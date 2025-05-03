@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Fantasy Fantasy</title>
+        <link rel="icon" type="image/svg" href="./assets/favicon.svg">
+
+        <link rel="stylesheet" href="./assets/rpg-awesome.min.css" />
+
+        <style>
+         @font-face {
+           font-family: RPGAwesome;
+           src: url("fonts/rpgawesome-webfont.woff?v=0.1.0") format("woff");
+         }
+         @font-face {
+           font-family: ysabeau;
+           src: url("fonts/YsabeauOffice-VariableFont_wght.ttf") format("truetype");
+         }
+         @font-face {
+           font-family: varsity;
+           src: url("fonts/VarsityTeamBold.otf") format("opentype");
+         }
+         @font-face {
+           font-family: devinneswash;
+           src: url("fonts/DevinneSwash.ttf") format("truetype");
+         }
+
+         :root {
+           --boxGap: 0.5rem;
+           --sidebarWidth: 22vw;
+
+           --topFontSize: clamp(0.75rem, 1.5vw, 2rem);
+
+           --bgColor: #010101;
+           --baseColor: #e0e0e0;
+           --boxColor: #e0e0e0;
+         }
+
+         *, *::before, *::after {
+           box-sizing: border-box;
+           scrollbar-width: none;
+         }
+
+         .box {
+           background: var(--bgColor);
+           border: 2px solid var(--boxColor);
+           border-radius: 3px;
+           padding: var(--boxGap);
+         }
+
+         html, body {
+           margin: 0;
+           height: 100vh;
+           width: 100vw;
+           overflow: visible;
+         }
+
+         /* ASSUMES MOBILE */
+         
+         body {
+           background: var(--bgColor);
+           color: var(--baseColor);
+           font-family: ysabeau, monospace;
+           display: grid;
+           grid-template-rows: auto 1fr 0.5fr 0.5fr 0.2fr;
+           grid-template-areas:
+             "header header header"
+             "main main main"
+             "actionbar actionbar actionbar"
+             "right right right"
+             "updates updates updates";
+           gap: var(--boxGap);
+           padding: var(--boxGap);
+           padding-bottom: calc(var(--boxGap) + 1px); /* extra pixel feels right */
+           
+           p, h1, h2, h3 {
+             margin: 0;
+           }
+         }
+
+         *:has(> .filler) { display: flex; justify-content: center; align-items: center;}         
+
+         #navbar {
+           grid-area: header;
+           display: flex;
+           gap: var(--boxGap);
+           overflow-x: auto;
+           justify-content: center;
+           flex: 1;
+           align-items: center;
+           width: 100%;
+         }
+         
+         #navbar button {
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           flex-grow: 1;
+           color: var(--baseColor);
+           height: 100%;
+           font-weight: 600;
+           font-size: 1.55rem;
+           box-shadow: inset 0 0 0 1.5px var(--bgColor);
+
+           transition: background 0.05s, border 0.05s, box-shadow 0.05s, scale 0.05s;
+           white-space: nowrap;
+           cursor: pointer;
+           img {
+             height: 1em;
+             filter: invert(0.97);
+           }
+
+           &:focus, &:active, &.chosen {
+             outline: none;
+
+             &:is(#field) {
+               box-shadow: inset 0 0 0 1.5px  hsl(74, 90%, 30%);
+               border-color: hsl(74, 90%, 30%);
+               background-color: hsl(74, 90%, 8%);
+             }
+
+             &:is(#city) {
+               box-shadow: inset 0 0 0 1.5px  hsl(40, 90%, 30%);
+               border-color: hsl(40, 90%, 30%);
+               background-color: hsl(40, 90%, 8%);
+             }
+
+             &:is(#config) {
+               box-shadow: inset 0 0 0 1.5px  hsl(175, 10%, 45%);
+               border-color: hsl(175, 10%, 45%);
+               background-color: hsl(175, 10%, 8%);
+             }
+             
+           }
+         }
+         
+         @media (pointer: fine) and (hover: hover) {
+           #navbar button:hover:not(.chosen, :focus, :active) {
+             &:is(#field) {
+               border-color:hsl(74, 90%, 30%);
+             }
+
+             &:is(#city) {
+               border-color: hsl(40, 90%, 30%);
+             }
+
+             &:is(#config) {
+               border-color: hsl(175, 10%, 45%);
+             }
+           }
+         }
+
+         #logo {
+           grid-area: logo;
+         }
+
+         main {
+           grid-area: main;
+           display: flex;
+           flex-direction: column;
+         }
+         
+         #story {
+           flex: 1;
+           overflow-y: auto;
+           margin: 0;
+           font-size: clamp(0.75rem, 1.5vw + 1.5vh, 1.3rem);
+           font-weight:300;
+           padding-left: 0.1rem;
+           padding-right: 0.1rem;
+
+           p {
+             text-align: justify;
+           }
+           input {
+             display: inline;
+             background: color-mix(in hsl, var(--bgColor) 94%, var(--baseColor));
+             padding: 0;
+             border: 0;
+             border-bottom: 1.5px solid var(--baseColor);    
+             caret-color: var(--baseColor);
+             color: var(--baseColor);
+             border-radius: 2px;
+             font-family: inherit;
+             font-weight: 400;
+             font-size: 0.9em;
+             transition: width 0.2s linear;
+             outline: none;
+             text-align: center;
+             caret-color: color-mix(in hsl, var(--bgColor) 40%, var(--baseColor));
+             @starting-style {
+               width: 0;
+             }
+           }
+
+           #getFirstName, #getLastName {
+             width: 5.5em;
+             max-width: 5.5em;
+             margin-left: 0.35em;
+             margin-right: 0.1em;
+             @starting-style {
+               width: 0;
+             }
+           }
+         }
+         
+         .sidebar#left {
+           grid-area: left;
+           display: flex;     
+         }
+         .sidebar#right {
+           grid-area: right;
+           display: flex;
+         }
+
+         #actionbar {
+           grid-area: actionbar;
+         }
+         #dash {
+           grid-area: dash;
+         }
+         #detail {
+           grid-area: detail;
+         }
+         #updates {
+           grid-area: updates;
+         } 
+
+
+         #logo, #dash, #detail, .sidebar#left { display: none; }
+         
+         /* DESKTOP VIEW */
+         @media (min-width: 850px) {
+           body {
+             grid-template-columns: var(--sidebarWidth) 1fr var(--sidebarWidth);
+             grid-template-rows: auto 1fr 0.2fr 0.1fr;
+             grid-template-areas:
+               "logo header right"
+               "left   main   right"
+               "dash   actionbar   detail"             
+               "dash   updates   detail";
+           }
+           
+           #dash, #detail, .sidebar#left, .sidebar#right { display: flex; } /* show hidden panels */
+
+           #navbar button {
+             font-size: var(--topFontSize);
+             img {height: 1.5em;}
+           }
+           .sidebar {
+             width: var(--sidebarWidth);
+           }
+           
+           #logo {
+             grid-area: logo;
+             display: flex;
+             align-items: center;
+             width: var(--sidebarWidth);
+             justify-content: center;
+             font-size: var(--topFontSize);
+             cursor: pointer;
+             transition: scale 0.05s;
+             
+             i {
+               color: hsl(200, 30%, 70%);
+               position: relative;
+               top: 0.1rem;
+               font-size: 1.05em;
+               margin-right: 0.15rem;
+             }
+             #firstword {
+               font-family: varsity;
+               font-size: 1.25em;
+               margin-right: 0.065rem;
+               color: hsl(20, 70%, 48%);
+             }
+             #secondword {
+               font-family: devinneswash;
+               font-size: 1.1em;
+               position: relative;
+               bottom: 0.05em;
+               color: hsl(45, 70%, 48%);
+             }
+           }
+         }
+
+         .nudged {
+           scale: 0.985;
+         }
+        </style>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    </head>
+
+
+    <body>
+        <div id="logo" class="box nudge">
+            <i class="ra ra-crossed-swords"></i>
+            <span id="firstword">Fantasy</span>
+            <span id="secondword">Fantasy</span>
+        </div>
+        <div id="navbar">
+            <button id="field" class="box nudge"><img src="assets/compass.svg"> </button>
+            <button id="city" class="box nudge"><img src="assets/city.svg"> </button>
+            <button id="config" class="box nudge"><img src="assets/cog.svg"></button>
+        </div>
+
+
+        <aside class="sidebar box" id="left">
+            <h1 class="filler"> ROSTER </h1>
+        </aside>
+
+        <main class="box">
+            <div id="story">
+            </div>
+        </main>
+
+        <section class="box" id="actionbar">
+            <h1 class="filler"> ACTIONS </h1>
+        </section>
+
+        <aside class="box" id="dash">
+            <h1 class="filler"> STATS </h1>
+        </aside>
+
+
+        <aside class="box" id="updates">
+            <h1 class="filler"> LIVE UPDATES </h1>
+        </aside>
+        
+        <aside class="box" id="detail">
+            <h1 class="filler"> MISCELLANEA </h1>
+        </aside>
+
+        <aside class="sidebar box" id="right">
+            <h1 class="filler"> KINGDOM MANAGEMENT </h1>
+        </aside>
+
+        <script type="module">
+         import {typeOn, typeP} from "./typing.js";
+
+
+         document.getElementById("logo").onclick = () => location.href = location.href;
+         document.querySelectorAll("#navbar button").forEach(b => b.onpointerdown = () => selectMain(b.id));
+         document.querySelectorAll(".nudge").forEach(b =>
+           b.addEventListener("pointerdown", () =>
+             b.classList.add("nudged")
+         ));
+         document.onpointerup = () => {
+           document.querySelectorAll(".nudged").forEach(b => b.classList.remove("nudged"));
+         };
+
+
+         function selectMain(topic) {
+           document.querySelectorAll("#navbar button.chosen").forEach(b => b.classList.remove("chosen"));
+           document.querySelector("#navbar button#" + topic).classList.add("chosen");
+         }
+
+         const beginTutorial = () => 
+           typeP("You jolt awake, your head spinning. What a wild dream that must have been. You can hardly even remember your own name! But of course, it is", document.getElementById("story"), getName);
+
+         const nameValidate = (e) => {
+           if (!e.data) {
+             if (!e.target.value) {
+               
+               e.target.style.transitionDuration = "";
+               e.target.style.width = "";
+               return;
+             }
+           } else if (!"abcdefghijklmnopqrstuvwxyz".includes(e.data.toLowerCase())) {
+             const inputValue = e.target.value;
+             const alphabeticValue = inputValue.replace(/[^a-zA-Z]/g, '');
+             e.target.value = alphabeticValue;
+           }
+
+           if (e.target.value) {
+             e.target.style.width = e.target.value.length + 0.5 + 'ch';
+             setTimeout( () => e.target.style.transitionDuration = "0s", 200);
+           }
+         };
+         
+
+         const getInput = (p, id="", cb=null, ml=null) => {
+           let input = document.createElement("input");
+           input.id = id;
+           input.autocomplete = "off";
+           input.spellcheck = null;
+           input.oninput = cb;
+           if (ml)
+             input.maxLength = ml;
+
+           p.append(input);
+           return input;
+         }
+
+         const inputSecondRendered = (e) => {
+           event.target.removeEventListener("transitionend", inputSecondRendered);
+           let span = document.createElement("span");
+           span.innerText = ".";
+           event.target.closest("p").append(span);
+           event.target.previousElementSibling.focus();
+         }
+
+         const inputFirstRendered = (e) => {
+           event.target.removeEventListener("transitionend", inputFirstRendered);
+           let inputSecond = getInput(event.target.closest("p"), "getLastName", (e) => nameValidate(e), 11);
+
+           inputSecond.addEventListener("transitionend", inputSecondRendered);
+         };
+         
+         
+         const getName = (p) => {
+           let inputFirst = getInput(p, "getFirstName", (e) => nameValidate(e), 11);
+
+           inputFirst.addEventListener("transitionend", inputFirstRendered);
+         };
+
+
+         beginTutorial();
+        </script>
+    </body>
+</html>
