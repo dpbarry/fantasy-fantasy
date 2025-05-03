@@ -40,6 +40,8 @@
          *, *::before, *::after {
            box-sizing: border-box;
            scrollbar-width: none;
+           -webkit-tap-highlight-color: transparent;
+           -webkit-user-drag: none;
          }
 
          .box {
@@ -50,10 +52,11 @@
          }
 
          html, body {
+           padding: 0;
            margin: 0;
-           height: 100vh;
-           width: 100vw;
-           overflow: visible;
+           width: 100%;
+           height: 100%;
+           overflow: hidden;
          }
 
          /* ASSUMES MOBILE */
