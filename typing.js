@@ -18,11 +18,11 @@ export function typeOn(text, body, callback) {
             span.style.pointerEvents = "";
             span.style.userSelect = "";
 
-        }, count * 20);
+        }, count * 5);
     }
 
     // run callback, if any, after last character has been typed
-    setTimeout(callback, 20 * text.length);
+    setTimeout(callback, 5 * text.length);
 }
 
 // convenience function to abstract the <p> created in a message

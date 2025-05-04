@@ -26,6 +26,12 @@
            src: url("fonts/DevinneSwash.ttf") format("truetype");
          }
 
+         @font-face {
+           font-family: vinque;
+           src: url("fonts/Vinque rg.otf") format("opentype");
+         }
+
+
          :root {
            --boxGap: 0.5rem;
            --sidebarWidth: 22vw;
@@ -35,6 +41,7 @@
            --bgColor: #010101;
            --baseColor: #e0e0e0;
            --boxColor: #e0e0e0;
+           --accent: hsl(120, 82.5%, 45%);
          }
 
          *, *::before, *::after {
@@ -76,10 +83,10 @@
            gap: var(--boxGap);
            padding: var(--boxGap);
            padding-bottom: calc(var(--boxGap) + 1px); /* extra pixel feels right */
-           
-           p, h1, h2, h3 {
-             margin: 0;
-           }
+         }
+
+         p, h1, h2, h3 {
+           margin: 0;
          }
 
          *:has(> .filler) { display: flex; justify-content: center; align-items: center;}         
@@ -112,6 +119,7 @@
            img {
              height: 1em;
              filter: invert(0.97);
+             user-select: none;
            }
 
            &:focus, &:active, &.chosen {
@@ -174,38 +182,64 @@
            padding-right: 0.1rem;
 
            p {
+             line-height: 1.15;
              text-align: justify;
+             
            }
-           input {
+           input, p.fakeinput {
              display: inline;
              background: color-mix(in hsl, var(--bgColor) 94%, var(--baseColor));
              padding: 0;
              border: 0;
-             border-bottom: 1.5px solid var(--baseColor);    
+             border-bottom: 0.05em solid var(--baseColor);    
              caret-color: var(--baseColor);
              color: var(--baseColor);
              border-radius: 2px;
-             font-family: inherit;
-             font-weight: 400;
-             font-size: 0.9em;
-             transition: width 0.2s linear;
              outline: none;
              text-align: center;
-             caret-color: color-mix(in hsl, var(--bgColor) 40%, var(--baseColor));
+             position: relative;
+             padding-bottom: 2px;
+
              @starting-style {
                width: 0;
+             }
+
+           }
+
+           p.fakeinput {
+             width: fit-content;
+             transition: none !important;
+           }
+
+           #getFirstName, #getLastName, .fakegetname {
+             font-family: vinque;
+             font-size: 0.9em;
+             transition: width 0.15s linear, border-color 0.15s;
+             width: 5.5em;
+             max-width: 8em;
+             margin-left: 0.25em;
+             margin-right: 0.075em;
+             color: var(--accent);
+             border-color: var(--accent);
+             caret-color: color-mix(in hsl, var(--bgColor) 30%, var(--accent));    
+             @starting-style {
+               width: 0;
+             }
+
+             &.invalid {
+               animation: invalid 0.15s forwards;
+             }
+             &.full {
+               border-color:  hsl(3, 75%, 50%);
              }
            }
 
-           #getFirstName, #getLastName {
-             width: 5.5em;
-             max-width: 5.5em;
-             margin-left: 0.35em;
-             margin-right: 0.1em;
-             @starting-style {
-               width: 0;
-             }
-           }
+         }
+
+         @keyframes invalid {
+           0% {border-color: var(--baseColor);}
+           50% {border-color: hsl(3, 75%, 50%); }
+           100% {border-color: var(--baseColor); }
          }
          
          .sidebar#left {
@@ -345,6 +379,7 @@
 
          document.getElementById("logo").onclick = () => location.href = location.href;
          document.querySelectorAll("#navbar button").forEach(b => b.onpointerdown = () => selectMain(b.id));
+
          document.querySelectorAll(".nudge").forEach(b =>
            b.addEventListener("pointerdown", () =>
              b.classList.add("nudged")
@@ -353,6 +388,8 @@
            document.querySelectorAll(".nudged").forEach(b => b.classList.remove("nudged"));
          };
 
+         const story = document.getElementById("story");
+
 
          function selectMain(topic) {
            document.querySelectorAll("#navbar button.chosen").forEach(b => b.classList.remove("chosen"));
@@ -360,24 +397,61 @@
          }
 
          const beginTutorial = () => 
-           typeP("You jolt awake, your head spinning. What a wild dream that must have been. You can hardly even remember your own name! But of course, it is", document.getElementById("story"), getName);
+           typeP("You jolt awake, your head spinning. What a wild dream that must have been. You can hardly even remember your own name... But of course, it is", document.getElementById("story"), getName);
+
+         const isAlphabetic = (text) => [...text].every(c => "abcdefghijklmnopqrstuvwxyz".includes(c.toLowerCase()));
 
          const nameValidate = (e) => {
+           
            if (!e.data) {
              if (!e.target.value) {
-               
+               e.target.classList.remove("full");
                e.target.style.transitionDuration = "";
                e.target.style.width = "";
                return;
              }
-           } else if (!"abcdefghijklmnopqrstuvwxyz".includes(e.data.toLowerCase())) {
+           } else if (!isAlphabetic(e.data)) {
+             let store = e.target.selectionStart - [...e.data].filter(c => !isAlphabetic(c)).length;
              const inputValue = e.target.value;
              const alphabeticValue = inputValue.replace(/[^a-zA-Z]/g, '');
              e.target.value = alphabeticValue;
-           }
 
-           if (e.target.value) {
-             e.target.style.width = e.target.value.length + 0.5 + 'ch';
+             if (e.target.value.length)
+               e.target.classList.add("invalid");
+             
+             e.target.selectionStart = store;
+             e.target.selectionEnd = store;
+           }
+           
+
+           if (e.target.value.length >= 15)
+             e.target.classList.add("full");
+           else
+             e.target.classList.remove("full");
+
+
+           if (e.target.value.length) {
+             let store = e.target.selectionStart;
+             
+             e.target.value = e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1).toLowerCase();
+
+             e.target.selectionStart = store;
+             e.target.selectionEnd = store;
+
+             let p = document.createElement("p");
+             p.className = "fakeinput fakegetname";
+             p.style.color = "transparent";
+             p.style.pointerEvents = "none";
+             p.style.userSelect = "none";
+
+             story.append(p);
+             p.innerText = e.target.value;
+
+             let rect = p.getBoundingClientRect();
+
+             p.remove();
+             e.target.style.width = rect.width / 15.5 + "em"; // convert to em so as to adapt to screen change
+
              setTimeout( () => e.target.style.transitionDuration = "0s", 200);
            }
          };
@@ -389,6 +463,7 @@
            input.autocomplete = "off";
            input.spellcheck = null;
            input.oninput = cb;
+           input.onanimationend = () =>input.classList.remove("invalid");
            if (ml)
              input.maxLength = ml;
 
@@ -396,26 +471,92 @@
            return input;
          }
 
-         const inputSecondRendered = (e) => {
-           event.target.removeEventListener("transitionend", inputSecondRendered);
-           let span = document.createElement("span");
-           span.innerText = ".";
-           event.target.closest("p").append(span);
-           event.target.previousElementSibling.focus();
-         }
-
-         const inputFirstRendered = (e) => {
-           event.target.removeEventListener("transitionend", inputFirstRendered);
-           let inputSecond = getInput(event.target.closest("p"), "getLastName", (e) => nameValidate(e), 11);
-
-           inputSecond.addEventListener("transitionend", inputSecondRendered);
-         };
-         
-         
          const getName = (p) => {
-           let inputFirst = getInput(p, "getFirstName", (e) => nameValidate(e), 11);
+           const inputFirst = getInput(p, "getFirstName", (e) => nameValidate(e));
+           const enterCue = document.createElement("span");
+           enterCue.className = "cue enter";
+
+           const inputFirstRendered = () => {
+             inputFirst.removeEventListener("transitionend", inputFirstRendered);
+
+             const inputSecond = getInput(p, "getLastName", (e) => nameValidate(e));
+
+             const inputSecondRendered = () => {
+               inputSecond.removeEventListener("transitionend", inputSecondRendered);
+
+               const span = document.createElement("span");
+               span.innerText = "!";
+               p.append(span);
+
+               inputFirst.focus();
+               p.append(enterCue);
+             };
+
+             inputSecond.addEventListener("transitionend", inputSecondRendered);
+           };
 
            inputFirst.addEventListener("transitionend", inputFirstRendered);
+           const nameValidate = (e) => {
+             
+             if (!e.data) {
+               if (!e.target.value) {
+                 e.target.classList.remove("full");
+                 e.target.style.transitionDuration = "";
+                 e.target.style.width = "";
+                 return;
+               }
+             } else if (!isAlphabetic(e.data)) {
+               let store = e.target.selectionStart - [...e.data].filter(c => !isAlphabetic(c)).length;
+               const inputValue = e.target.value;
+               const alphabeticValue = inputValue.replace(/[^a-zA-Z]/g, '');
+               e.target.value = alphabeticValue;
+
+               if (e.target.value.length)
+                 e.target.classList.add("invalid");
+               
+               e.target.selectionStart = store;
+               e.target.selectionEnd = store;
+             }
+             
+
+             if (e.target.value.length >= 15)
+               e.target.classList.add("full");
+             else
+               e.target.classList.remove("full");
+
+
+             if (e.target.value.length) {
+               let store = e.target.selectionStart;
+               
+               e.target.value = e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1).toLowerCase();
+
+               e.target.selectionStart = store;
+               e.target.selectionEnd = store;
+
+               let p = document.createElement("p");
+               p.className = "fakeinput fakegetname";
+               p.style.color = "transparent";
+               p.style.pointerEvents = "none";
+               p.style.userSelect = "none";
+
+               story.append(p);
+               p.innerText = e.target.value;
+
+               let rect = p.getBoundingClientRect();
+
+               p.remove();
+               e.target.style.width = rect.width / 15.5 + "em"; // convert to em so as to adapt to screen change
+
+               setTimeout( () => e.target.style.transitionDuration = "0s", 200);
+
+
+               if ((event.target.nextElementSibling.value.length)) {
+                 enterCue.classList.add("visible");
+               }
+             } else {
+               enterCue.classList.remove("visible");
+             }
+           };
          };
 
 
