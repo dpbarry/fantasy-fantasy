@@ -74,11 +74,10 @@
            color: var(--baseColor);
            font-family: ysabeau, monospace;
            display: grid;
-           grid-template-rows: auto 1fr 0.5fr 0.5fr 0.2fr;
+           grid-template-rows: auto 1fr 0.5fr 0.15fr;
            grid-template-areas:
              "header header header"
              "main main main"
-             "actionbar actionbar actionbar"
              "right right right"
              "updates updates updates";
            gap: var(--boxGap);
@@ -330,7 +329,7 @@
              grid-template-areas:
                "logo header right"
                "left   main   right"
-               "dash   actionbar   detail"             
+               "dash   main   detail"             
                "dash   updates   detail";
            }
            
@@ -406,11 +405,7 @@
             <div id="story">
             </div>
         </main>
-
-        <section class="box" id="actionbar">
-            <h1 class="filler"> ACTIONS </h1>
-        </section>
-
+        
         <aside class="box" id="dash">
             <h1 class="filler"> STATS </h1>
         </aside>
@@ -510,9 +505,34 @@
            p.querySelector("input").addEventListener("transitionend", wrap);
          };
          const getAppearance = (p) => {
-           clearInput(p, () => {collapseP(p, (i) => "<span class='fakegetname settled'>" + i + "</span>");            typeP("You roll out of bed, hoping you haven't missed the first bell. Your father said the meeting today had to be as early as possible. Maybe that explained the odd sleep: you had a feeling that this might be The Meeting, the one long awaited by any onlyborn child of a king.", story);
+           let n = 0;
+           // elaborate process to collapse both the unnecessary spans (for performance) and the inputs so they mesh with the text
+           clearInput(p, () => {
+             collapseP(p, (i) =>`<span class='fakegetname settled' style='display: inline-block; text-align: center; width:${p.querySelectorAll("input")[n++].getBoundingClientRect().width}px; transition: width 0.3s;'>` + i + "</span>");
+             document.querySelectorAll(".fakegetname").forEach( n => {
+               let width = getTrueWidthName(n.innerText);
+               n.style.width = width + "px";
+             });
            });
+           
+           typeP("You roll out of bed, hoping you haven’t missed the first bell. Your father said the meeting today had to be as early as possible. Maybe that explained the odd sleep: you had a feeling that this might be The Meeting, the one long awaited by any onlyborn child of a king.", story);
          };
+
+         function getTrueWidthName(text) {
+           let p = document.createElement("p");
+           p.className = "fakeinput fakegetname";
+           p.style.color = "transparent";
+           p.style.pointerEvents = "none";
+           p.style.userSelect = "none";
+
+           story.append(p);
+           p.innerText = text;
+
+           let rect = p.getBoundingClientRect();
+           let store = rect.width;
+           p.remove();
+           return store;
+         }
 
          const getName = (p) => {
            const inputFirst = getInput(p, "getFirstName", (e) => nameValidate(e));
@@ -581,20 +601,7 @@
 
                e.target.selectionStart = store;
                e.target.selectionEnd = store;
-
-               let p = document.createElement("p");
-               p.className = "fakeinput fakegetname";
-               p.style.color = "transparent";
-               p.style.pointerEvents = "none";
-               p.style.userSelect = "none";
-
-               story.append(p);
-               p.innerText = e.target.value;
-
-               let rect = p.getBoundingClientRect();
-
-               p.remove();
-               e.target.style.width = rect.width / 15 + "em"; // convert to em so as to adapt to screen change
+               e.target.style.width = getTrueWidthName(e.target.value) / 15 + "em"; // convert to em so as to adapt to screen change
 
                setTimeout( () => e.target.style.transitionDuration = "0s", 100);
 
