@@ -186,8 +186,9 @@
              text-align: justify;
              margin-bottom: 0.75rem;
            }
-           input, p.fakeinput {
+           input, .fakeinput, p.fakeinput {
              display: inline;
+             font-size: 0.9em;
              background: color-mix(in hsl, var(--bgColor) 94%, var(--baseColor));
              padding: 0;
              border: 0;
@@ -207,7 +208,7 @@
 
            }
 
-           p.fakeinput {
+           .fakeinput, p.fakeinput {
              width: fit-content;
              transition: none !important;
            }
@@ -219,8 +220,7 @@
 
            #getFirstName, #getLastName, .fakegetname {
              font-family: vinque;
-             font-size: 0.9em;
-             transition: width 0.15s linear, border-color 0.15s, background 0.15s;
+             transition: width 0.25s linear, border-color 0.15s, background 0.15s;
              width: 5.5em;
              max-width: 8em;
              color: var(--accent);
@@ -231,11 +231,15 @@
              }
 
              &.invalid {
-               animation: invalid 0.15s forwards;
+               animation: invalid 0.18s forwards;
              }
              &.full {
                border-color:  hsl(3, 75%, 50%);
              }
+           }
+
+           #getLastName {
+             transition-delay: 0.25s;
            }
 
            .cue {
@@ -291,9 +295,9 @@
          }
 
          @keyframes invalid {
-           0% {border-color: var(--baseColor);}
-           50% {border-color: hsl(3, 75%, 50%); }
-           100% {border-color: var(--baseColor); }
+           0% {border-color: var(-accent);}
+           50% {border-color: hsl(3, 75%, 70%); }
+           100% {border-color: var(--accent); }
          }
          
          .sidebar#left {
@@ -454,6 +458,11 @@
          
 
          const getInput = (p, id="", cb=null, ml=null) => {
+           let div = document.createElement("div");
+           div.style.display = "inline-block";
+           div.style.width = "calc(0.9 * 5.5em)";
+           p.appendChild(div);
+           
            let input = document.createElement("input");
            input.id = id;
            input.autocomplete = "off";
@@ -463,7 +472,9 @@
            if (ml)
              input.maxLength = ml;
 
-           p.append(input);
+           div.append(input);
+
+           input.ontransitionend = () => {input.style.transition = "0s"; input.ontransitionend = null; div.parentNode.replaceChild(input, div);  setTimeout( () => {input.style.transition = ""; input.style.transitionDelay = "0s";} , 0);};
            return input;
          }
 
@@ -508,7 +519,7 @@
            let n = 0;
            // elaborate process to collapse both the unnecessary spans (for performance) and the inputs so they mesh with the text
            clearInput(p, () => {
-             collapseP(p, (i) =>`<span class='fakegetname settled' style='display: inline-block; text-align: center; width:${p.querySelectorAll("input")[n++].getBoundingClientRect().width}px; transition: width 0.3s;'>` + i + "</span>");
+             collapseP(p, (i) =>`<span class='fakegetname settled' style='font-size: 0.9em; display: inline-block; text-align: center; width:${p.querySelectorAll("input")[n++].getBoundingClientRect().width}px; transition: width 0.2s;'>` + i + "</span>");
              document.querySelectorAll(".fakegetname").forEach( n => {
                let width = getTrueWidthName(n.innerText);
                n.style.width = width + "px";
@@ -538,36 +549,23 @@
            const inputFirst = getInput(p, "getFirstName", (e) => nameValidate(e));
            const enterCue = getCue("Enter", () => getAppearance(p));
 
-           const inputFirstRendered = () => {
-             inputFirst.removeEventListener("transitionend", inputFirstRendered);
-             const span = document.createElement("span");
-             span.innerText = " ";
-             p.append(span);
-             
-             
-             const inputSecond = getInput(p, "getLastName", (e) => nameValidate(e));
-
-             inputFirst.addEventListener("keydown", (e) => {if (e.key === " ") {e.preventDefault(); inputSecond.focus();}});
-             
-             const inputSecondRendered = () => {
-               inputSecond.removeEventListener("transitionend", inputSecondRendered);
-
-               const span = document.createElement("span");
-               span.innerText = "!    ";
-               p.append(span);
-
-               inputFirst.focus();
-               p.append(enterCue);
-             };
-
-             inputSecond.addEventListener("transitionend", inputSecondRendered);
-           };
-
-           inputFirst.addEventListener("transitionend", inputFirstRendered);
+           let span = document.createElement("span");
+           span.innerText = " ";
+           p.append(span);                                                                                                
+           const inputSecond = getInput(p, "getLastName", (e) => nameValidate(e));
+           span = document.createElement("span");
+           span.innerText = "!    ";
+           p.append(span);
+            p.append(enterCue);      
+           inputFirst.addEventListener("keydown", (e) => {if (e.code === "Space") {e.preventDefault(); inputSecond.focus();}});
+           
+           setTimeout(() => {
+             inputFirst.focus();
+           }, 300);
 
            
            const nameValidate = (e) => {
-             
+             console.log(e);
              if (!e.data) {
                if (!e.target.value) {
                  e.target.classList.remove("full");
@@ -612,9 +610,8 @@
                enterCue.classList.remove("visible");
              }
            };
+
          };
-
-
          beginTutorial();
         </script>
     </body>
