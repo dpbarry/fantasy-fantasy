@@ -28,9 +28,8 @@
 
          @font-face {
            font-family: vinque;
-           src: url("fonts/Vinque rg.otf") format("opentype");
+           src: url("fonts/Vinque Rg.otf") format("opentype");
          }
-
 
          :root {
            --boxGap: 0.5rem;
@@ -42,7 +41,9 @@
            --baseColor: #e0e0e0;
            --boxColor: #e0e0e0;
            --accent: hsl(120, 82.5%, 45%);
+           --accent: hsl(190, 82.5%, 45%);
          }
+
 
          *, *::before, *::after {
            box-sizing: border-box;
@@ -184,7 +185,7 @@
            p {
              line-height: 1.15;
              text-align: justify;
-             
+             margin-bottom: 0.75rem;
            }
            input, p.fakeinput {
              display: inline;
@@ -198,7 +199,8 @@
              outline: none;
              text-align: center;
              position: relative;
-             padding-bottom: 2px;
+             padding-bottom: 1.5px;
+             
 
              @starting-style {
                width: 0;
@@ -211,14 +213,17 @@
              transition: none !important;
            }
 
+           .settled {
+             background: var(--bgColor) !important;
+             border-color: transparent !important;
+           }
+
            #getFirstName, #getLastName, .fakegetname {
              font-family: vinque;
              font-size: 0.9em;
-             transition: width 0.15s linear, border-color 0.15s;
+             transition: width 0.15s linear, border-color 0.15s, background 0.15s;
              width: 5.5em;
              max-width: 8em;
-             margin-left: 0.25em;
-             margin-right: 0.075em;
              color: var(--accent);
              border-color: var(--accent);
              caret-color: color-mix(in hsl, var(--bgColor) 30%, var(--accent));    
@@ -234,6 +239,56 @@
              }
            }
 
+           .cue {
+             font-size: 0.7em;
+             opacity: 0;
+             color: var(--accent);
+             font-weight: 650;
+             transition: opacity 0.2s 0.2s;
+             position: relative;
+             user-select: none;
+             pointer-events: none;
+             z-index: 2;
+             &.enter::before {
+               content: "enter";
+               position: relative;
+               display: inline-block;
+               padding: 3px;
+               bottom: 2px;           
+               transition: scale 0.1s;
+             }
+             &::after {
+               content: "";
+               position: absolute;
+               left: 0;
+               top: 0;
+               width: 100%;
+               height: 100%;
+               border: 1px solid var(--accent);
+               border-bottom-width: 2px;
+               border-radius: 3px;
+               animation: cueing 0.5s linear infinite alternate;            
+               transition: scale 0.1s;
+             }
+
+             &.visible {
+               opacity: 0.8;
+               cursor: pointer;
+               pointer-events: all;
+             }
+
+             &.done, &.done::before, &.done::after {
+               transition: scale 0.15s, opacity 0.15s;
+               scale: 0;
+               opacity: 0;
+             }
+           }
+           
+
+         }
+         @keyframes cueing {
+           from {opacity: 1; }
+           to {opacity: 0.65; }
          }
 
          @keyframes invalid {
@@ -322,7 +377,7 @@
            }
          }
 
-         .nudged {
+         .nudged, .nudged::before, .nudged::after {
            scale: 0.985;
          }
         </style>
@@ -374,7 +429,7 @@
         </aside>
 
         <script type="module">
-         import {typeOn, typeP} from "./typing.js";
+         import {typeOn, typeP, collapseP} from "./typing.js";
 
 
          document.getElementById("logo").onclick = () => location.href = location.href;
@@ -397,64 +452,10 @@
          }
 
          const beginTutorial = () => 
-           typeP("You jolt awake, your head spinning. What a wild dream that must have been. You can hardly even remember your own name... But of course, it is", document.getElementById("story"), getName);
+           typeP("You jolt awake, your head spinning. What a wild dream that must have been. You can hardly even remember your own name... But of course, it is ", story, getName);
 
          const isAlphabetic = (text) => [...text].every(c => "abcdefghijklmnopqrstuvwxyz".includes(c.toLowerCase()));
-
-         const nameValidate = (e) => {
-           
-           if (!e.data) {
-             if (!e.target.value) {
-               e.target.classList.remove("full");
-               e.target.style.transitionDuration = "";
-               e.target.style.width = "";
-               return;
-             }
-           } else if (!isAlphabetic(e.data)) {
-             let store = e.target.selectionStart - [...e.data].filter(c => !isAlphabetic(c)).length;
-             const inputValue = e.target.value;
-             const alphabeticValue = inputValue.replace(/[^a-zA-Z]/g, '');
-             e.target.value = alphabeticValue;
-
-             if (e.target.value.length)
-               e.target.classList.add("invalid");
-             
-             e.target.selectionStart = store;
-             e.target.selectionEnd = store;
-           }
-           
-
-           if (e.target.value.length >= 15)
-             e.target.classList.add("full");
-           else
-             e.target.classList.remove("full");
-
-
-           if (e.target.value.length) {
-             let store = e.target.selectionStart;
-             
-             e.target.value = e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1).toLowerCase();
-
-             e.target.selectionStart = store;
-             e.target.selectionEnd = store;
-
-             let p = document.createElement("p");
-             p.className = "fakeinput fakegetname";
-             p.style.color = "transparent";
-             p.style.pointerEvents = "none";
-             p.style.userSelect = "none";
-
-             story.append(p);
-             p.innerText = e.target.value;
-
-             let rect = p.getBoundingClientRect();
-
-             p.remove();
-             e.target.style.width = rect.width / 15.5 + "em"; // convert to em so as to adapt to screen change
-
-             setTimeout( () => e.target.style.transitionDuration = "0s", 200);
-           }
-         };
+         
          
 
          const getInput = (p, id="", cb=null, ml=null) => {
@@ -471,21 +472,68 @@
            return input;
          }
 
+         const getCue = (key, cb) => {
+           const cue = document.createElement("span");
+           cue.className = `cue ${key.toLowerCase()}`;
+           cue.addEventListener("pointerdown", () =>
+             cue.classList.add("nudged"));
+
+           const wrap = (e) => {
+             if (e.key == key) {
+               document.removeEventListener("keydown", wrap);
+               cue.removeEventListener("click", wrapClick);
+               cue.classList.add("done");
+               cue.ontransitionend = () => cue.remove();
+               cb();
+           }};
+           const wrapClick = (e) => {
+             document.removeEventListener("keydown", wrap);
+             cue.removeEventListener("click", wrapClick);
+             cue.classList.add("done");
+             cue.ontransitionend = () => cue.remove();
+             cb();
+           };
+           document.addEventListener("keydown", wrap);
+           cue.addEventListener("click", wrapClick);
+           return cue;
+         };
+
+         const clearInput = (p, cb=()=>{}) => {
+           p.querySelectorAll("input").forEach(i => {
+             i.classList.add("settled");
+             i.style.transitionDuration = "";
+           });
+           const wrap = (e) => {
+             cb();
+             e.target.removeEventListener("transitionend", wrap);
+           }
+           p.querySelector("input").addEventListener("transitionend", wrap);
+         };
+         const getAppearance = (p) => {
+           clearInput(p, () => {collapseP(p, (i) => "<span class='fakegetname settled'>" + i + "</span>");            typeP("You roll out of bed, hoping you haven't missed the first bell. Your father said the meeting today had to be as early as possible. Maybe that explained the odd sleep: you had a feeling that this might be The Meeting, the one long awaited by any onlyborn child of a king.", story);
+           });
+         };
+
          const getName = (p) => {
            const inputFirst = getInput(p, "getFirstName", (e) => nameValidate(e));
-           const enterCue = document.createElement("span");
-           enterCue.className = "cue enter";
+           const enterCue = getCue("Enter", () => getAppearance(p));
 
            const inputFirstRendered = () => {
              inputFirst.removeEventListener("transitionend", inputFirstRendered);
-
+             const span = document.createElement("span");
+             span.innerText = " ";
+             p.append(span);
+             
+             
              const inputSecond = getInput(p, "getLastName", (e) => nameValidate(e));
 
+             inputFirst.addEventListener("keydown", (e) => {if (e.key === " ") {e.preventDefault(); inputSecond.focus();}});
+             
              const inputSecondRendered = () => {
                inputSecond.removeEventListener("transitionend", inputSecondRendered);
 
                const span = document.createElement("span");
-               span.innerText = "!";
+               span.innerText = "!    ";
                p.append(span);
 
                inputFirst.focus();
@@ -496,6 +544,8 @@
            };
 
            inputFirst.addEventListener("transitionend", inputFirstRendered);
+
+           
            const nameValidate = (e) => {
              
              if (!e.data) {
@@ -511,8 +561,7 @@
                const alphabeticValue = inputValue.replace(/[^a-zA-Z]/g, '');
                e.target.value = alphabeticValue;
 
-               if (e.target.value.length)
-                 e.target.classList.add("invalid");
+               e.target.classList.add("invalid");
                
                e.target.selectionStart = store;
                e.target.selectionEnd = store;
@@ -545,14 +594,13 @@
                let rect = p.getBoundingClientRect();
 
                p.remove();
-               e.target.style.width = rect.width / 15.5 + "em"; // convert to em so as to adapt to screen change
+               e.target.style.width = rect.width / 15 + "em"; // convert to em so as to adapt to screen change
 
-               setTimeout( () => e.target.style.transitionDuration = "0s", 200);
+               setTimeout( () => e.target.style.transitionDuration = "0s", 100);
 
-
-               if ((event.target.nextElementSibling.value.length)) {
+               
+               if (event.target.nextElementSibling.nextElementSibling.value?.length || event.target.previousSibling.previousSibling.value?.length) 
                  enterCue.classList.add("visible");
-               }
              } else {
                enterCue.classList.remove("visible");
              }

@@ -1,3 +1,4 @@
+
 export function typeOn(text, body, callback) {
     // first add all the characters invisibly to establish justified alignment
     [...text].forEach(c => {
@@ -30,4 +31,14 @@ export function typeP(text, body, callback = (p) => {}) {
     let p = document.createElement("p");
     body.appendChild(p);
     typeOn(text, p, () => callback(p));
+}
+
+export function collapseP(p, opt = () => {}) {
+    let text = [...p.children].reduce( (acc, x) => {
+        if (x.nodeName === "SPAN")
+            return acc + x.innerHTML;
+        else
+            return acc + opt(x.value);
+    }, "");
+    p.innerHTML = text;
 }
