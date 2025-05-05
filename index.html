@@ -458,11 +458,7 @@
          
 
          const getInput = (p, id="", cb=null, ml=null) => {
-           let div = document.createElement("div");
-           div.style.display = "inline-block";
-           div.style.width = "calc(0.9 * 5.5em)";
-           p.appendChild(div);
-           
+     
            let input = document.createElement("input");
            input.id = id;
            input.autocomplete = "off";
@@ -472,9 +468,9 @@
            if (ml)
              input.maxLength = ml;
 
-           div.append(input);
+           p.append(input);
 
-           input.ontransitionend = () => {input.style.transition = "0s"; input.ontransitionend = null; div.parentNode.replaceChild(input, div);  setTimeout( () => {input.style.transition = ""; input.style.transitionDelay = "0s";} , 0);};
+           input.ontransitionend = () => input.style.transitionDelay = "0s";
            return input;
          }
 
@@ -556,8 +552,8 @@
            span = document.createElement("span");
            span.innerText = "!    ";
            p.append(span);
-            p.append(enterCue);      
-           inputFirst.addEventListener("keydown", (e) => {if (e.code === "Space") {e.preventDefault(); inputSecond.focus();}});
+           p.append(enterCue);      
+           inputFirst.addEventListener("keydown", (e) => {if (e.key === " ") {e.preventDefault(); inputSecond.focus();}});
            
            setTimeout(() => {
              inputFirst.focus();
