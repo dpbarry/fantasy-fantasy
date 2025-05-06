@@ -200,7 +200,7 @@
              }
            }
            .inputwrap::before {
-             content: "\200B"; /* zero-width space character */
+             content: "";
              display: inline-block;
              height: 1em;
              visibility: hidden;
@@ -256,7 +256,7 @@
            }
 
            .cue {
-             font-size: 0.7em;
+             font-size: 1em;
              opacity: 0;
              color: var(--accent);
              font-weight: 650;
@@ -266,13 +266,15 @@
              pointer-events: none;
              z-index: 2;
              position: relative;
-             bottom: 0.85rem;
+             bottom: 0.65rem;
              
              &.enter::before {
-               content: "enter";
+               content: "⏎";
                position: relative;
                display: inline-block;
                padding: 3px;
+               padding-left: 8px;
+               padding-right: 8px;
                bottom: 2px;           
                transition: scale 0.1s;
              }
@@ -336,13 +338,89 @@
          }
          #updates {
            grid-area: updates;
-         } 
+         }
+         #alphaboard {
+           grid-area: alpha;
+         }
+         #numboard {
+           grid-area: numboard;
+         }
+
+         #alphaboard,
+         #numboard {
+           grid-template-columns: repeat(6, 1fr);    
+           gap: 6px;                                
+           background: var(--bgColor);
+           border-color: var(--accent);
+           display: none;
+
+           transition: opacity 0.1s; 
+           @starting-style {
+             opacity: 0;
+           }
+
+         }
+
+         .box {
+           transition: opacity 0.1s; 
+           @starting-style {
+             opacity: 0;
+           }
+         }
 
 
-         #logo, #dash, #detail, .sidebar#left { display: none; }
+         #logo, #dash, #detail, .sidebar#left { display: none; opacity: 0; }
+
+         @media (width <= 850px) {
+           body.keyboard {
+             grid-template-areas:
+               "header header header"
+               "main main main"
+               "alpha alpha alpha"
+               "updates updates updates";
+
+             #alphaboard {
+               display: grid;
+             }
+             #right {
+               display: none;
+               opacity: 0;
+             }
+           }
+         }
+         
+
+         .key {
+           background: var(--bgColor);
+           border: 1.5px solid var(--accent);
+           border-bottom-width: 2.25px;
+           border-radius: 3px;
+           color: var(--accent);
+           font-weight: 750;
+           font-size: 3vh;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           cursor: pointer;
+           transition: transform .1s;
+         }
+         .key:active {
+           transform: translateY(2px);
+           box-shadow: inset 0 1px 2px rgba(0,0,0,0.4);
+         }
+
+         .key.action {
+           background: var(--bgColor);
+           grid-column: span 1;
+         }
+
+         .key.action:last-of-type {
+           grid-column: span 2;
+         }
+
          
          /* DESKTOP VIEW */
-         @media (min-width: 850px) {
+         @media (width > 850px) {
            body {
              grid-template-columns: var(--sidebarWidth) 1fr var(--sidebarWidth);
              grid-template-rows: auto 1fr 0.2fr 0.1fr;
@@ -353,7 +431,7 @@
                "dash   updates   detail";
            }
            
-           #dash, #detail, .sidebar#left, .sidebar#right { display: flex; } /* show hidden panels */
+           #dash, #detail, .sidebar#left, .sidebar#right { display: flex; opacity: 1; } /* show hidden panels */
 
            #navbar button {
              font-size: var(--topFontSize);
@@ -371,7 +449,8 @@
              justify-content: center;
              font-size: var(--topFontSize);
              cursor: pointer;
-             transition: scale 0.05s;
+             transition: scale 0.05s, opacity 0.1s;
+             opacity: 1;
              
              i {
                color: hsl(200, 30%, 70%);
@@ -442,6 +521,32 @@
         <aside class="sidebar box" id="right">
             <h1 class="filler"> KINGDOM MANAGEMENT </h1>
         </aside>
+        
+        <aside  id="alphaboard">
+            <div class="key">A</div><div class="key">B</div><div class="key">C</div><div class="key">D</div>
+            <div class="key">E</div><div class="key">F</div><div class="key">G</div><div class="key">H</div>
+            <div class="key">I</div><div class="key">J</div><div class="key">K</div><div class="key">L</div>
+            <div class="key">M</div><div class="key">N</div><div class="key">O</div><div class="key">P</div>
+            <div class="key">Q</div><div class="key">R</div><div class="key">S</div><div class="key">T</div>
+            <div class="key">U</div><div class="key">V</div><div class="key">W</div><div class="key">X</div>
+            <div class="key">Y</div><div class="key">Z</div>
+            <div class="key action">⟵</div>
+            <div class="key action">SPC</div>
+            <div class="key action">⏎</div>
+        </aside>
+
+        </aside>
+
+        <aside id="numboard">
+            <div class="key">1</div><div class="key">2</div><div class="key">3</div>
+            <div class="key">4</div><div class="key">5</div><div class="key">6</div>
+            <div class="key">7</div><div class="key">8</div><div class="key">9</div>
+            <div class="key">0</div><div class="key">.</div>
+            <div class="key action">⟵</div>
+            <div class="key action">⏎</div>
+        </aside>
+
+
 
         <script type="module">
          import {typeOn, typeP, collapseP, typePWithInputs} from "./typing.js";
@@ -458,6 +563,56 @@
            document.querySelectorAll(".nudged").forEach(b => b.classList.remove("nudged"));
          };
 
+         document.querySelectorAll(".key").forEach(k => {
+           k.tabIndex = 0;
+           k.onpointerdown = () => {
+             k.focus();
+
+             setTimeout( () => {
+               let input = document.activeElement;
+               switch(k.innerText) {
+                 case "⏎":
+                   input.dispatchEvent(
+                     new KeyboardEvent('keydown', {
+                       code: 'Enter',
+                       key: 'Enter',
+                       charCode: 13,
+                       keyCode: 13,
+                       view: window,
+                       bubbles: true
+                     })
+                   );
+                   break;
+                 case "SPC":
+                   input.dispatchEvent(
+                     new KeyboardEvent('keydown', {
+                       code: 'Space',
+                       key: ' ',
+                       charCode: 32,
+                       keyCode: 32,
+                       view: window,
+                       bubbles: true
+                     })
+                   );
+                   break;
+                 case "⟵":
+                   input.value = input.value.slice(0, -1);
+                   input.dispatchEvent(
+                     new Event('input', { bubbles: true, cancelable: true })
+                   );
+                   break;
+                 default:
+                   input.value = input.value + k.innerText;
+                   input.dispatchEvent(
+                     new Event('input', { bubbles: true, cancelable: true, data: k.innerText })
+                   );
+               }
+               
+               
+             }, 0);
+           };
+         });
+
          const story = document.getElementById("story");
          let currentCue;
 
@@ -467,7 +622,7 @@
          }
 
          const beginTutorial = () => 
-           typePWithInputs(story, "You jolt awake, your head spinning. What a wild dream that must have been. You can hardly even remember your own name... But of course, it is @ @!    ", ["getFirstName", "getLastName"], (e) => nameValidate(e), (p,inps) => getName(p, inps));
+           typePWithInputs(story, "You jolt awake, your head spinning. What a wild dream that must have been. You can hardly even remember your own name... But of course, it is @ @!    ", "5.5em", ["getFirstName", "getLastName"], (e) => nameValidate(e), (p,inps) => getName(p, inps));
 
          const isAlphabetic = (text) => [...text].every(c => "abcdefghijklmnopqrstuvwxyz".includes(c.toLowerCase()));
          
@@ -511,10 +666,14 @@
 
          const clearInput = (p, cb=()=>{}) => {
            p.querySelectorAll(".inputwrap").forEach(i => {
+             i.firstChild.onblur = null;
+             i.firstChild.onfocus = null;
              i.firstChild.classList.add("settled");
              i.style.transitionDuration = "";
              i.firstChild.style.transitionDuration = "";
            });
+           document.body.classList.remove("keyboard");
+
            const wrap = (e) => {
              cb();
              e.target.removeEventListener("transitionend", wrap);
@@ -559,19 +718,21 @@
            currentCue = getCue("Enter", () => getAppearance(p));
 
            inputFirst.addEventListener("keydown", (e) => {if (e.key === " ") {e.preventDefault(); inputSecond.focus();}});
-           
-           setTimeout(() => {
-             inputFirst.focus();
-           }, 300);
+           inputFirst.focus();
+           inputFirst.onblur = (e) => {if (e.relatedTarget !== inputSecond) inputFirst.focus();};
+           inputSecond.onblur = (e) => {if (e.relatedTarget !== inputFirst) inputSecond.focus()};
+
+
          };
 
+         
          
          const nameValidate = (e) => {
            if (!e.data) {
              if (!e.target.value) {
                e.target.classList.remove("full");
                e.target.style.transitionDuration = "";
-               e.target.parentNode.transitionDuration = "";
+               e.target.parentNode.style.transitionDuration = "";
                e.target.style.width = "";
                e.target.parentNode.style.width = "";
                currentCue.classList.remove("visible");
@@ -616,9 +777,14 @@
              } else {
                currentCue.classList.remove("visible");
              }
-           };
+           } else {
+             e.target.style.transitionDuration = "";
+             e.target.parentNode.style.transitionDuration = "";
+             e.target.style.width = "";
+             e.target.parentNode.style.width = "";
+             currentCue.classList.remove("visible");
+           }
          };
-
          beginTutorial();
         </script>
     </body>

@@ -35,13 +35,14 @@ export function typeP(text, body, callback = (p) => {}) {
 
 
 // expects a string with @ representing inputs
-export async function typePWithInputs(body, string, ids, cb, externalCB) {
+export async function typePWithInputs(body, string, width, ids, cb, externalCB) {
     let p = document.createElement("p");
     body.appendChild(p);
     [...string].forEach(c => {
         let span = document.createElement("span");
         if (c === "@") {
             span.className = "inputwrap";
+            span.style.width = width;
         } else {
             span.style.color = "transparent";
             span.style.pointerEvents = "none";
@@ -69,8 +70,16 @@ export async function typePWithInputs(body, string, ids, cb, externalCB) {
             const input = document.createElement("input");
             input.id           = ids[inputIndex++];
             input.autocomplete = "off";
+            input.inputmode    = "none";
             input.spellcheck   = false;
             input.oninput      = cb;
+            input.onfocus      = () => document.body.classList.add("keyboard");
+            input.onblur      = (e) => {
+                if (!e.relatedTarget?.closest("#alphaboard, #numboard")) document.body.classList.remove("keyboard");
+                else
+                    e.target.focus();
+            };
+            
             input.onanimationend = () => input.classList.remove("invalid");
 
             inputs.push(input);
