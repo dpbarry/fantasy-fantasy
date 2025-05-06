@@ -221,6 +221,78 @@
 
            }
 
+           #sonChoice, #daughterChoice {
+             font-family: Vinque;
+             font-size: 0.9em;
+             cursor: pointer;
+             border-radius:4px;
+             padding-left: 0.2em;
+             padding-right: 0.2em;
+             position: relative;
+             transition: padding 0.1s, font-size 0.1s, bottom 0.15s;
+
+             &::after {
+               content: "";
+               position: absolute;
+               left: 0;
+               top: 2px;
+               width: 100%;
+               height: 100%;
+               border: 0.5px solid transparent;
+               border-bottom-width: 1.75px;
+               border-radius: 3px;
+               animation: cueing 0.7s linear infinite alternate;            
+               transition: scale 0.1s, border 0.1s, filter 0.075s;
+             }
+             
+             @media (pointer: fine) and (hover:hover) {
+               &:hover {
+                 padding-left: 0.4em;
+                 padding-right: 0.4em;
+               }
+               &:hover::after {
+                 filter: unset;
+               }
+             }
+             &.selected {
+               padding-left: 0.4em;
+               padding-right: 0.4em;
+               &::after {animation: none; opacity: 1;}
+             }
+             &:active {
+               bottom: 0.1rem;
+             }
+           }
+
+           #sonChoice {
+             color: hsl(200, 70%, 80%);
+             &.visible::after {
+               border: 0.5px solid hsl(200, 40%, 80%);
+               border-bottom-width: 1.75px;
+             }
+
+
+             &.selected ~ #daughterChoice,  &:has(~ #daughterChoice.selected){
+               font-size: 0.6em;
+               &::after {animation: none; opacity: 0.2;}
+             }
+             
+           }
+           #daughterChoice {
+             color: hsl(330, 70%, 80%);
+             &.visible::after {
+               border:  0.5px solid hsl(330, 40%, 80%);
+               border-bottom-width: 1.75px;
+             }
+           }
+
+           p:has(#sonChoice.selected) + .cue,  p:has(#daughterChoice.selected) + .cue {
+             opacity: 0.8;
+             cursor: pointer;
+             pointer-events: all;
+             transition-delay: 0s;
+           }
+
            .cue {
              font-size: 1em;
              opacity: 0;
@@ -255,13 +327,23 @@
                border-bottom-width: 2px;
                border-radius: 3px;
                animation: cueing 0.5s linear infinite alternate;            
-               transition: scale 0.1s;
+               transition: scale 0.1s, opacity 0.1s;
              }
 
              &.visible {
                opacity: 0.8;
                cursor: pointer;
                pointer-events: all;
+             }
+
+             @media (pointer: fine) and (hover:hover) {
+               &:hover::after {
+                 animation: none;
+                 opacity: 1;
+               }
+               &:not(.nudged):hover::after, &:not(.nudged):hover::before {
+                 scale: 1.05;
+               }
              }
 
              &.done, &.done::before, &.done::after {
@@ -513,7 +595,7 @@
 
 
     <script type="module">
-     import {typeOn, typeP, collapseP, typePWithInputs} from "./typing.js";
+     import {typeOn, typeP, collapseP, typePWithInputs, typePWithSpans} from "./typing.js";
 
 
      document.getElementById("logo").onclick = () => location.href = location.href;
@@ -647,20 +729,29 @@
        }
        p.querySelector("input").addEventListener("transitionend", wrap);
      };
-     const getAppearance = (p) => {
+     const getGender = (p) => {
        let n = 0;
        // elaborate process to collapse both the unnecessary spans (for performance) and the inputs so they mesh with the text
        clearInput(p, () => {
-         collapseP(p, (i) =>`<span class='fakegetname settled' style='font-size: 0.9em; display: inline-block; text-align: center; width:${p.querySelectorAll("input")[n++].getBoundingClientRect().width}px; transition: width 0.2s;'>` + i + "</span>");
+         collapseP(p, (i) =>`<span class='fakegetname settled' style='font-size: 0.9em; display: inline-block; text-align: center; width:${p.querySelectorAll("input")[n++].getBoundingClientRect().width}px; transition: width 0.2s;'>` + i.firstChild.value + "</span>");
          document.querySelectorAll(".fakegetname").forEach( n => {
            n.style.width =  getTrueWidthName(n.innerText) + "px";
            n.ontransitionend = () => n.style.width = "min-content";
          });
        });
 
-       setTimeout(() => typeP("You roll out of bed, hoping you haven’t missed the first bell. Your father said the meeting today had to be as early as possible. Maybe that explained the odd sleep: you had a feeling that this might be The Meeting, the one long awaited by any onlyborn child of a king.", story), 200);
-     };
+       setTimeout(async () => {
+         let [sonChoice, daughterChoice] = await typePWithSpans("You roll out of bed, hoping you haven’t missed the first bell. Your father said the meeting today had to be as early as possible. Maybe that explained the odd sleep: you had a feeling that this might be The Meeting, the one long awaited by any firstborn @ / @ of a king.", story, ["sonChoice", "daughterChoice"], ["son", "daughter"]);
 
+         [sonChoice, daughterChoice].forEach(c => {
+           c.onclick = () => {if (c.parentNode.querySelector(".selected"))c.parentNode.querySelector(".selected").classList.remove("selected"); c.classList.add("selected"); };
+           c.onpointerdown = () => c.classList.add("nudged");
+         });
+
+         currentCue = getCue("Enter", (p) => getAppearance(p));}, 200);
+     };
+     
+     
      function getTrueWidthName(text) {
        let p = document.createElement("p");
        p.className = "fakeinput fakegetname";
@@ -682,7 +773,7 @@
      const getName = (p, inputs) => {
        const inputFirst = inputs[0];
        const inputSecond = inputs[1];
-       currentCue = getCue("Enter", () => getAppearance(p));
+       currentCue = getCue("Enter", () => getGender(p));
 
        inputFirst.addEventListener("keydown", (e) => {if (e.key === " ") {e.preventDefault(); inputSecond.focus();}});
        inputFirst.focus();
