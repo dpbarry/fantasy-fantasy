@@ -73,9 +73,9 @@ export async function typePWithInputs(body, string, width, ids, cb, externalCB) 
             input.inputMode    = "none";
             input.spellcheck   = false;
             input.oninput      = cb;
-            input.onfocus      = () => document.body.classList.add("keyboard");
+            input.onfocus      = () => document.body.classList.add("keyboardactive");
             input.onblur      = (e) => {
-                if (!e.relatedTarget?.closest("#alphaboard, #numboard")) document.body.classList.remove("keyboard");
+                if (!e.relatedTarget?.closest("#alphaboard, #numboard")) document.body.classList.remove("keyboardactive");
                 else
                     e.target.focus();
             };

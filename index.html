@@ -92,7 +92,6 @@
          *:has(> .filler) { display: flex; justify-content: center; align-items: center;}         
 
          #navbar {
-           grid-area: header;
            display: flex;
            gap: var(--boxGap);
            overflow-x: auto;
@@ -124,50 +123,17 @@
 
            &:focus, &:active, &.chosen {
              outline: none;
-
-             &:is(#field) {
-               box-shadow: inset 0 0 0 1.5px  hsl(74, 90%, 30%);
-               border-color: hsl(74, 90%, 30%);
-               background-color: hsl(74, 90%, 8%);
-             }
-
-             &:is(#city) {
-               box-shadow: inset 0 0 0 1.5px  hsl(40, 90%, 30%);
-               border-color: hsl(40, 90%, 30%);
-               background-color: hsl(40, 90%, 8%);
-             }
-
-             &:is(#config) {
-               box-shadow: inset 0 0 0 1.5px  hsl(175, 10%, 45%);
-               border-color: hsl(175, 10%, 45%);
-               background-color: hsl(175, 10%, 8%);
-             }
-             
+             border-color: var(--accent);
+             box-shadow: inset 0 0 0 1.5px var(--accent);
            }
          }
          
          @media (pointer: fine) and (hover: hover) {
-           #navbar button:hover:not(.chosen, :focus, :active) {
-             &:is(#field) {
-               border-color:hsl(74, 90%, 30%);
-             }
-
-             &:is(#city) {
-               border-color: hsl(40, 90%, 30%);
-             }
-
-             &:is(#config) {
-               border-color: hsl(175, 10%, 45%);
-             }
+           #navbar button:hover {
+             border-color: var(--accent);
            }
          }
-
-         #logo {
-           grid-area: logo;
-         }
-
          main {
-           grid-area: main;
            display: flex;
            flex-direction: column;
          }
@@ -318,38 +284,44 @@
            100% {border-color: var(--accent); }
          }
          
-         .sidebar#left {
-           grid-area: left;
-           display: flex;     
-         }
-         .sidebar#right {
-           grid-area: right;
-           display: flex;
+
+         #logo-wrap    { grid-area: logo; }
+         #navbar-wrap  { grid-area: header; }
+         #left-wrap    { grid-area: left; }
+         #right-wrap   { grid-area: right; }
+         #dash-wrap    { grid-area: dash; }
+         #detail-wrap  { grid-area: detail; }
+         #updates-wrap { grid-area: updates; }
+         #main-wrap    { grid-area: main; }
+         
+
+         .box {
+           transition: opacity 0.1s;
+           height: 100%;
+           width: 100%;
+           @starting-style {
+             opacity: 0;
+           }
          }
 
-         #actionbar {
-           grid-area: actionbar;
-         }
-         #dash {
-           grid-area: dash;
-         }
-         #detail {
-           grid-area: detail;
-         }
-         #updates {
-           grid-area: updates;
-         }
-         #alphaboard {
-           grid-area: alpha;
-         }
-         #numboard {
-           grid-area: numboard;
+
+         #logo-wrap, #dash-wrap, #detail-wrap, #left-wrap { display: none; opacity: 0; }
+
+         @media (width <= 850px) {
+           body.keyboardactive {
+             #alphaboard {
+               display: grid;
+             }
+             #kingdom {
+               display: none;
+               opacity: 0;
+             }
+           }
          }
 
-         #alphaboard,
-         #numboard {
-           grid-template-columns: repeat(6, 1fr);    
-           gap: 6px;                                
+         .keyboard {
+           width: 100%;
+           height: 100%;
            background: var(--bgColor);
            border-color: var(--accent);
            display: none;
@@ -358,65 +330,48 @@
            @starting-style {
              opacity: 0;
            }
-
-         }
-
-         .box {
-           transition: opacity 0.1s; 
-           @starting-style {
-             opacity: 0;
+           .key {
+             background: transparent;
+             border: 1.5px solid var(--accent);
+             border-bottom-width: 2.25px;
+             border-radius: 3px;
+             color: var(--accent);
+             font-weight: 750;
+             font-size: 3vh;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             cursor: pointer;
+             transition: transform .1s;
            }
-         }
-
-
-         #logo, #dash, #detail, .sidebar#left { display: none; opacity: 0; }
-
-         @media (width <= 850px) {
-           body.keyboard {
-             grid-template-areas:
-               "header header header"
-               "main main main"
-               "alpha alpha alpha"
-               "updates updates updates";
-
-             #alphaboard {
-               display: grid;
-             }
-             #right {
-               display: none;
-               opacity: 0;
-             }
+           .key:active {
+             transform: translateY(2px);
            }
-         }
-         
 
-         .key {
-           background: var(--bgColor);
-           border: 1.5px solid var(--accent);
-           border-bottom-width: 2.25px;
-           border-radius: 3px;
-           color: var(--accent);
-           font-weight: 750;
-           font-size: 3vh;
-           display: flex;
-           align-items: center;
-           justify-content: center;
-           cursor: pointer;
-           transition: transform .1s;
-         }
-         .key:active {
-           transform: translateY(2px);
-           box-shadow: inset 0 1px 2px rgba(0,0,0,0.4);
+           .key.action {
+             grid-column: span 1;
+           }
+
+           .key.bkspc {
+             background-image: url("./assets/bkspc.svg");
+             background-size: 40%;
+             background-repeat: no-repeat;
+             background-position: center;
+             filter: invert(56%) sepia(98%) saturate(2737%) hue-rotate(153deg) brightness(101%) contrast(84%);
+
+           }
+           .key.action:last-of-type {
+             grid-column: span 2;
+           }
+
          }
 
-         .key.action {
-           background: var(--bgColor);
-           grid-column: span 1;
+         #alphaboard {
+           grid-template-columns: repeat(6, 1fr);    
+           gap: 6px;                                
          }
 
-         .key.action:last-of-type {
-           grid-column: span 2;
-         }
+
 
          
          /* DESKTOP VIEW */
@@ -431,7 +386,7 @@
                "dash   updates   detail";
            }
            
-           #dash, #detail, .sidebar#left, .sidebar#right { display: flex; opacity: 1; } /* show hidden panels */
+           #dash-wrap, #detail-wrap, #left-wrap, #logo-wrap { display: flex; opacity: 1; } /* show hidden panels */
 
            #navbar button {
              font-size: var(--topFontSize);
@@ -442,7 +397,6 @@
            }
            
            #logo {
-             grid-area: logo;
              display: flex;
              align-items: center;
              width: var(--sidebarWidth);
@@ -482,310 +436,328 @@
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </head>
 
-
     <body>
-        <div id="logo" class="box nudge">
-            <i class="ra ra-crossed-swords"></i>
-            <span id="firstword">Fantasy</span>
-            <span id="secondword">Fantasy</span>
-        </div>
-        <div id="navbar">
-            <button id="field" class="box nudge"><img src="assets/compass.svg"> </button>
-            <button id="city" class="box nudge"><img src="assets/city.svg"> </button>
-            <button id="config" class="box nudge"><img src="assets/cog.svg"></button>
-        </div>
-
-
-        <aside class="sidebar box" id="left">
-            <h1 class="filler"> ROSTER </h1>
-        </aside>
-
-        <main class="box">
-            <div id="story">
+        <div id="logo-wrap">
+            <div id="logo" class="box nudge">
+                <i class="ra ra-crossed-swords"></i>
+                <span id="firstword">Fantasy</span>
+                <span id="secondword">Fantasy</span>
             </div>
-        </main>
+        </div>
+
+        <div id="navbar-wrap">
+            <div id="navbar">
+                <button id="field" class="box nudge"><img src="assets/compass.svg"> </button>
+                <button id="city" class="box nudge"><img src="assets/city.svg"> </button>
+                <button id="config" class="box nudge"><img src="assets/cog.svg"></button>
+            </div>
+        </div>
+
+        <div id="left-wrap" class="sidebar">
+            <aside class="box" id="roster">
+                <h1 class="filler"> ROSTER </h1>
+            </aside>
+        </div>
+
+        <div id="main-wrap">
+            <main class="box">
+                <div id="story"></div>
+            </main>
+        </div>
+
         
-        <aside class="box" id="dash">
-            <h1 class="filler"> STATS </h1>
-        </aside>
 
-
-        <aside class="box" id="updates">
-            <h1 class="filler"> LIVE UPDATES </h1>
-        </aside>
+        <div id="updates-wrap">
+            <aside class="box" id="updates">
+                <h1 class="filler"> LIVE UPDATES </h1>
+            </aside>
+            <aside class="keyboard" id="numboard">
+                <div class="key">1</div><div class="key">2</div><div class="key">3</div>
+                <div class="key">4</div><div class="key">5</div><div class="key">6</div>
+                <div class="key">7</div><div class="key">8</div><div class="key">9</div>
+                <div class="key">0</div><div class="key">.</div>
+                <div class="key action bkspc"></div>
+                <div class="key action">⏎</div>
+            </aside>
+        </div>
         
-        <aside class="box" id="detail">
-            <h1 class="filler"> MISCELLANEA </h1>
-        </aside>
+        <div id="dash-wrap">
+            <aside class="box" id="dash">
+                <h1 class="filler"> STATS </h1>
+            </aside>
+        </div>
 
-        <aside class="sidebar box" id="right">
-            <h1 class="filler"> KINGDOM MANAGEMENT </h1>
-        </aside>
+        <div id="detail-wrap">
+            <aside class="box" id="detail">
+                <h1 class="filler"> MISCELLANEA </h1>
+            </aside>
+        </div>
+
+        <div id="right-wrap" class="sidebar">
+            <aside class="box" id="kingdom">
+                <h1 class="filler"> KINGDOM MANAGEMENT </h1>
+            </aside>
+            <aside id="alphaboard" class="keyboard">
+                <div class="key">A</div><div class="key">B</div><div class="key">C</div><div class="key">D</div>
+                <div class="key">E</div><div class="key">F</div><div class="key">G</div><div class="key">H</div>
+                <div class="key">I</div><div class="key">J</div><div class="key">K</div><div class="key">L</div>
+                <div class="key">M</div><div class="key">N</div><div class="key">O</div><div class="key">P</div>
+                <div class="key">Q</div><div class="key">R</div><div class="key">S</div><div class="key">T</div>
+                <div class="key">U</div><div class="key">V</div><div class="key">W</div><div class="key">X</div>
+                <div class="key">Y</div><div class="key">Z</div>
+                <div class="key action bkspc"></div>
+                <div class="key action">SPC</div>
+                <div class="key action">⏎</div>
+            </aside>
+        </div>
+
         
-        <aside  id="alphaboard">
-            <div class="key">A</div><div class="key">B</div><div class="key">C</div><div class="key">D</div>
-            <div class="key">E</div><div class="key">F</div><div class="key">G</div><div class="key">H</div>
-            <div class="key">I</div><div class="key">J</div><div class="key">K</div><div class="key">L</div>
-            <div class="key">M</div><div class="key">N</div><div class="key">O</div><div class="key">P</div>
-            <div class="key">Q</div><div class="key">R</div><div class="key">S</div><div class="key">T</div>
-            <div class="key">U</div><div class="key">V</div><div class="key">W</div><div class="key">X</div>
-            <div class="key">Y</div><div class="key">Z</div>
-            <div class="key action">⟵</div>
-            <div class="key action">SPC</div>
-            <div class="key action">⏎</div>
-        </aside>
-
-        </aside>
-
-        <aside id="numboard">
-            <div class="key">1</div><div class="key">2</div><div class="key">3</div>
-            <div class="key">4</div><div class="key">5</div><div class="key">6</div>
-            <div class="key">7</div><div class="key">8</div><div class="key">9</div>
-            <div class="key">0</div><div class="key">.</div>
-            <div class="key action">⟵</div>
-            <div class="key action">⏎</div>
-        </aside>
+        
+    </body>
 
 
 
-        <script type="module">
-         import {typeOn, typeP, collapseP, typePWithInputs} from "./typing.js";
+    <script type="module">
+     import {typeOn, typeP, collapseP, typePWithInputs} from "./typing.js";
 
 
-         document.getElementById("logo").onclick = () => location.href = location.href;
-         document.querySelectorAll("#navbar button").forEach(b => b.onpointerdown = () => selectMain(b.id));
+     document.getElementById("logo").onclick = () => location.href = location.href;
+     document.querySelectorAll("#navbar button").forEach(b => b.onpointerdown = () => selectMain(b.id));
 
-         document.querySelectorAll(".nudge").forEach(b =>
-           b.addEventListener("pointerdown", () =>
-             b.classList.add("nudged")
-         ));
-         document.onpointerup = () => {
-           document.querySelectorAll(".nudged").forEach(b => b.classList.remove("nudged"));
-         };
+     document.querySelectorAll(".nudge").forEach(b =>
+       b.addEventListener("pointerdown", () =>
+         b.classList.add("nudged")
+     ));
+     document.onpointerup = () => {
+       document.querySelectorAll(".nudged").forEach(b => b.classList.remove("nudged"));
+     };
 
-         document.querySelectorAll(".key").forEach(k => {
-           k.tabIndex = 0;
-           k.onpointerdown = () => {
-             k.focus();
+     document.querySelectorAll(".key").forEach(k => {
+       k.tabIndex = 0;
+       k.addEventListener("pointerdown", () =>
+         k.classList.add("nudged")
+       );
+       k.onpointerdown = () => {
+         k.focus();
 
-             setTimeout( () => {
-               let input = document.activeElement;
-               switch(k.innerText) {
-                 case "⏎":
-                   input.dispatchEvent(
-                     new KeyboardEvent('keydown', {
-                       code: 'Enter',
-                       key: 'Enter',
-                       charCode: 13,
-                       keyCode: 13,
-                       view: window,
-                       bubbles: true
-                     })
-                   );
-                   break;
-                 case "SPC":
-                   input.dispatchEvent(
-                     new KeyboardEvent('keydown', {
-                       code: 'Space',
-                       key: ' ',
-                       charCode: 32,
-                       keyCode: 32,
-                       view: window,
-                       bubbles: true
-                     })
-                   );
-                   break;
-                 case "⟵":
-                   input.value = input.value.slice(0, -1);
-                   input.dispatchEvent(
-                     new Event('input', { bubbles: true, cancelable: true })
-                   );
-                   break;
-                 default:
-                   input.value = input.value + k.innerText;
-                   input.dispatchEvent(
-                     new Event('input', { bubbles: true, cancelable: true, data: k.innerText })
-                   );
-               }
-               
-               
-             }, 0);
-           };
-         });
-
-         const story = document.getElementById("story");
-         let currentCue;
-
-         function selectMain(topic) {
-           document.querySelectorAll("#navbar button.chosen").forEach(b => b.classList.remove("chosen"));
-           document.querySelector("#navbar button#" + topic).classList.add("chosen");
-         }
-
-         const beginTutorial = () => 
-           typePWithInputs(story, "You jolt awake, your head spinning. What a wild dream that must have been. You can hardly even remember your own name... But of course, it is @ @!    ", "5.5em", ["getFirstName", "getLastName"], (e) => nameValidate(e), (p,inps) => getName(p, inps));
-
-         const isAlphabetic = (text) => [...text].every(c => "abcdefghijklmnopqrstuvwxyz".includes(c.toLowerCase()));
-         
-         
-
-
-         const getCue = (key, cb) => {
-           const cue = document.createElement("span");
-           cue.className = `cue ${key.toLowerCase()}`;
-           cue.addEventListener("pointerdown", () =>
-             cue.classList.add("nudged"));
-
-           const wrap = (e) => {
-             if (e.key == key) {
-               document.removeEventListener("keydown", wrap);
-               cue.removeEventListener("click", wrapClick);
-               cue.classList.add("done");
-               currentCue = null;
-               cue.addEventListener("transitionend", function h() {
-                 cue.removeEventListener("transitionend", h);
-                 cue.remove();
-                 cb();
-               });
-           }};
-           const wrapClick = (e) => {
-             document.removeEventListener("keydown", wrap);
-             cue.removeEventListener("click", wrapClick);
-             cue.classList.add("done");
-             currentCue = null;
-             cue.addEventListener("transitionend", function h() {
-               cue.removeEventListener("transitionend", h);
-               cue.remove();
-               cb();
-             });
-           };
-           document.addEventListener("keydown", wrap);
-           cue.addEventListener("click", wrapClick);
-           story.append(cue);
-           return cue;
-         };
-
-         const clearInput = (p, cb=()=>{}) => {
-           p.querySelectorAll(".inputwrap").forEach(i => {
-             i.firstChild.onblur = null;
-             i.firstChild.onfocus = null;
-             i.firstChild.classList.add("settled");
-             i.style.transitionDuration = "";
-             i.firstChild.style.transitionDuration = "";
-           });
-           document.body.classList.remove("keyboard");
-
-           const wrap = (e) => {
-             cb();
-             e.target.removeEventListener("transitionend", wrap);
-           }
-           p.querySelector("input").addEventListener("transitionend", wrap);
-         };
-         const getAppearance = (p) => {
-           let n = 0;
-           // elaborate process to collapse both the unnecessary spans (for performance) and the inputs so they mesh with the text
-           clearInput(p, () => {
-             collapseP(p, (i) =>`<span class='fakegetname settled' style='font-size: 0.9em; display: inline-block; text-align: center; width:${p.querySelectorAll("input")[n++].getBoundingClientRect().width}px; transition: width 0.2s;'>` + i + "</span>");
-             document.querySelectorAll(".fakegetname").forEach( n => {
-               let width = getTrueWidthName(n.innerText);
-               n.style.width = width + "px";
-             });
-           });
-
-           setTimeout(() => typeP("You roll out of bed, hoping you haven’t missed the first bell. Your father said the meeting today had to be as early as possible. Maybe that explained the odd sleep: you had a feeling that this might be The Meeting, the one long awaited by any onlyborn child of a king.", story), 200);
-         };
-
-         function getTrueWidthName(text) {
-           let p = document.createElement("p");
-           p.className = "fakeinput fakegetname";
-           p.style.color = "transparent";
-           p.style.pointerEvents = "none";
-           p.style.userSelect = "none";
-           p.style.fontSize = "0.9em";
-
-           story.append(p);
-           p.innerText = text;
-
-           let rect = p.getBoundingClientRect();
-           let store = rect.width;
-           p.remove();
-           return store;
-         }
-
-
-         const getName = (p, inputs) => {
-           const inputFirst = inputs[0];
-           const inputSecond = inputs[1];
-           currentCue = getCue("Enter", () => getAppearance(p));
-
-           inputFirst.addEventListener("keydown", (e) => {if (e.key === " ") {e.preventDefault(); inputSecond.focus();}});
-           inputFirst.focus();
-           inputFirst.onblur = (e) => {if (e.relatedTarget !== inputSecond) inputFirst.focus();};
-           inputSecond.onblur = (e) => {if (e.relatedTarget !== inputFirst) inputSecond.focus()};
-
-
-         };
-
-         
-         
-         const nameValidate = (e) => {
-           if (!e.data) {
-             if (!e.target.value) {
-               e.target.classList.remove("full");
-               e.target.style.transitionDuration = "";
-               e.target.parentNode.style.transitionDuration = "";
-               e.target.style.width = "";
-               e.target.parentNode.style.width = "";
-               currentCue.classList.remove("visible");
-               return;
-             }
-           } else if (!isAlphabetic(e.data)) {
-             let store = e.target.selectionStart - [...e.data].filter(c => !isAlphabetic(c)).length;
-             const inputValue = e.target.value;
-             const alphabeticValue = inputValue.replace(/[^a-zA-Z]/g, '');
-             e.target.value = alphabeticValue;
-
-             e.target.classList.add("invalid");
-             
-             e.target.selectionStart = store;
-             e.target.selectionEnd = store;
+         setTimeout( () => {
+           let input = document.activeElement;
+           switch(k.innerText) {
+             case "⏎":
+               input.dispatchEvent(
+                 new KeyboardEvent('keydown', {
+                   code: 'Enter',
+                   key: 'Enter',
+                   charCode: 13,
+                   keyCode: 13,
+                   view: window,
+                   bubbles: true
+                 })
+               );
+               break;
+             case "SPC":
+               input.dispatchEvent(
+                 new KeyboardEvent('keydown', {
+                   code: 'Space',
+                   key: ' ',
+                   charCode: 32,
+                   keyCode: 32,
+                   view: window,
+                   bubbles: true
+                 })
+               );
+               break;
+             case "⟵":
+               input.value = input.value.slice(0, -1);
+               input.dispatchEvent(
+                 new Event('input', { bubbles: true, cancelable: true })
+               );
+               break;
+             default:
+               input.value = input.value + k.innerText;
+               input.dispatchEvent(
+                 new Event('input', { bubbles: true, cancelable: true, data: k.innerText })
+               );
            }
            
+           
+         }, 0);
+       };
+     });
 
-           if (e.target.value.length >= 15)
-             e.target.classList.add("full");
-           else
-             e.target.classList.remove("full");
+     const story = document.getElementById("story");
+     let currentCue;
+
+     function selectMain(topic) {
+       document.querySelectorAll("#navbar button.chosen").forEach(b => b.classList.remove("chosen"));
+       document.querySelector("#navbar button#" + topic).classList.add("chosen");
+     }
+
+     const beginTutorial = () => 
+       typePWithInputs(story, "You jolt awake, your head spinning. What a wild dream that must have been. You can hardly even remember your own name... But of course, it is @ @!    ", "5.5em", ["getFirstName", "getLastName"], (e) => nameValidate(e), (p,inps) => getName(p, inps));
+
+     const isAlphabetic = (text) => [...text].every(c => "abcdefghijklmnopqrstuvwxyz".includes(c.toLowerCase()));
+     
+     
 
 
-           if (e.target.value.length) {
-             let store = e.target.selectionStart;
-             
-             e.target.value = e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1).toLowerCase();
+     const getCue = (key, cb) => {
+       const cue = document.createElement("span");
+       cue.className = `cue ${key.toLowerCase()}`;
+       cue.addEventListener("pointerdown", () =>
+         cue.classList.add("nudged"));
 
-             e.target.selectionStart = store;
-             e.target.selectionEnd = store;
-             let width = getTrueWidthName(e.target.value) / 15 + "em";  // convert to em so as to adapt to screen change
-             e.target.style.width = width;
-             e.target.parentNode.style.width = width;
+       const wrap = (e) => {
+         if (e.key == key && cue.classList.contains("visible")) {
+           document.removeEventListener("keydown", wrap);
+           cue.removeEventListener("click", wrapClick);
+           cue.classList.add("done");
+           currentCue = null;
+           cue.addEventListener("transitionend", function h() {
+             cue.removeEventListener("transitionend", h);
+             cue.remove();
+             cb();
+           });
+       }};
+       const wrapClick = (e) => {
+         document.removeEventListener("keydown", wrap);
+         cue.removeEventListener("click", wrapClick);
+         cue.classList.add("done");
+         currentCue = null;
+         cue.addEventListener("transitionend", function h() {
+           cue.removeEventListener("transitionend", h);
+           cue.remove();
+           cb();
+         });
+       };
+       document.addEventListener("keydown", wrap);
+       cue.addEventListener("click", wrapClick);
+       story.append(cue);
+       return cue;
+     };
+
+     const clearInput = (p, cb=()=>{}) => {
+       p.querySelectorAll(".inputwrap").forEach(i => {
+         i.firstChild.onblur = null;
+         i.firstChild.onfocus = null;
+         i.firstChild.classList.add("settled");
+         i.style.transitionDuration = "";
+         i.firstChild.style.transitionDuration = "";
+       });
+       document.body.classList.remove("keyboardactive");
+
+       const wrap = (e) => {
+         cb();
+         e.target.removeEventListener("transitionend", wrap);
+       }
+       p.querySelector("input").addEventListener("transitionend", wrap);
+     };
+     const getAppearance = (p) => {
+       let n = 0;
+       // elaborate process to collapse both the unnecessary spans (for performance) and the inputs so they mesh with the text
+       clearInput(p, () => {
+         collapseP(p, (i) =>`<span class='fakegetname settled' style='font-size: 0.9em; display: inline-block; text-align: center; width:${p.querySelectorAll("input")[n++].getBoundingClientRect().width}px; transition: width 0.2s;'>` + i + "</span>");
+         document.querySelectorAll(".fakegetname").forEach( n => {
+           n.style.width =  getTrueWidthName(n.innerText) + "px";
+           n.ontransitionend = () => n.style.width = "min-content";
+         });
+       });
+
+       setTimeout(() => typeP("You roll out of bed, hoping you haven’t missed the first bell. Your father said the meeting today had to be as early as possible. Maybe that explained the odd sleep: you had a feeling that this might be The Meeting, the one long awaited by any onlyborn child of a king.", story), 200);
+     };
+
+     function getTrueWidthName(text) {
+       let p = document.createElement("p");
+       p.className = "fakeinput fakegetname";
+       p.style.color = "transparent";
+       p.style.pointerEvents = "none";
+       p.style.userSelect = "none";
+       p.style.fontSize = "0.9em";
+
+       story.append(p);
+       p.innerText = text;
+
+       let rect = p.getBoundingClientRect();
+       let store = rect.width;
+       p.remove();
+       return store;
+     }
 
 
-             setTimeout( () => {e.target.style.transitionDuration = "0s"; e.target.parentNode.style.transitionDuration = "0s"; }, 100);
+     const getName = (p, inputs) => {
+       const inputFirst = inputs[0];
+       const inputSecond = inputs[1];
+       currentCue = getCue("Enter", () => getAppearance(p));
 
-             
-             if (event.target.parentNode.nextElementSibling.nextElementSibling.firstChild?.value?.length || event.target.parentNode.previousSibling.previousSibling.firstChild?.value?.length)  {
-               currentCue.classList.add("visible");
-             } else {
-               currentCue.classList.remove("visible");
-             }
-           } else {
-             e.target.style.transitionDuration = "";
-             e.target.parentNode.style.transitionDuration = "";
-             e.target.style.width = "";
-             e.target.parentNode.style.width = "";
-             currentCue.classList.remove("visible");
-           }
-         };
-         beginTutorial();
-        </script>
+       inputFirst.addEventListener("keydown", (e) => {if (e.key === " ") {e.preventDefault(); inputSecond.focus();}});
+       inputFirst.focus();
+       inputFirst.onblur = (e) => {if (e.relatedTarget !== inputSecond) inputFirst.focus();};
+       inputSecond.onblur = (e) => {if (e.relatedTarget !== inputFirst) inputSecond.focus()};
+
+
+     };
+
+     
+     
+     const nameValidate = (e) => {
+       if (!e.data) {
+         if (!e.target.value) {
+           e.target.classList.remove("full");
+           e.target.style.transitionDuration = "";
+           e.target.parentNode.style.transitionDuration = "";
+           e.target.style.width = "";
+           e.target.parentNode.style.width = "";
+           currentCue.classList.remove("visible");
+           return;
+         }
+       } else if (!isAlphabetic(e.data)) {
+         let store = e.target.selectionStart - [...e.data].filter(c => !isAlphabetic(c)).length;
+         const inputValue = e.target.value;
+         const alphabeticValue = inputValue.replace(/[^a-zA-Z]/g, '');
+         e.target.value = alphabeticValue;
+
+         e.target.classList.add("invalid");
+         
+         e.target.selectionStart = store;
+         e.target.selectionEnd = store;
+       }
+       
+
+       if (e.target.value.length >= 15)
+         e.target.classList.add("full");
+       else
+         e.target.classList.remove("full");
+
+
+       if (e.target.value.length) {
+         let store = e.target.selectionStart;
+         
+         e.target.value = e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1).toLowerCase();
+
+         e.target.selectionStart = store;
+         e.target.selectionEnd = store;
+         let width = getTrueWidthName(e.target.value) / 15 + "em";  // convert to em so as to adapt to screen change
+         e.target.style.width = width;
+         e.target.parentNode.style.width = width;
+
+
+         setTimeout( () => {e.target.style.transitionDuration = "0s"; e.target.parentNode.style.transitionDuration = "0s"; }, 100);
+
+         
+         if (event.target.parentNode.nextElementSibling.nextElementSibling.firstChild?.value?.length || event.target.parentNode.previousSibling.previousSibling.firstChild?.value?.length)  {
+           currentCue.classList.add("visible");
+         } else {
+           currentCue.classList.remove("visible");
+         }
+       } else {
+         e.target.style.transitionDuration = "";
+         e.target.parentNode.style.transitionDuration = "";
+         e.target.style.width = "";
+         e.target.parentNode.style.width = "";
+         currentCue.classList.remove("visible");
+       }
+     };
+     beginTutorial();
+    </script>
     </body>
 </html>
