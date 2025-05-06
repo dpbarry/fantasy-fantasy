@@ -70,7 +70,7 @@ export async function typePWithInputs(body, string, width, ids, cb, externalCB) 
             const input = document.createElement("input");
             input.id           = ids[inputIndex++];
             input.autocomplete = "off";
-            input.inputmode    = "none";
+            input.inputMode    = "none";
             input.spellcheck   = false;
             input.oninput      = cb;
             input.onfocus      = () => document.body.classList.add("keyboard");
