@@ -1,849 +1,801 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Fantasy Fantasy</title>
-        <link rel="icon" type="image/svg" href="./assets/favicon.svg">
+<head>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1" name="viewport"/>
+    <title>Fantasy Fantasy</title>
+    <link href="./assets/favicon.svg" rel="icon" type="image/svg">
 
-        <link rel="stylesheet" href="./assets/rpg-awesome.min.css" />
+    <link href="./assets/rpg-awesome.min.css" rel="stylesheet"/>
 
-        <style>
-         @font-face {
-           font-family: RPGAwesome;
-           src: url("fonts/rpgawesome-webfont.woff?v=0.1.0") format("woff");
-         }
-         @font-face {
-           font-family: ysabeau;
-           src: url("fonts/YsabeauOffice-VariableFont_wght.ttf") format("truetype");
-         }
-         @font-face {
-           font-family: varsity;
-           src: url("fonts/VarsityTeamBold.otf") format("opentype");
-         }
-         @font-face {
-           font-family: devinneswash;
-           src: url("fonts/DevinneSwash.ttf") format("truetype");
-         }
+    <style>
+        @font-face {
+            font-family: RPGAwesome;
+            src: url("fonts/rpgawesome-webfont.woff?v=0.1.0") format("woff");
+        }
 
-         @font-face {
-           font-family: vinque;
-           src: url("fonts/Vinque Rg.otf") format("opentype");
-         }
+        @font-face {
+            font-family: ysabeau;
+            src: url("fonts/YsabeauOffice-VariableFont_wght.ttf") format("truetype");
+        }
 
-         :root {
-           --boxGap: 0.5rem;
-           --sidebarWidth: 22vw;
+        @font-face {
+            font-family: varsity;
+            src: url("fonts/VarsityTeamBold.otf") format("opentype");
+        }
 
-           --topFontSize: clamp(0.75rem, 1.5vw, 2rem);
+        @font-face {
+            font-family: devinneswash;
+            src: url("fonts/DevinneSwash.ttf") format("truetype");
+        }
 
-           --bgColor: #010101;
-           --baseColor: #e0e0e0;
-           --boxColor: #e0e0e0;
-           --accent: hsl(120, 82.5%, 45%);
-           --accent: hsl(190, 82.5%, 45%);
-         }
+        @font-face {
+            font-family: vinque;
+            src: url("fonts/Vinque Rg.otf") format("opentype");
+        }
+
+        :root {
+            --boxGap: 0.5rem;
+            --sidebarWidth: 22vw;
+
+            --topFontSize: clamp(0.75rem, 1.5vw, 1.25rem);
+
+            --bgColor: #010101;
+            --baseColor: #e0e0e0;
+            --boxColor: #e0e0e0;
+            /* --accent: hsl(120, 82.5%, 45%); */
+            --accent: hsl(190, 82.5%, 45%);
+        }
 
 
-         *, *::before, *::after {
-           box-sizing: border-box;
-           scrollbar-width: none;
-           -webkit-tap-highlight-color: transparent;
-           -webkit-user-drag: none;
-         }
+        *, *::before, *::after {
+            box-sizing: border-box;
+            scrollbar-width: none;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-drag: none;
+        }
 
-         .box {
-           background: var(--bgColor);
-           border: 2px solid var(--boxColor);
-           border-radius: 3px;
-           padding: var(--boxGap);
-         }
+        .box {
+            background: var(--bgColor);
+            border: 2px solid var(--boxColor);
+            border-radius: 3px;
+            padding: var(--boxGap);
+        }
 
-         html, body {
-           padding: 0;
-           margin: 0;
-           width: 100%;
-           height: 100%;
-           overflow: hidden;
-         }
+        html, body {
+            padding: 0;
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
 
-         /* ASSUMES MOBILE */
-         .wrapper {width: 100%; height: 100%;}
-         body {
-           background: var(--bgColor);
-           color: var(--baseColor);
-           font-family: ysabeau, monospace;
-           display: grid;
-           grid-template-rows: auto 1fr 0.5fr 0.15fr;
-           grid-template-areas:
+        /* ASSUMES MOBILE */
+        .wrapper {
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            background: var(--bgColor);
+            color: var(--baseColor);
+            font-family: ysabeau, monospace;
+            display: grid;
+            grid-template-rows: auto 1fr 0.5fr 0.1fr;
+            grid-template-areas:
              "header header header"
              "main main main"
              "right right right"
              "updates updates updates";
-           gap: var(--boxGap);
-           padding: var(--boxGap);
-           padding-bottom: calc(var(--boxGap) + 1px); /* extra pixel feels right */
-         }
+            gap: var(--boxGap);
+            padding: var(--boxGap);
+        }
 
-         p, h1, h2, h3 {
-           margin: 0;
-         }
+        p, h1, h2, h3 {
+            margin: 0;
+        }
 
-         *:has(> .filler) { display: flex; justify-content: center; align-items: center;}         
+        *:has(> .lockedpanel) {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
 
-         #navbar {
-           display: flex;
-           gap: var(--boxGap);
-           overflow-x: auto;
-           justify-content: center;
-           flex: 1;
-           align-items: center;
-           width: 100%;
-         }
-         
-         #navbar button {
-           display: flex;
-           align-items: center;
-           justify-content: center;
-           flex-grow: 1;
-           color: var(--baseColor);
-           height: 100%;
-           font-weight: 600;
-           font-size: 1.55rem;
-           box-shadow: inset 0 0 0 1.5px var(--bgColor);
+        .lockedpanel {
+            transition: opacity 0.15s, bottom 0.2s;
+            opacity: 1;
+            position: relative;
+            font-size: 1rem;
+            font-family: varsity, sans-serif;
+        }
 
-           transition: background 0.05s, border 0.05s, box-shadow 0.05s, scale 0.05s;
-           white-space: nowrap;
-           cursor: pointer;
-           img {
-             height: 1em;
-             filter: invert(0.97);
-             user-select: none;
-           }
+        .lockedpanel.hide {
+            opacity: 0;
+            bottom: 5px;
+        }
 
-           &:focus, &:active, &.chosen {
-             outline: none;
-             border-color: var(--accent);
-             box-shadow: inset 0 0 0 1.5px var(--accent);
-           }
-         }
-         
-         @media (pointer: fine) and (hover: hover) {
-           #navbar button:hover {
-             border-color: var(--accent);
-           }
-         }
-         main {
-           display: flex;
-           flex-direction: column;
-         }
-         
-         #story {
-           flex: 1;
-           overflow-y: auto;
-           margin: 0;
-           font-size: clamp(0.75rem, 1.5vw + 1.5vh, 1.3rem);
-           font-weight:300;
-           padding-left: 0.1rem;
-           padding-right: 0.1rem;
+        #navbar {
+            display: flex;
+            gap: var(--boxGap);
+            overflow-x: auto;
+            justify-content: center;
+            flex: 1;
+            align-items: center;
+            width: 100%;
+        }
 
-           p {
-             line-height: 1.15;
-             text-align: justify;
-             margin-bottom: 0.75rem;
-           }
+        #navbar button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-grow: 1;
+            color: var(--baseColor);
+            height: 100%;
+            font-weight: 600;
+            font-size: 1.55rem;
+            box-shadow: inset 0 0 0 1.5px var(--bgColor);
 
-           .inputwrap {
-             display: inline-block;
-             position: relative;  
-             font-size: 0.9em;
-             padding-bottom: 1.5px;
+            transition: background 0.05s, border 0.05s, box-shadow 0.05s, scale 0.05s;
+            white-space: nowrap;
+            cursor: pointer;
 
-             transition: width 0.25s linear;
-             &:has(#getFirstName, #getLastName) {
-               width: 5.5em;
-               max-width: 8em;
-             }
-           }
-           .inputwrap::before {
-             content: "";
-             display: inline-block;
-             height: 1em;
-             visibility: hidden;
-           }
-           input, .fakeinput, p.fakeinput {
-             position: absolute;
-             top: 0; left: 0; bottom: 0; right: 0;
-             background: color-mix(in hsl, var(--bgColor) 94%, var(--baseColor));
-             padding: 0;
-             border: 0;
-             font-size: 1em;
-             padding-bottom: 1.5px;
-             border-bottom: 0.05em solid var(--baseColor);    
-             caret-color: var(--baseColor);
-             color: var(--baseColor);
-             border-radius: 2px;
-             outline: none;
-             text-align: center;
-             transition: width 0.25s linear, border-color 0.15s, background 0.15s;
+            img {
+                height: 1em;
+                filter: invert(0.97);
+                user-select: none;
+            }
 
-             &.invalid {
-               animation: invalid 0.18s forwards;
-             }
-             &.full {
-               border-color:  hsl(3, 75%, 50%);
-             }
+            &:focus, &:active, &.chosen {
+                outline: none;
+                border-color: var(--accent);
+                box-shadow: inset 0 0 0 1.5px var(--accent);
+            }
+        }
 
-           }
+        @media (pointer: fine) and (hover: hover) {
+            #navbar button:hover {
+                border-color: var(--accent);
+            }
+        }
 
-           .fakeinput, p.fakeinput {
-             width: fit-content;
-             transition: none !important;
-           }
+        main {
+            display: flex;
+            flex-direction: column;
+        }
 
-           .settled {
-             background: var(--bgColor) !important;
-             border-color: transparent !important;
-           }
+        #story {
+            flex: 1;
+            overflow-y: auto;
+            margin: 0;
+            font-size: clamp(0.75rem, 1.5vw + 1.5vh, 1.3rem);
+            font-weight: 300;
+            padding-left: 0.1rem;
+            padding-right: 0.1rem;
 
-           #getFirstName, #getLastName, .fakegetname {
-             font-family: vinque;
-             width: 5.5em;
-             max-width: 8em;
-             color: var(--accent);
-             border-color: var(--accent);
-             caret-color: color-mix(in hsl, var(--bgColor) 30%, var(--accent));
-             background: color-mix(in hsl, var(--bgColor) 94%, var(--baseColor));
+            p {
+                line-height: 1.15;
+                text-align: justify;
+                margin-bottom: 0.75rem;
+            }
 
-             @starting-style {
-               width: 0;
-             }
+            .inputwrap {
+                display: inline-block;
+                position: relative;
+                font-size: 0.9em;
+                padding-bottom: 1.5px;
 
-           }
+                transition: width 0.25s linear;
 
-           #sonChoice, #daughterChoice {
-             font-family: Vinque;
-             font-size: 0.9em;
-             cursor: pointer;
-             border-radius:4px;
-             padding-left: 0.2em;
-             padding-right: 0.2em;
-             position: relative;
-             transition: padding 0.1s, font-size 0.1s, bottom 0.15s;
+                &:has(#getFirstName, #getLastName) {
+                    width: 5.5em;
+                    max-width: 8em;
+                }
+            }
 
-             &::after {
-               content: "";
-               position: absolute;
-               left: 0;
-               top: 2px;
-               width: 100%;
-               height: 100%;
-               border: 0.5px solid transparent;
-               border-bottom-width: 1.75px;
-               border-radius: 3px;
-               animation: cueing 0.7s linear infinite alternate;            
-               transition: scale 0.1s, border 0.1s, filter 0.075s;
-             }
-             
-             @media (pointer: fine) and (hover:hover) {
-               &:hover {
-                 padding-left: 0.4em;
-                 padding-right: 0.4em;
-               }
-               &:hover::after {
-                 filter: unset;
-               }
-             }
-             &.selected {
-               padding-left: 0.4em;
-               padding-right: 0.4em;
-               &::after {animation: none; opacity: 1;}
-             }
-             &:active {
-               bottom: 0.1rem;
-             }
-           }
+            .inputwrap::before {
+                content: "";
+                display: inline-block;
+                height: 1em;
+                visibility: hidden;
+            }
 
-           #sonChoice {
-             color: hsl(200, 70%, 80%);
-             &.visible::after {
-               border: 0.5px solid hsl(200, 40%, 80%);
-               border-bottom-width: 1.75px;
-             }
+            input, .fakeinput, p.fakeinput {
+                position: absolute;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                right: 0;
+                background: color-mix(in hsl, var(--bgColor) 94%, var(--baseColor));
+                padding: 0;
+                border: 0;
+                font-size: 1em;
+                padding-bottom: 1.5px;
+                border-bottom: 0.05em solid var(--baseColor);
+                caret-color: var(--baseColor);
+                color: var(--baseColor);
+                border-radius: 2px;
+                outline: none;
+                text-align: center;
+                transition: width 0.25s linear, border-color 0.15s, background 0.15s;
+
+                &.invalid {
+                    animation: invalid 0.18s forwards;
+                }
+
+                &.full {
+                    border-color: hsl(3, 75%, 50%) !important;
+                }
+
+            }
+
+            .fakeinput, p.fakeinput {
+                width: fit-content;
+                transition: none !important;
+            }
+
+            .settled {
+                background: transparent !important;
+                border-color: transparent !important;
+
+                &::after {
+                    opacity: 0 !important;
+                }
+            }
 
 
-             &.selected ~ #daughterChoice,  &:has(~ #daughterChoice.selected){
-               font-size: 0.6em;
-               &::after {animation: none; opacity: 0.2;}
-             }
-             
-           }
-           #daughterChoice {
-             color: hsl(330, 70%, 80%);
-             &.visible::after {
-               border:  0.5px solid hsl(330, 40%, 80%);
-               border-bottom-width: 1.75px;
-             }
-           }
+            #getFirstName, #getLastName, .fakegetname {
+                font-family: vinque, serif;
+                width: 5.5em;
+                max-width: 8em;
+                color: var(--accent);
+                border-color: var(--accent);
+                caret-color: color-mix(in hsl, var(--bgColor) 30%, var(--accent));
+                background: color-mix(in hsl, var(--bgColor) 94%, var(--baseColor));
 
-           p:has(#sonChoice.selected) + .cue,  p:has(#daughterChoice.selected) + .cue {
-             opacity: 0.8;
-             cursor: pointer;
-             pointer-events: all;
-             transition-delay: 0s;
-           }
+                @starting-style {
+                    width: 0;
+                }
 
-           .cue {
-             font-size: 1em;
-             opacity: 0;
-             color: var(--accent);
-             font-weight: 650;
-             transition: opacity 0.2s 0.2s;
-             position: relative;
-             user-select: none;
-             pointer-events: none;
-             z-index: 2;
-             position: relative;
-             bottom: 0.65rem;
-             
-             &.enter::before {
-               content: "⏎";
-               position: relative;
-               display: inline-block;
-               padding: 3px;
-               padding-left: 8px;
-               padding-right: 8px;
-               bottom: 2px;           
-               transition: scale 0.1s;
-             }
-             &::after {
-               content: "";
-               position: absolute;
-               left: 0;
-               top: 0;
-               width: 100%;
-               height: 100%;
-               border: 1px solid var(--accent);
-               border-bottom-width: 2px;
-               border-radius: 3px;
-               animation: cueing 0.5s linear infinite alternate;            
-               transition: scale 0.1s, opacity 0.1s;
-             }
+            }
 
-             &.visible {
-               opacity: 0.8;
-               cursor: pointer;
-               pointer-events: all;
-             }
+            #sonChoice, #daughterChoice {
+                font-family: Vinque, serif;
+                font-size: 0.9em;
+                cursor: pointer;
+                border-radius: 4px;
+                padding-left: 0.2em;
+                padding-right: 0.2em;
+                position: relative;
+                opacity: 1;
+                transition: padding 0.1s, font-size 0.1s, bottom 0.15s, font-size 0.2s;
 
-             @media (pointer: fine) and (hover:hover) {
-               &:hover::after {
-                 animation: none;
-                 opacity: 1;
-               }
-               &:not(.nudged):hover::after, &:not(.nudged):hover::before {
-                 scale: 1.05;
-               }
-             }
+                &::after {
+                    content: "";
+                    position: absolute;
+                    left: 0;
+                    top: 2px;
+                    width: 100%;
+                    height: 100%;
+                    border: 0.5px solid transparent;
+                    border-bottom-width: 1.75px;
+                    border-radius: 3px;
+                    animation: cueing 0.7s linear infinite alternate;
+                    transition: scale 0.1s, border 0.1s, opacity 0.05s;
+                }
 
-             &.done, &.done::before, &.done::after {
-               transition: opacity 0.2s, scale 0.3s !important;
-               opacity: 0;
-               scale: 0;
-             }
-           }
-           
+                @media (pointer: fine) and (hover: hover) {
+                    &:hover {
+                        padding-left: 0.4em;
+                        padding-right: 0.4em;
+                    }
+                }
 
-         }
-         @keyframes cueing {
-           from {opacity: 1; }
-           to {opacity: 0.65; }
-         }
+                &.selected {
+                    padding-left: 0.4em;
+                    padding-right: 0.4em;
 
-         @keyframes invalid {
-           0% {border-color: var(-accent);}
-           50% {border-color: hsl(3, 75%, 70%); }
-           100% {border-color: var(--accent); }
-         }
-         
+                    &::after {
+                        animation: none;
+                        opacity: 1;
+                    }
+                }
 
-         #logo-wrap    { grid-area: logo; }
-         #navbar-wrap  { grid-area: header; }
-         #left-wrap    { grid-area: left; }
-         #right-wrap   { grid-area: right; }
-         #dash-wrap    { grid-area: dash; }
-         #detail-wrap  { grid-area: detail; }
-         #updates-wrap { grid-area: updates; }
-         #main-wrap    { grid-area: main; }
-         
+                &.hide {
+                    font-size: 0 !important;
 
-         .box {
-           transition: opacity 0.1s;
-           height: 100%;
-           width: 100%;
-           @starting-style {
-             opacity: 0;
-           }
-         }
+                    &::after {
+                        opacity: 0;
+                    }
+                }
+
+                &.selected.settled {
+                    padding-left: 0;
+                    padding-right: 0;
+                }
+
+                &:active {
+                    bottom: 0.1rem;
+                }
+
+                &:not(.selected).settled {
+                    font-size: 0 !important;
+                }
+            }
+
+            #sonChoice {
+                color: hsl(200, 70%, 80%);
+
+                &.visible::after {
+                    border: 0.5px solid hsl(200, 40%, 80%);
+                    border-bottom-width: 1.75px;
+                }
 
 
-         #logo-wrap, #dash-wrap, #detail-wrap, #left-wrap { display: none; opacity: 0; }
+                &.selected ~ #daughterChoice, &:has(~ #daughterChoice.selected) {
+                    font-size: 0.6em;
 
-         @media (width <= 850px) {
-           body.keyboardactive {
-             #alphaboard {
-               display: grid;
-             }
-             #kingdom {
-               display: none;
-               opacity: 0;
-             }
-           }
-         }
+                    &::after {
+                        animation: none;
+                        opacity: 0.2;
+                    }
+                }
 
-         .keyboard {
-           width: 100%;
-           height: 100%;
-           background: var(--bgColor);
-           border-color: var(--accent);
-           display: none;
+            }
 
-           transition: opacity 0.1s; 
-           @starting-style {
-             opacity: 0;
-           }
-           .key {
-             background: transparent;
-             border: 1.5px solid var(--accent);
-             border-bottom-width: 2.25px;
-             border-radius: 3px;
-             color: var(--accent);
-             font-weight: 750;
-             font-size: 3vh;
-             display: flex;
-             align-items: center;
-             justify-content: center;
-             cursor: pointer;
-             transition: transform .1s;
-           }
-           .key:active {
-             transform: translateY(2px);
-           }
+            #daughterChoice {
+                color: hsl(330, 70%, 80%);
 
-           .key.action {
-             grid-column: span 1;
-           }
+                &.visible::after {
+                    border: 0.5px solid hsl(330, 40%, 80%);
+                    border-bottom-width: 1.75px;
+                }
+            }
 
-           .key.bkspc {
-             background-image: url("./assets/bkspc.svg");
-             background-size: 40%;
-             background-repeat: no-repeat;
-             background-position: center;
-             filter: invert(56%) sepia(98%) saturate(2737%) hue-rotate(153deg) brightness(101%) contrast(84%);
-             color: transparent;
-           }
-           .key.action:last-of-type {
-             grid-column: span 2;
-           }
-
-         }
-
-         #alphaboard {
-           grid-template-columns: repeat(6, 1fr);    
-           gap: 6px;                                
-         }
+            #sonChoice ~ span:has(~ #daughterChoice).hide {
+                transition: font-size 0.2s;
+                font-size: 0;
+            }
 
 
+            p:has(#sonChoice.selected) + .cue, p:has(#daughterChoice.selected) + .cue {
+                opacity: 0.8;
+                cursor: pointer;
+                pointer-events: all;
+                transition-delay: 0s;
+            }
 
-         
-         /* DESKTOP VIEW */
-         @media (width > 850px) {
-           body {
-             grid-template-columns: var(--sidebarWidth) 1fr var(--sidebarWidth);
-             grid-template-rows: auto 1fr 0.2fr 0.1fr;
-             grid-template-areas:
+            .cue {
+                font-size: 1em;
+                opacity: 0;
+                color: var(--accent);
+                font-weight: 650;
+                transition: opacity 0.2s 0.2s;
+                user-select: none;
+                pointer-events: none;
+                z-index: 2;
+                position: relative;
+                bottom: 0.65rem;
+
+                &.enter::before {
+                    content: "⏎";
+                    position: relative;
+                    display: inline-block;
+                    padding: 3px;
+                    padding-left: 8px;
+                    padding-right: 8px;
+                    bottom: 2px;
+                    transition: scale 0.1s;
+                }
+
+                &::after {
+                    content: "";
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    height: 100%;
+                    border: 1px solid var(--accent);
+                    border-bottom-width: 2px;
+                    border-radius: 3px;
+                    animation: cueing 0.5s linear infinite alternate;
+                    transition: scale 0.1s, opacity 0.1s;
+                }
+
+                &.visible {
+                    opacity: 0.8;
+                    cursor: pointer;
+                    pointer-events: all;
+                }
+
+                @media (pointer: fine) and (hover: hover) {
+                    &:hover::after {
+                        animation: none;
+                        opacity: 1;
+                    }
+
+                    &:not(.nudged):hover::after, &:not(.nudged):hover::before {
+                        scale: 1.1;
+                    }
+                }
+
+                &.done, &.done::before, &.done::after {
+                    transition: opacity 0.2s, scale 0.3s !important;
+                    opacity: 0;
+                    scale: 0;
+                }
+            }
+
+
+        }
+
+        @keyframes cueing {
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0.65;
+            }
+        }
+
+        @keyframes invalid {
+            0% {
+                border-color: var(--accent);
+            }
+            50% {
+                border-color: hsl(3, 75%, 70%);
+            }
+            100% {
+                border-color: var(--accent);
+            }
+        }
+
+
+        #logo-wrap {
+            grid-area: logo;
+        }
+
+        #navbar-wrap {
+            grid-area: header;
+        }
+
+        #left-wrap {
+            grid-area: left;
+        }
+
+        #right-wrap {
+            grid-area: right;
+        }
+
+        #dash-wrap {
+            grid-area: dash;
+        }
+
+        #detail-wrap {
+            grid-area: detail;
+        }
+
+        #updates-wrap {
+            grid-area: updates;
+        }
+
+        #main-wrap {
+            grid-area: main;
+        }
+
+
+        .box {
+            transition: opacity 0.1s;
+            height: 100%;
+            width: 100%;
+            @starting-style {
+                opacity: 0;
+            }
+        }
+
+
+        #logo-wrap, #dash-wrap, #detail-wrap, #left-wrap {
+            display: none;
+            opacity: 0;
+        }
+
+        #updates {
+            .wrapupdates {
+                display: grid;
+                overflow-y: scroll;
+                width: 100%;
+                max-height: 3.6rem;
+                margin: 0 auto;
+                grid-template-columns: auto 1fr;
+                grid-template-rows: min-content;
+
+                column-gap: 0.5rem;
+
+                .timestamp, .message {
+                    position: relative;
+                    top: 0;
+                    transition: top 0.1s, opacity 0.1s;
+                    @starting-style {
+                        top: 1rem;
+                        opacity: 0;
+                    }
+                }
+
+
+                .timestamp {
+                    color: color-mix(in hsl, var(--bgColor) 60%, var(--baseColor));
+                    text-align: center;
+                }
+
+                .message {
+                    border-left: 1px solid color-mix(in hsl, var(--bgColor) 10%, var(--baseColor));
+                    padding-left: 0.5em;
+                }
+            }
+        }
+
+        #selfpanel:not(:has(.lockedpanel)) {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        #selfpanel .character-name {
+            font-family: vinque, serif;
+            font-size: 1.2em;
+        }
+
+        #selfpanel .game-time {
+            font-family: ysabeau, monospace;
+            color: var(--baseColor);
+        }
+
+        @media (width <= 850px) {
+            body.keyboardactive {
+                #alphaboard {
+                    display: grid;
+                }
+
+                #kingdom {
+                    display: none;
+                    opacity: 0;
+                }
+            }
+        }
+
+        .keyboard {
+            width: 100%;
+            height: 100%;
+            background: var(--bgColor);
+            border-color: var(--accent);
+            display: none;
+            font-family: vinque, serif;
+
+            transition: opacity 0.1s;
+            @starting-style {
+                opacity: 0;
+            }
+
+            .key {
+                background: transparent;
+                border: 1.5px solid var(--accent);
+                border-bottom-width: 2.25px;
+                border-radius: 3px;
+                color: var(--accent);
+                font-weight: 750;
+                font-size: 3vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: transform .1s;
+            }
+
+            .key:active, .key.forceactive {
+                transform: translateY(2px);
+            }
+
+            .key.action {
+                grid-column: span 1;
+            }
+
+            .key.bkspc {
+                background-image: url("./assets/bkspc.svg");
+                background-size: 40%;
+                background-repeat: no-repeat;
+                background-position: center;
+                filter: invert(56%) sepia(98%) saturate(2737%) hue-rotate(153deg) brightness(101%) contrast(84%);
+                color: transparent;
+            }
+
+            .key.action:last-of-type {
+                grid-column: span 2;
+            }
+
+        }
+
+        #alphaboard {
+            grid-template-columns: repeat(6, 1fr);
+            gap: 6px;
+        }
+
+
+        /* DESKTOP VIEW */
+        @media (width > 850px) {
+            body {
+                grid-template-columns: var(--sidebarWidth) 1fr var(--sidebarWidth);
+                grid-template-rows: auto 1fr 0.2fr 0.1fr;
+                grid-template-areas:
                "logo header right"
                "left   main   right"
                "dash   main   detail"             
                "dash   updates   detail";
-           }
-           
-           #dash-wrap, #detail-wrap, #left-wrap, #logo-wrap { display: flex; opacity: 1; } /* show hidden panels */
+            }
 
-           #navbar button {
-             font-size: var(--topFontSize);
-             img {height: 1.5em;}
-           }
-           .sidebar {
-             width: var(--sidebarWidth);
-           }
-           
-           #logo {
-             display: flex;
-             align-items: center;
-             width: var(--sidebarWidth);
-             justify-content: center;
-             font-size: var(--topFontSize);
-             cursor: pointer;
-             transition: scale 0.05s, opacity 0.1s;
-             opacity: 1;
-             
-             i {
-               color: hsl(200, 30%, 70%);
-               position: relative;
-               top: 0.1rem;
-               font-size: 1.05em;
-               margin-right: 0.15rem;
-             }
-             #firstword {
-               font-family: varsity;
-               font-size: 1.25em;
-               margin-right: 0.065rem;
-               color: hsl(20, 70%, 48%);
-             }
-             #secondword {
-               font-family: devinneswash;
-               font-size: 1.1em;
-               position: relative;
-               bottom: 0.05em;
-               color: hsl(45, 70%, 48%);
-             }
-           }
-         }
+            #dash-wrap, #detail-wrap, #left-wrap, #logo-wrap {
+                display: flex;
+                opacity: 1;
+            }
 
-         .nudged, .nudged::before, .nudged::after {
-           scale: 0.985;
-         }
-        </style>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    </head>
+            /* show hidden panels */
+            #navbar button {
+                font-size: var(--topFontSize);
 
-    <body>
-        <div id="logo-wrap" class="wrapper">
-            <div id="logo" class="box nudge">
-                <i class="ra ra-crossed-swords"></i>
-                <span id="firstword">Fantasy</span>
-                <span id="secondword">Fantasy</span>
-            </div>
-        </div>
+                img {
+                    height: 1.5em;
+                }
+            }
 
-        <div id="navbar-wrap" class="wrapper">
-            <div id="navbar">
-                <button id="field" class="box nudge"><img src="assets/compass.svg"> </button>
-                <button id="city" class="box nudge"><img src="assets/city.svg"> </button>
-                <button id="config" class="box nudge"><img src="assets/cog.svg"></button>
-            </div>
-        </div>
+            .sidebar {
+                width: var(--sidebarWidth);
+            }
 
-        <div id="left-wrap" class="wrapper sidebar">
-            <aside class="box" id="roster">
-                <h1 class="filler"> ROSTER </h1>
-            </aside>
-        </div>
+            #logo {
+                display: flex;
+                align-items: center;
+                width: var(--sidebarWidth);
+                justify-content: center;
+                font-size: var(--topFontSize);
+                cursor: pointer;
+                transition: scale 0.05s, opacity 0.1s;
+                opacity: 1;
 
-        <div id="main-wrap" class="wrapper">
-            <main class="box">
-                <div id="story"></div>
-            </main>
-        </div>
+                i {
+                    color: hsl(200, 30%, 70%);
+                    position: relative;
+                    top: 0.1rem;
+                    font-size: 1.05em;
+                    margin-right: 0.15rem;
+                }
 
-        <div id="updates-wrap" class="wrapper">
-            <aside class="box" id="updates">
-                <h1 class="filler"> LIVE UPDATES </h1>
-            </aside>
-            <aside class="keyboard" id="numboard">
-                <div class="key">1</div><div class="key">2</div><div class="key">3</div>
-                <div class="key">4</div><div class="key">5</div><div class="key">6</div>
-                <div class="key">7</div><div class="key">8</div><div class="key">9</div>
-                <div class="key">0</div><div class="key">.</div>
-                <div class="key action bkspc">⟵</div>
-                <div class="key action">⏎</div>
-            </aside>
-        </div>
+                #firstword {
+                    font-family: varsity, sans serif;
+                    font-size: 1.25em;
+                    margin-right: 0.065rem;
+                    color: hsl(20, 70%, 48%);
+                }
 
-        <div id="dash-wrap" class="wrapper">
-            <aside class="box" id="dash">
-                <h1 class="filler"> STATS </h1>
-            </aside>
-        </div>
+                #secondword {
+                    font-family: devinneswash, serif;
+                    font-size: 1.1em;
+                    position: relative;
+                    bottom: 0.05em;
+                    color: hsl(45, 70%, 48%);
+                }
+            }
+        }
 
-        <div id="detail-wrap" class="wrapper">
-            <aside class="box" id="detail">
-                <h1 class="filler"> MISCELLANEA </h1>
-            </aside>
-        </div>
+        .nudged, .nudged::before, .nudged::after {
+            scale: 0.985;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
 
-        <div id="right-wrap" class="wrapper sidebar">
-            <aside class="box" id="kingdom">
-                <h1 class="filler"> KINGDOM MANAGEMENT </h1>
-            </aside>
-            <aside id="alphaboard" class="keyboard">
-                <div class="key">A</div><div class="key">B</div><div class="key">C</div><div class="key">D</div>
-                <div class="key">E</div><div class="key">F</div><div class="key">G</div><div class="key">H</div>
-                <div class="key">I</div><div class="key">J</div><div class="key">K</div><div class="key">L</div>
-                <div class="key">M</div><div class="key">N</div><div class="key">O</div><div class="key">P</div>
-                <div class="key">Q</div><div class="key">R</div><div class="key">S</div><div class="key">T</div>
-                <div class="key">U</div><div class="key">V</div><div class="key">W</div><div class="key">X</div>
-                <div class="key">Y</div><div class="key">Z</div>
-                <div class="key action bkspc">⟵</div>
-                <div class="key action">SPC</div>
-                <div class="key action">⏎</div>
-            </aside>
-        </div>
-    </body>
+<body>
+<div class="wrapper" id="logo-wrap">
+    <div class="box nudge" id="logo">
+        <i class="ra ra-crossed-swords"></i>
+        <span id="firstword">Fantasy</span>
+        <span id="secondword">Fantasy</span>
+    </div>
+</div>
 
+<div class="wrapper" id="navbar-wrap">
+    <div id="navbar">
+        <button class="box nudge" id="field"><img alt="Campaign" src="assets/compass.svg"></button>
+        <button class="box nudge" id="city"><img alt="City" src="assets/city.svg"></button>
+        <button class="box nudge" id="config"><img alt="Settings" src="assets/cog.svg"></button>
+    </div>
+</div>
 
+<div class="wrapper sidebar" id="left-wrap">
+    <aside class="box" id="roster">
+        <h1 class="lockedpanel"> LOCKED </h1>
+    </aside>
+</div>
 
-    <script type="module">
-     import {typeOn, typeP, collapseP, typePWithInputs, typePWithSpans} from "./typing.js";
+<div class="wrapper" id="main-wrap">
+    <main class="box">
+        <div id="story"></div>
+    </main>
+</div>
 
+<div class="wrapper" id="updates-wrap">
+    <aside class="box" id="updates">
+        <h1 class="lockedpanel"> LOCKED </h1>
+    </aside>
+    <aside class="keyboard" id="numboard">
+        <div class="key">1</div>
+        <div class="key">2</div>
+        <div class="key">3</div>
+        <div class="key">4</div>
+        <div class="key">5</div>
+        <div class="key">6</div>
+        <div class="key">7</div>
+        <div class="key">8</div>
+        <div class="key">9</div>
+        <div class="key">0</div>
+        <div class="key">.</div>
+        <div class="key action bkspc">⟵</div>
+        <div class="key action">⏎</div>
+    </aside>
+</div>
 
-     document.getElementById("logo").onclick = () => location.href = location.href;
-     document.querySelectorAll("#navbar button").forEach(b => b.onpointerdown = () => selectMain(b.id));
+<div class="wrapper" id="dash-wrap">
+    <aside class="box" id="dash">
+        <h1 class="lockedpanel"> LOCKED </h1>
+    </aside>
+</div>
 
-     document.querySelectorAll(".nudge").forEach(b =>
-       b.addEventListener("pointerdown", () =>
-         b.classList.add("nudged")
-     ));
-     document.onpointerup = () => {
-       document.querySelectorAll(".nudged").forEach(b => b.classList.remove("nudged"));
-     };
+<div class="wrapper" id="detail-wrap">
+    <aside class="box" id="selfpanel">
+        <h1 class="lockedpanel"> LOCKED </h1>
+    </aside>
+</div>
 
-     document.querySelectorAll(".key").forEach(k => {
-       k.tabIndex = 0;
-       k.addEventListener("pointerdown", () =>
-         k.classList.add("nudged")
-       );
-       k.onpointerdown = () => {
-         k.focus();
-
-         setTimeout( () => {
-           let input = document.activeElement;
-           switch(k.innerText) {
-             case "⏎":
-               input.dispatchEvent(
-                 new KeyboardEvent('keydown', {
-                   code: 'Enter',
-                   key: 'Enter',
-                   charCode: 13,
-                   keyCode: 13,
-                   view: window,
-                   bubbles: true
-                 })
-               );
-               break;
-             case "SPC":
-               input.dispatchEvent(
-                 new KeyboardEvent('keydown', {
-                   code: 'Space',
-                   key: ' ',
-                   charCode: 32,
-                   keyCode: 32,
-                   view: window,
-                   bubbles: true
-                 })
-               );
-               break;
-             case "⟵":
-               input.value = input.value.slice(0, -1);
-               input.dispatchEvent(
-                 new Event('input', { bubbles: true, cancelable: true })
-               );
-               break;
-             default:
-               input.value = input.value + k.innerText;
-               input.dispatchEvent(
-                 new Event('input', { bubbles: true, cancelable: true, data: k.innerText })
-               );
-           }
-           
-           
-         }, 0);
-       };
-     });
-
-     const story = document.getElementById("story");
-     let currentCue;
-
-     function selectMain(topic) {
-       document.querySelectorAll("#navbar button.chosen").forEach(b => b.classList.remove("chosen"));
-       document.querySelector("#navbar button#" + topic).classList.add("chosen");
-     }
-
-     const beginTutorial = () => 
-       typePWithInputs(story, "You jolt awake, your head spinning. What a wild dream that must have been. You can hardly even remember your own name... But of course, it is @ @!    ", "5.5em", ["getFirstName", "getLastName"], (e) => nameValidate(e), (p,inps) => getName(p, inps));
-
-     const isAlphabetic = (text) => [...text].every(c => "abcdefghijklmnopqrstuvwxyz".includes(c.toLowerCase()));
-     
-     
+<div class="wrapper sidebar" id="right-wrap">
+    <aside class="box" id="kingdom">
+        <h1 class="lockedpanel"> LOCKED </h1>
+    </aside>
+    <aside class="keyboard" id="alphaboard">
+        <div class="key">A</div>
+        <div class="key">B</div>
+        <div class="key">C</div>
+        <div class="key">D</div>
+        <div class="key">E</div>
+        <div class="key">F</div>
+        <div class="key">G</div>
+        <div class="key">H</div>
+        <div class="key">I</div>
+        <div class="key">J</div>
+        <div class="key">K</div>
+        <div class="key">L</div>
+        <div class="key">M</div>
+        <div class="key">N</div>
+        <div class="key">O</div>
+        <div class="key">P</div>
+        <div class="key">Q</div>
+        <div class="key">R</div>
+        <div class="key">S</div>
+        <div class="key">T</div>
+        <div class="key">U</div>
+        <div class="key">V</div>
+        <div class="key">W</div>
+        <div class="key">X</div>
+        <div class="key">Y</div>
+        <div class="key">Z</div>
+        <div class="key action bkspc">⟵</div>
+        <div class="key action">SPC</div>
+        <div class="key action">⏎</div>
+    </aside>
+</div>
+</body>
 
 
-     const getCue = (key, cb) => {
-       const cue = document.createElement("span");
-       cue.className = `cue ${key.toLowerCase()}`;
-       cue.addEventListener("pointerdown", () =>
-         cue.classList.add("nudged"));
+<script type="module">
+    import GameCore from './scripts/GameCore.js';
 
-       const wrap = (e) => {
-         if (e.key == key && cue.classList.contains("visible")) {
-           document.removeEventListener("keydown", wrap);
-           cue.removeEventListener("click", wrapClick);
-           cue.classList.add("done");
-           currentCue = null;
-           cue.addEventListener("transitionend", function h() {
-             cue.removeEventListener("transitionend", h);
-             cue.remove();
-             cb();
-           });
-       }};
-       const wrapClick = (e) => {
-         document.removeEventListener("keydown", wrap);
-         cue.removeEventListener("click", wrapClick);
-         cue.classList.add("done");
-         currentCue = null;
-         cue.addEventListener("transitionend", function h() {
-           cue.removeEventListener("transitionend", h);
-           cue.remove();
-           cb();
-         });
-       };
-       document.addEventListener("keydown", wrap);
-       cue.addEventListener("click", wrapClick);
-       story.append(cue);
-       return cue;
-     };
-
-     const clearInput = (p, cb=()=>{}) => {
-       p.querySelectorAll(".inputwrap").forEach(i => {
-         i.firstChild.onblur = null;
-         i.firstChild.onfocus = null;
-         i.firstChild.classList.add("settled");
-         i.style.transitionDuration = "";
-         i.firstChild.style.transitionDuration = "";
-       });
-       document.body.classList.remove("keyboardactive");
-
-       const wrap = (e) => {
-         cb();
-         e.target.removeEventListener("transitionend", wrap);
-       }
-       p.querySelector("input").addEventListener("transitionend", wrap);
-     };
-     const getGender = (p) => {
-       let n = 0;
-       // elaborate process to collapse both the unnecessary spans (for performance) and the inputs so they mesh with the text
-       clearInput(p, () => {
-         collapseP(p, (i) =>`<span class='fakegetname settled' style='font-size: 0.9em; display: inline-block; text-align: center; width:${p.querySelectorAll("input")[n++].getBoundingClientRect().width}px; transition: width 0.2s;'>` + i.firstChild.value + "</span>");
-         document.querySelectorAll(".fakegetname").forEach( n => {
-           n.style.width =  getTrueWidthName(n.innerText) + "px";
-           n.ontransitionend = () => n.style.width = "min-content";
-         });
-       });
-
-       setTimeout(async () => {
-         let [sonChoice, daughterChoice] = await typePWithSpans("You roll out of bed, hoping you haven’t missed the first bell. Your father said the meeting today had to be as early as possible. Maybe that explained the odd sleep: you had a feeling that this might be The Meeting, the one long awaited by any firstborn @ / @ of a king.", story, ["sonChoice", "daughterChoice"], ["son", "daughter"]);
-
-         [sonChoice, daughterChoice].forEach(c => {
-           c.onclick = () => {if (c.parentNode.querySelector(".selected"))c.parentNode.querySelector(".selected").classList.remove("selected"); c.classList.add("selected"); };
-           c.onpointerdown = () => c.classList.add("nudged");
-         });
-
-         currentCue = getCue("Enter", (p) => getAppearance(p));}, 200);
-     };
-     
-     
-     function getTrueWidthName(text) {
-       let p = document.createElement("p");
-       p.className = "fakeinput fakegetname";
-       p.style.color = "transparent";
-       p.style.pointerEvents = "none";
-       p.style.userSelect = "none";
-       p.style.fontSize = "0.9em";
-
-       story.append(p);
-       p.innerText = text;
-
-       let rect = p.getBoundingClientRect();
-       let store = rect.width;
-       p.remove();
-       return store;
-     }
-
-
-     const getName = (p, inputs) => {
-       const inputFirst = inputs[0];
-       const inputSecond = inputs[1];
-       currentCue = getCue("Enter", () => getGender(p));
-
-       inputFirst.addEventListener("keydown", (e) => {if (e.key === " ") {e.preventDefault(); inputSecond.focus();}});
-       inputFirst.focus();
-       inputFirst.onblur = (e) => {if (e.relatedTarget !== inputSecond) inputFirst.focus();};
-       inputSecond.onblur = (e) => {if (e.relatedTarget !== inputFirst) inputSecond.focus()};
-
-
-     };
-
-     
-     
-     const nameValidate = (e) => {
-       if (!e.data) {
-         if (!e.target.value) {
-           e.target.classList.remove("full");
-           e.target.style.transitionDuration = "";
-           e.target.parentNode.style.transitionDuration = "";
-           e.target.style.width = "";
-           e.target.parentNode.style.width = "";
-           currentCue.classList.remove("visible");
-           return;
-         }
-       } else if (!isAlphabetic(e.data)) {
-         let store = e.target.selectionStart - [...e.data].filter(c => !isAlphabetic(c)).length;
-         const inputValue = e.target.value;
-         const alphabeticValue = inputValue.replace(/[^a-zA-Z]/g, '');
-         e.target.value = alphabeticValue;
-
-         e.target.classList.add("invalid");
-         
-         e.target.selectionStart = store;
-         e.target.selectionEnd = store;
-       }
-       
-
-       if (e.target.value.length >= 15)
-         e.target.classList.add("full");
-       else
-         e.target.classList.remove("full");
-
-
-       if (e.target.value.length) {
-         let store = e.target.selectionStart;
-         
-         e.target.value = e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1).toLowerCase();
-
-         e.target.selectionStart = store;
-         e.target.selectionEnd = store;
-         let width = getTrueWidthName(e.target.value) / 15 + "em";  // convert to em so as to adapt to screen change
-         e.target.style.width = width;
-         e.target.parentNode.style.width = width;
-
-
-         setTimeout( () => {e.target.style.transitionDuration = "0s"; e.target.parentNode.style.transitionDuration = "0s"; }, 100);
-
-         
-         if (event.target.parentNode.nextElementSibling.nextElementSibling.firstChild?.value?.length || event.target.parentNode.previousSibling.previousSibling.firstChild?.value?.length)  {
-           currentCue.classList.add("visible");
-         } else {
-           currentCue.classList.remove("visible");
-         }
-       } else {
-         e.target.style.transitionDuration = "";
-         e.target.parentNode.style.transitionDuration = "";
-         e.target.style.width = "";
-         e.target.parentNode.style.width = "";
-         currentCue.classList.remove("visible");
-       }
-     };
-     beginTutorial();
-    </script>
-    </body>
+    const game = GameCore.getInstance();
+</script>
 </html>
