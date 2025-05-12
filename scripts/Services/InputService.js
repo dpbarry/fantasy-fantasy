@@ -15,6 +15,7 @@ export default class InputService {
         input.id = id;
         input.autocomplete = "off";
         input.inputMode = "none";
+        input.whitespace = "nowrap";
         input.spellcheck = false;
         input.oninput = cb;
         input.onfocus = () => {
