@@ -42,9 +42,13 @@
 
             --bgColor: #010101;
             --baseColor: #e0e0e0;
+            --darkBaseColor: color-mix(in hsl, var(--bgColor) 94%, var(--baseColor));
+            --midBaseColor: color-mix(in hsl, var(--bgColor) 60%, var(--baseColor));
             --boxColor: #e0e0e0;
             /* --accent: hsl(120, 82.5%, 45%); */
             --accent: hsl(190, 82.5%, 45%);
+            --darkAccent: color-mix(in hsl, var(--accent) 70%, var(--bgColor));
+
         }
 
 
@@ -81,11 +85,12 @@
             color: var(--baseColor);
             font-family: ysabeau, monospace;
             display: grid;
-            grid-template-rows: auto 1fr 0.5fr 0.1fr;
+            grid-template-rows: auto 1fr 0.5fr 0.1fr 0.1fr;
             grid-template-areas:
              "header header header"
              "main main main"
              "right right right"
+             "status status status"
              "updates updates updates";
             gap: var(--boxGap);
             padding: var(--boxGap);
@@ -103,9 +108,9 @@
 
         .lockedpanel {
             transition: opacity 0.15s, bottom 0.2s;
-            opacity: 1;
             position: relative;
             font-size: 1rem;
+            opacity: 1;
             font-family: varsity, sans-serif;
         }
 
@@ -205,7 +210,7 @@
                 left: 0;
                 bottom: 0;
                 right: 0;
-                background: color-mix(in hsl, var(--bgColor) 94%, var(--baseColor));
+                background: var(--darkBaseColor);
                 padding: 0;
                 border: 0;
                 font-size: 1em;
@@ -249,8 +254,8 @@
                 max-width: 8em;
                 color: var(--accent);
                 border-color: var(--accent);
-                caret-color: color-mix(in hsl, var(--bgColor) 30%, var(--accent));
-                background: color-mix(in hsl, var(--bgColor) 94%, var(--baseColor));
+                caret-color: var(--darkAccent);
+                background: var(--darkBaseColor);
 
                 @starting-style {
                     width: 0;
@@ -268,7 +273,7 @@
                 padding-right: 0.2em;
                 position: relative;
                 opacity: 1;
-                transition: padding 0.1s, font-size 0.1s, bottom 0.15s, font-size 0.2s;
+                transition: padding 0.1s, font-size 0.1s, bottom 0.15s, font-size 0.2s, opacity 0.2s;
 
                 &::after {
                     content: "";
@@ -303,6 +308,7 @@
 
                 &.hide {
                     font-size: 0 !important;
+                    opacity: 0;
 
                     &::after {
                         opacity: 0;
@@ -426,6 +432,48 @@
                 }
             }
 
+            .choice-container {
+                display: flex;
+                flex-direction: column;
+                gap: 0.25rem;
+                margin-top: 0.25rem;
+
+                .choice {
+                    color: var(--baseColor);
+                    cursor: pointer;
+                    text-decoration: 1.5px underline var(--darkAccent);
+                    width: fit-content;
+                    transition: font-weight 0.17s, left 0.17s;
+                    position: relative;
+                    left: 0;
+                    display: flex;
+                    align-items: center;
+
+                    &::before {
+                        font-family: sans-serif;
+                        content: "→";
+                        color: var(--baseColor);
+                        font-size: 1.25rem;
+                        position: absolute;
+                        left: -2rem;
+                        opacity: 0;
+
+                        transition: opacity 0.17s, left 0.17s;
+                    }
+                }
+
+                @media (hover: hover) and (pointer: fine) {
+                    .choice:hover {
+                        font-weight: 600;
+                        left: 1rem;
+                        &::before {
+                            left: -1.25rem;
+                            opacity: 1;
+                        }
+                    }
+                }
+            }
+
 
         }
 
@@ -471,10 +519,6 @@
             grid-area: dash;
         }
 
-        #detail-wrap {
-            grid-area: detail;
-        }
-
         #updates-wrap {
             grid-area: updates;
         }
@@ -494,9 +538,32 @@
         }
 
 
-        #logo-wrap, #dash-wrap, #detail-wrap, #left-wrap {
+        #logo-wrap, #dash-wrap, #left-wrap {
             display: none;
             opacity: 0;
+        }
+
+        #status-wrap {
+            grid-area: status;
+        }
+
+        #user-status:not(:has(.lockedpanel)) {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-direction: row;
+            padding: calc(var(--boxGap) * 0.5);
+
+            #character-name {
+                font-family: vinque, serif;
+                font-size: 1em;
+            }
+
+            #date-element {
+                font-family: ysabeau, monospace;
+                color: var(--baseColor);
+                transition: color 0.5s;
+            }
         }
 
         #updates {
@@ -523,36 +590,19 @@
 
 
                 .timestamp {
-                    color: color-mix(in hsl, var(--bgColor) 60%, var(--baseColor));
+                    color: var(--midBaseColor);
                     text-align: center;
                 }
 
                 .message {
-                    border-left: 1px solid color-mix(in hsl, var(--bgColor) 10%, var(--baseColor));
+                    border-left: 1px solid var(--baseColor);
                     padding-left: 0.5em;
                 }
             }
         }
 
-        #selfpanel:not(:has(.lockedpanel)) {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            flex-direction: column;
-        }
-
-        #selfpanel .character-name {
-            font-family: vinque, serif;
-            font-size: 1.2em;
-        }
-
-        #selfpanel .game-time {
-            font-family: ysabeau, monospace;
-            color: var(--baseColor);
-        }
-
         @media (width <= 850px) {
-            body.keyboardactive {
+            body.alphaactive {
                 #alphaboard {
                     display: grid;
                 }
@@ -620,20 +670,38 @@
             gap: 6px;
         }
 
+        .tooltip {
+            position: fixed;
+            background: var(--bgColor);
+            filter: drop-shadow(0 0 0.25rem var(--bgColor));
+            border: 2px solid var(--baseColor);
+            padding: 0.125rem;
+            border-radius: 3px;
+            color: var(--baseColor);
+            font-size: 0.9em;
+            pointer-events: none;
+            @starting-style {
+                opacity: 0;
+            }
+            transition: opacity 0.1s;
+            z-index: 1000;
+        }
+
 
         /* DESKTOP VIEW */
         @media (width > 850px) {
             body {
                 grid-template-columns: var(--sidebarWidth) 1fr var(--sidebarWidth);
-                grid-template-rows: auto 1fr 0.2fr 0.1fr;
+                grid-template-rows: auto 1fr 0.2fr 0.075fr 0.1fr;
                 grid-template-areas:
                "logo header right"
                "left   main   right"
-               "dash   main   detail"             
-               "dash   updates   detail";
+               "left   main   dash"
+               "left status dash"
+               "left   updates   dash";
             }
 
-            #dash-wrap, #detail-wrap, #left-wrap, #logo-wrap {
+            #dash-wrap, #left-wrap, #logo-wrap {
                 display: flex;
                 opacity: 1;
             }
@@ -722,6 +790,12 @@
     </main>
 </div>
 
+<div class="wrapper" id="status-wrap">
+    <aside class="box" id="user-status">
+        <h1 class="lockedpanel"> LOCKED </h1>
+    </aside>
+</div>
+
 <div class="wrapper" id="updates-wrap">
     <aside class="box" id="updates">
         <h1 class="lockedpanel"> LOCKED </h1>
@@ -740,18 +814,6 @@
         <div class="key">.</div>
         <div class="key action bkspc">⟵</div>
         <div class="key action">⏎</div>
-    </aside>
-</div>
-
-<div class="wrapper" id="dash-wrap">
-    <aside class="box" id="dash">
-        <h1 class="lockedpanel"> LOCKED </h1>
-    </aside>
-</div>
-
-<div class="wrapper" id="detail-wrap">
-    <aside class="box" id="selfpanel">
-        <h1 class="lockedpanel"> LOCKED </h1>
     </aside>
 </div>
 
@@ -789,6 +851,12 @@
         <div class="key action bkspc">⟵</div>
         <div class="key action">SPC</div>
         <div class="key action">⏎</div>
+    </aside>
+</div>
+
+<div class="wrapper" id="dash-wrap">
+    <aside class="box" id="dash">
+        <h1 class="lockedpanel"> LOCKED </h1>
     </aside>
 </div>
 </body>

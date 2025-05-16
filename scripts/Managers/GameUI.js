@@ -5,7 +5,7 @@ export default class GameUI {
         this.core = core;
         this.story = document.getElementById("story");
         this.news = document.getElementById("updates");
-        this.selfpanel = document.getElementById("selfpanel");
+        this.userstatus = document.getElementById("user-status");
         this.setupEventListeners();
     }
 
@@ -99,4 +99,37 @@ export default class GameUI {
         NewsService.updateOn(this.news, message, this.core.clock.gameTime({format: "short"}));
     }
 
+    createTooltip(element, content) {
+        class Tooltip {
+            constructor(element, content, parent) {
+                this.element = element;
+                this.tooltipElement = document.createElement('div');
+                this.tooltipElement.className = 'tooltip';
+                this.tooltipElement.innerHTML = content;
+                this.showHandler = this.show.bind(this);
+                this.destroyHandler = this.destroy.bind(this);
+                this.element.addEventListener('mouseenter', this.showHandler);
+                this.element.addEventListener('mouseleave', this.destroyHandler);
+                this.parent = parent;
+            }
+
+            show() {
+                this.tooltipElement.style.opacity = "";
+                this.tooltipElement.ontransitionend = null;
+                document.body.appendChild(this.tooltipElement);
+                const rect = this.element.getBoundingClientRect();
+                this.tooltipElement.style.top = `${rect.top - this.tooltipElement.offsetHeight}px`;
+                this.tooltipElement.style.left = `${rect.left + (rect.width - this.tooltipElement.offsetWidth) / 2}px`;
+            }
+
+            destroy() {
+                this.tooltipElement.style.opacity = "0";
+                this.tooltipElement.ontransitionend = () => {this.tooltipElement.remove();};
+
+            }
+        }
+
+        // Create and store new tooltip
+        return new Tooltip(element, content, this);
+    }
 }

@@ -86,7 +86,7 @@ export default class GameClock {
         this.gameTimeListeners.delete(listener);
     }
 
-    getDate(options = {format: null}) {
+    getDate(options = {format: null | 'full' | 'short' | 'numeric'}) {
         let remaining = this.totalSeconds;
 
         const years = Math.floor(remaining / this.SECONDS_PER_YEAR);
@@ -119,7 +119,7 @@ export default class GameClock {
             case 'short':
                 return `${date.day} ${this.months[date.month].substring(0, 3)} ${date.year}`;
             case 'numeric':
-                return `${date.month}-${date.day}-${date.year}`;
+                return `${date.month.toString().padStart(2, '0')}-${date.day.toString().padStart(2, '0')}-${date.year}`;
             default:
                 return date;
         }
@@ -130,7 +130,7 @@ export default class GameClock {
         return ['Winter', 'Spring', 'Summer', 'Autumn'][Math.floor(this.getDate().month / 3)];
     }
 
-    gameTime(options = {format: null}) {
+    gameTime(options = {format: null | 'full' | 'short'}) {
         const date = this.getDate();
         const hours = date.hour.toString().padStart(2, '0');
         const minutes = date.minute.toString().padStart(2, '0');

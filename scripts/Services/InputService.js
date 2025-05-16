@@ -8,9 +8,10 @@ export default class InputService {
     /**
      * @param {string} id
      * @param {function} cb
+     * @param {string} type
      * @returns {HTMLInputElement}
      */
-    static getInput(id, cb) {
+    static getInput(id, cb, type="alpha") {
         const input = document.createElement("input");
         input.id = id;
         input.autocomplete = "off";
@@ -20,7 +21,7 @@ export default class InputService {
         input.oninput = cb;
         input.onfocus = () => {
             cb({data: "", target: input});
-            document.body.classList.add("keyboardactive");
+            document.body.classList.add(type + "active");
 
             // Simulate key pushes
             const keydownHandler = (e) => {
@@ -103,7 +104,9 @@ export default class InputService {
             if (i.closest(".inputwrap"))
                 i.parentNode.style.transitionDuration = "";
         });
-        document.body.classList.remove("keyboardactive");
+        document.body.classList.remove("alphaactive");
+        document.body.classList.remove("numactive");
+        document.body.classList.remove("alphanumactive");
 
         return new Promise(resolve => {
             const wrap = (e) => {

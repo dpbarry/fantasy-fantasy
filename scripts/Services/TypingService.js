@@ -2,7 +2,7 @@ import GeneralService from "./GeneralService.js";
 import InputService from "./InputService.js";
 
 export default class TypingService {
-    static TYPE_DELAY = 10;
+    static TYPE_DELAY = 0;
 
     static async typeOn(text, body) {
         // first add all the characters invisibly to establish justified alignment
@@ -15,7 +15,7 @@ export default class TypingService {
     }
 
     // convenience function to abstract the <p> created in a message
-    static async  typeP(text, body) {
+    static async typeP(text, body) {
         let p = document.createElement("p");
         body.appendChild(p);
         await this.typeOn(text, p);
@@ -49,7 +49,7 @@ export default class TypingService {
         });
     }
 
-    static async  typePWithSpans(text, body, spanIDs, spanTexts) {
+    static async typePWithSpans(text, body, spanIDs, spanTexts) {
         let p = document.createElement("p");
         body.appendChild(p);
         let spans = [];
@@ -123,6 +123,39 @@ export default class TypingService {
         }
 
         return Promise.resolve([p, inputs]);
+    }
+
+    static async typePWithChoices(text, body, choices) {
+        this.typeP(text, body).then((p) => {
+            const choiceContainer = document.createElement('div');
+            choiceContainer.className = 'choice-container';
+
+            choices.forEach((choice, index) => {
+                const choiceElement = document.createElement('div');
+                choiceElement.className = 'choice';
+                choiceElement.textContent = choice;
+
+                choiceElement.onclick = () => {
+                    choiceElement.classList.add('selected');
+                    choiceContainer.querySelectorAll('.choice').forEach(el => {
+                        el.onclick = null;
+                        if (el !== choiceElement) {
+                            el.classList.add('unselected');
+                        }
+                    });
+                    Promise.resolve({
+                        index: index,
+                        element: choiceElement,
+                        paragraph: p
+                    });
+                };
+
+                choiceContainer.appendChild(choiceElement);
+            });
+
+            p.after(choiceContainer);
+
+        });
     }
 
 

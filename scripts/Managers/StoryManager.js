@@ -15,19 +15,50 @@ export default class StoryManager {
         return TypingService.typePWithSpans(text, this.core.ui.story, spanIDs, spanTexts);
     }
 
+    typeP(text) {
+        TypingService.typeP(text, this.core.ui.story);
+    }
+
+    typePWithChoices(text, choices) {
+        return TypingService.typePWithChoices(text, this.core.ui.story, choices);
+    }
+
     async beginTutorial() {
         this.core.clock.pause();
-        this.typePWithInputs('You jolt awake, your head spinning. What a wild dream that must have been. '+
+        this.typePWithInputs('You jolt awake, your head spinning. What a wild dream that must have been. ' +
             'You can hardly even remember your own name... But of course, it is @ @!',
             "5.5em", ["getFirstName", "getLastName"],
             InputService.nameValidate).then(this.getName.bind(this));
+    }
+
+    async getName(res) {
+        let [p, inputs] = res;
+        const inputFirst = inputs[0];
+        const inputSecond = inputs[1];
+        this.core.ui.story.append(InputService.getCue("Enter", () => this.getGender(p, inputs)));
+
+        inputFirst.addEventListener("keydown", (e) => {
+            if (e.key === " ") {
+                e.preventDefault();
+                inputSecond.focus();
+            }
+        });
+
+        inputFirst.focus();
+
+        inputFirst.onblur = (e) => {
+            if (e.relatedTarget !== inputSecond) inputFirst.focus();
+        };
+        inputSecond.onblur = (e) => {
+            if (e.relatedTarget !== inputFirst) inputSecond.focus()
+        };
     }
 
     async getGender(p, inputs) {
         this.core.ui.unlockPanel(this.core.ui.news).then(() => {
             this.core.clock.resume();
             this.core.ui.pushUpdate("You wake up from a strange dream.");
-            this.core.mc.unlock(inputs[0].value, inputs[1].value);
+            this.core.mc.unlockStatus(inputs[0].value, inputs[1].value);
             let n = 0;
             // collapse both the unnecessary spans and the inputs so they mesh with the text
             InputService.clearInput(p).then(() => {
@@ -42,9 +73,9 @@ export default class StoryManager {
                 });
 
                 setTimeout(async () => {
-                    this.typePWithSpans("You roll out of bed, "+
-                        "hoping you haven’t missed the first bell. Your father said the meeting today had to be as "+
-                        "early as possible. Maybe that explained the odd sleep: you had a suspicion that this might be "+
+                    this.typePWithSpans("You roll out of bed, " +
+                        "hoping you haven’t missed the first bell. Your father said the meeting today had to be as " +
+                        "early as possible. Maybe that explained the odd sleep: you had a suspicion that this might be " +
                         "The Meeting, the one long awaited by any firstborn @ / @ of a king.",
                         ["sonChoice", "daughterChoice"], ["son", "daughter"]).then(([p, spans]) => {
                         let [sonChoice, daughterChoice] = spans;
@@ -76,42 +107,25 @@ export default class StoryManager {
         let color;
         if (selected.innerText === "son") {
             color = "hsl(200, 70%, 80%)";
+            this.core.mc.gender = "M";
         } else {
             color = "hsl(330, 70%, 80%)";
+            this.core.mc.gender = "F";
         }
         selected.classList.add("settled");
         setTimeout(() => {
-            InputService.clearInput(p,"#sonChoice, #daughterChoice");
-                TypingService.collapseP(p, (i) => i.classList.contains("selected") ?
-                    `<span class='settled' style='font-size: 0.9em; display: inline-block; 
-                    font-family: Vinque, serif; color: ${color}'>${i.innerText}</span>`  : "");
+            InputService.clearInput(p, "#sonChoice, #daughterChoice");
+            TypingService.collapseP(p, (i) => i.classList.contains("selected") ?
+                `<span class='settled' style='font-size: 0.9em; display: inline-block; 
+                    font-family: Vinque, serif; color: ${color}'>${i.innerText}</span>` : "");
+
+            this.typePWithChoices("After throwing on some clothes, you check your reflection in the mirror, wondering "+
+                                `if you will make a good ${this.core.mc.genderSwitch("king", "queen")}. You do `+
+                                "already know what your strong suit will be:", ["leading the people to "+
+                                "economic prosperity", "waging fierce military campaigns", "spearheading fortuitous "+
+                                "new discoveries"]);
+
         }, 200);
-    }
-
-
-    async getName(res) {
-        let [p, inputs] = res;
-        const inputFirst = inputs[0];
-        const inputSecond = inputs[1];
-        this.core.ui.story.append(InputService.getCue("Enter", () => this.getGender(p, inputs)));
-
-        inputFirst.addEventListener("keydown", (e) => {
-            if (e.key === " ") {
-                e.preventDefault();
-                inputSecond.focus();
-            }
-        });
-
-        inputFirst.focus();
-
-        inputFirst.onblur = (e) => {
-            if (e.relatedTarget !== inputSecond) inputFirst.focus();
-        };
-        inputSecond.onblur = (e) => {
-            if (e.relatedTarget !== inputFirst) inputSecond.focus()
-        };
-
-
     }
 
     serialize() {
