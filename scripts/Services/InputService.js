@@ -80,7 +80,7 @@ export default class InputService {
         }
 
         const wrapKeydown = (e) => {
-            if (e.key === key && cue.classList.contains("visible")) {
+            if (e.key === key && window.getComputedStyle(cue).getPropertyValue("opacity") !== "0"){
                 cueReceived();
             }
         };

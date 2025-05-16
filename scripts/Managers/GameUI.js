@@ -101,7 +101,7 @@ export default class GameUI {
 
     createTooltip(element, content) {
         class Tooltip {
-            constructor(element, content, parent) {
+            constructor(element, content) {
                 this.element = element;
                 this.tooltipElement = document.createElement('div');
                 this.tooltipElement.className = 'tooltip';
@@ -110,7 +110,6 @@ export default class GameUI {
                 this.destroyHandler = this.destroy.bind(this);
                 this.element.addEventListener('mouseenter', this.showHandler);
                 this.element.addEventListener('mouseleave', this.destroyHandler);
-                this.parent = parent;
             }
 
             show() {

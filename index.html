@@ -211,10 +211,9 @@
                 bottom: 0;
                 right: 0;
                 background: var(--darkBaseColor);
-                padding: 0;
                 border: 0;
                 font-size: 1em;
-                padding-bottom: 1.5px;
+                padding: 0 0 1.5px;
                 border-bottom: 0.05em solid var(--baseColor);
                 caret-color: var(--baseColor);
                 color: var(--baseColor);
@@ -387,9 +386,7 @@
                     content: "⏎";
                     position: relative;
                     display: inline-block;
-                    padding: 3px;
-                    padding-left: 8px;
-                    padding-right: 8px;
+                    padding: 3px 8px;
                     bottom: 2px;
                     transition: scale 0.1s;
                 }
@@ -435,19 +432,22 @@
             .choice-container {
                 display: flex;
                 flex-direction: column;
-                gap: 0.25rem;
-                margin-top: 0.25rem;
+                margin-top: -0.5rem;
 
                 .choice {
                     color: var(--baseColor);
                     cursor: pointer;
-                    text-decoration: 1.5px underline var(--darkAccent);
                     width: fit-content;
                     transition: font-weight 0.17s, left 0.17s;
                     position: relative;
+                    text-decoration: 1.5px underline var(--darkAccent);
                     left: 0;
                     display: flex;
                     align-items: center;
+                    opacity: 0;
+                    top: 1rem;
+                    animation: choiceIn 0.4s ease-out forwards;
+
 
                     &::before {
                         font-family: sans-serif;
@@ -466,6 +466,7 @@
                     .choice:hover {
                         font-weight: 600;
                         left: 1rem;
+
                         &::before {
                             left: -1.25rem;
                             opacity: 1;
@@ -475,6 +476,17 @@
             }
 
 
+        }
+
+        @keyframes choiceIn {
+            from {
+                opacity: 0;
+                top: 1rem;
+            }
+            to {
+                opacity: 1;
+                top: 0;
+            }
         }
 
         @keyframes cueing {
@@ -552,16 +564,15 @@
             justify-content: space-between;
             align-items: center;
             flex-direction: row;
-            padding: calc(var(--boxGap) * 0.5);
+            padding: calc(var(--boxGap) * 0.5) var(--boxGap);
 
             #character-name {
                 font-family: vinque, serif;
                 font-size: 1em;
             }
 
-            #date-element {
-                font-family: ysabeau, monospace;
-                color: var(--baseColor);
+            #game-date {
+                font-family: varsity, monospace;
                 transition: color 0.5s;
             }
         }
@@ -675,7 +686,7 @@
             background: var(--bgColor);
             filter: drop-shadow(0 0 0.25rem var(--bgColor));
             border: 2px solid var(--baseColor);
-            padding: 0.125rem;
+            padding: 0 0.15rem;
             border-radius: 3px;
             color: var(--baseColor);
             font-size: 0.9em;
@@ -865,6 +876,6 @@
 <script type="module">
     import GameCore from './scripts/GameCore.js';
 
-    const game = GameCore.getInstance();
+    GameCore.getInstance();
 </script>
 </html>

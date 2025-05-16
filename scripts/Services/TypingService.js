@@ -75,7 +75,7 @@ export default class TypingService {
         await this.renderText(p);
 
 
-        p.querySelectorAll(".deep").forEach(this.collapseP);
+        p.querySelectorAll(".deep").forEach((elem) => this.collapseP(elem));
         return Promise.resolve([p, spans]);
     }
 
@@ -129,11 +129,13 @@ export default class TypingService {
         this.typeP(text, body).then((p) => {
             const choiceContainer = document.createElement('div');
             choiceContainer.className = 'choice-container';
+            p.after(choiceContainer);
 
             choices.forEach((choice, index) => {
                 const choiceElement = document.createElement('div');
                 choiceElement.className = 'choice';
-                choiceElement.textContent = choice;
+                choiceElement.innerText = choice;
+                choiceElement.style.animationDelay = `${index * 0.3}s`;
 
                 choiceElement.onclick = () => {
                     choiceElement.classList.add('selected');
@@ -153,7 +155,6 @@ export default class TypingService {
                 choiceContainer.appendChild(choiceElement);
             });
 
-            p.after(choiceContainer);
 
         });
     }

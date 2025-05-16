@@ -22,27 +22,28 @@ export default class UserManager {
             dateElement.id = 'game-date';
             this.core.ui.createTooltip(dateElement, "<p>Current date</p>");
 
-            // Update time immediately
-            dateElement.textContent = this.core.clock.getDate({format: "numeric"});
-            switch (this.core.clock.getSeason()) {
-                case "Winter":
-                    dateElement.style.color = "hsl(200, 35%, 80%)";
-                    break;
-                case "Spring":
-                    dateElement.style.color = "hsl(120, 35%, 80%)";
-                    break;
-                case "Summer":
-                    dateElement.style.color = "hsl(0 35%, 80%)";
-                    break;
-                case "Autumn":
-                    dateElement.style.color = "hsl(35, 35%, 80%)";
-                    break;
+            const updateDate = () => {
+                dateElement.textContent = this.core.clock.getDate({format: "numeric"});
+                switch (this.core.clock.getSeason()) {
+                    case "Winter":
+                        dateElement.style.color = "hsl(200, 35%, 80%)";
+                        break;
+                    case "Spring":
+                        dateElement.style.color = "hsl(120, 35%, 80%)";
+                        break;
+                    case "Summer":
+                        dateElement.style.color = "hsl(0 35%, 80%)";
+                        break;
+                    case "Autumn":
+                        dateElement.style.color = "hsl(50, 35%, 80%)";
+                        break;
+                }
             }
 
+            updateDate();
             // Subscribe to time updates with a 1-second interval
             this.core.clock.subscribeGameTime(() => {
-                dateElement.textContent = this.core.clock.getDate({format: "numeric"});
-                
+                updateDate();
             }, {interval: 1});
 
             this.core.ui.userstatus.appendChild(nameElement);

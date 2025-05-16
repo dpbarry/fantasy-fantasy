@@ -119,7 +119,7 @@ export default class GameClock {
             case 'short':
                 return `${date.day} ${this.months[date.month].substring(0, 3)} ${date.year}`;
             case 'numeric':
-                return `${date.month.toString().padStart(2, '0')}-${date.day.toString().padStart(2, '0')}-${date.year}`;
+                return `${date.month.toString().padStart(2, '0')}/${date.day.toString().padStart(2, '0')}/${date.year}`;
             default:
                 return date;
         }

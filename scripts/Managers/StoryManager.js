@@ -4,6 +4,7 @@ import TypingService from "../Services/TypingService.js";
 export default class StoryManager {
     constructor(core) {
         this.core = core;
+        this.phase = 0;
         core.registerSaveableComponent('story', this);
     }
 
@@ -88,7 +89,7 @@ export default class StoryManager {
                             c.onpointerdown = () => c.classList.add("nudged");
                         });
 
-                        this.core.ui.story.append(InputService.getCue("Enter", () => this.getAppearance(p)));
+                        this.core.ui.story.append(InputService.getCue("Enter", () => this.getSpecialty(p)));
                     });
                 }, 200);
             });
@@ -96,7 +97,7 @@ export default class StoryManager {
 
     }
 
-    async getAppearance(p) {
+    async getSpecialty(p) {
         let hinge = [...p.children].find(span => span.innerText === "/");
         hinge.classList.add("hide");
         hinge.previousElementSibling.classList.add("hide");
@@ -119,23 +120,47 @@ export default class StoryManager {
                 `<span class='settled' style='font-size: 0.9em; display: inline-block; 
                     font-family: Vinque, serif; color: ${color}'>${i.innerText}</span>` : "");
 
-            this.typePWithChoices("After throwing on some clothes, you check your reflection in the mirror, wondering "+
-                                `if you will make a good ${this.core.mc.genderSwitch("king", "queen")}. You do `+
-                                "already know what your strong suit will be:", ["leading the people to "+
-                                "economic prosperity", "waging fierce military campaigns", "spearheading fortuitous "+
-                                "new discoveries"]);
+            this.typePWithChoices("After throwing on some clothes, you check your reflection in the mirror, wondering " +
+                `if you will make a good ${this.core.mc.genderSwitch("king", "queen")}. You do ` +
+                "already know what your strong suit will be:", ["leading the people to " +
+            "economic prosperity", "waging fierce military campaigns", "spearheading fortuitous " +
+            "new discoveries"]);
 
         }, 200);
     }
 
+    async resumeFrom(phase) {
+        switch (phase) {
+            case 0:
+                await this.beginTutorial();
+                break;
+            case 1:
+                await this.getGender();
+                break;
+            case 2:
+                await this.getSpecialty();
+                break;
+        }
+    }
+
     serialize() {
+        return {
+            phase: this.phase
+        };
 
     }
 
     deserialize(data) {
+        this.phase = data.phase;
 
+        if (this.phase >= 1) {
+            this.core.ui.unlockPanel(this.core.ui.news);
+            this.core.ui.unlockPanel(this.core.ui.userstatus);
+        }
+
+        if (this.phase !== -1)
+            this.resumeFrom(this.phase);
     }
 }
-
 
 
