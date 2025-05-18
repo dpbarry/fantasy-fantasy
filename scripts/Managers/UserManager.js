@@ -11,56 +11,69 @@ export default class UserManager {
     unlockStatus(firstName, lastName) {
         this.firstName = firstName;
         this.lastName = lastName;
-
         this.core.ui.unlockPanel(this.core.ui.userstatus).then(() => {
-            // Create and setup the panel content
-            const nameElement = document.createElement('div');
-            nameElement.id = 'character-name';
-            nameElement.textContent = `${firstName} ${lastName}`;
-
-            const dateElement = document.createElement('div');
-            dateElement.id = 'game-date';
-            this.core.ui.createTooltip(dateElement, "<p>Current date</p>");
-
-            const updateDate = () => {
-                dateElement.textContent = this.core.clock.getDate({format: "numeric"});
-                switch (this.core.clock.getSeason()) {
-                    case "Winter":
-                        dateElement.style.color = "hsl(200, 35%, 80%)";
-                        break;
-                    case "Spring":
-                        dateElement.style.color = "hsl(120, 35%, 80%)";
-                        break;
-                    case "Summer":
-                        dateElement.style.color = "hsl(0 35%, 80%)";
-                        break;
-                    case "Autumn":
-                        dateElement.style.color = "hsl(50, 35%, 80%)";
-                        break;
-                }
-            }
-
-            updateDate();
-            // Subscribe to time updates with a 1-second interval
-            this.core.clock.subscribeGameTime(() => {
-                updateDate();
-            }, {interval: 1});
-
-            this.core.ui.userstatus.appendChild(nameElement);
-            this.core.ui.userstatus.appendChild(dateElement);
+            this.renderStatus();
         });
     }
+
+    renderStatus() {
+        // Create and setup the panel content
+        const nameElement = document.createElement('div');
+        nameElement.id = 'character-name';
+        nameElement.textContent = `${this.firstName} ${this.lastName}`;
+
+        const dateElement = document.createElement('div');
+        dateElement.id = 'game-date';
+        this.core.ui.createTooltip(dateElement, "<p>Current date</p>");
+
+        const updateDate = () => {
+            dateElement.textContent = this.core.clock.gameDate({format: "numeric"});
+            switch (this.core.clock.getSeason()) {
+                case "Winter":
+                    dateElement.style.color = "hsl(200, 35%, 80%)";
+                    break;
+                case "Spring":
+                    dateElement.style.color = "hsl(120, 35%, 80%)";
+                    break;
+                case "Summer":
+                    dateElement.style.color = "hsl(0 35%, 80%)";
+                    break;
+                case "Autumn":
+                    dateElement.style.color = "hsl(50, 35%, 80%)";
+                    break;
+            }
+        }
+
+        updateDate();
+        // Subscribe to time updates with a 1-second interval
+        this.core.clock.subscribeGameTime(() => {
+            updateDate();
+        }, {interval: 1});
+
+        this.core.ui.userstatus.appendChild(nameElement);
+        this.core.ui.userstatus.appendChild(dateElement);
+    }
+
 
     genderSwitch(male, female) {
         return this.gender === "M" ? male : female;
     }
 
     serialize() {
-
+        return {
+            firstName: this.firstName, lastName: this.lastName, gender: this.gender
+        }
     }
 
     deserialize(data) {
+        this.firstName = data.firstName;
+        this.lastName = data.lastName;
+        this.gender = data.gender;
 
+        if (this.firstName) {
+            this.core.ui.userstatus.querySelector(".lockedpanel").remove();
+            this.renderStatus();
+        }
     }
 
 }

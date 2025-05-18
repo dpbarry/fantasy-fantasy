@@ -1,5 +1,3 @@
-import NewsService from "../Services/NewsService.js";
-
 export default class GameUI {
     constructor(core) {
         this.core = core;
@@ -93,10 +91,6 @@ export default class GameUI {
                 resolve();
             }
         })
-    }
-
-    pushUpdate(message) {
-        NewsService.updateOn(this.news, message, this.core.clock.gameTime({format: "short"}));
     }
 
     createTooltip(element, content) {

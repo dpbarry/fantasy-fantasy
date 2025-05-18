@@ -4,7 +4,12 @@ import TypingService from "../Services/TypingService.js";
 export default class StoryManager {
     constructor(core) {
         this.core = core;
-        this.phase = 0;
+        this.storyProg = {
+            tutorial: 0
+        };
+        this.storyText = {
+            tutorial: ""
+        }
         core.registerSaveableComponent('story', this);
     }
 
@@ -25,7 +30,6 @@ export default class StoryManager {
     }
 
     async beginTutorial() {
-        this.core.clock.pause();
         this.typePWithInputs('You jolt awake, your head spinning. What a wild dream that must have been. ' +
             'You can hardly even remember your own name... But of course, it is @ @!',
             "5.5em", ["getFirstName", "getLastName"],
@@ -36,7 +40,30 @@ export default class StoryManager {
         let [p, inputs] = res;
         const inputFirst = inputs[0];
         const inputSecond = inputs[1];
-        this.core.ui.story.append(InputService.getCue("Enter", () => this.getGender(p, inputs)));
+
+        const finishGetName = () => {
+            this.core.ui.unlockPanel(this.core.ui.news).then(() => {
+                this.core.clock.resume();
+                this.core.news.update("You wake up from a strange dream.");
+                this.core.mc.unlockStatus(inputFirst.value, inputSecond.value);
+                let n = 0;
+                // collapse both the unnecessary spans and the inputs so they mesh with the text
+                InputService.clearInput(p).then(() => {
+                    TypingService.collapseP(p, (i) =>
+                        `<span class='fakegetname settled' style='font-size: 0.9em; display: inline-block; text-align: center; 
+                    width: ${p.querySelectorAll("input")[n++].getBoundingClientRect().width}px; 
+                    transition: width 0.2s;'>` + i.firstChild.value + "</span>"
+                    );
+                    document.querySelectorAll(".fakegetname").forEach(n => {
+                        n.style.width = InputService.getTrueWidthName(this.core.ui.story, n.innerText) + "px";
+                        n.ontransitionend = () => n.style.width = "min-content";
+                    });
+                    this.getGender();
+                });
+            });
+        };
+
+        this.core.ui.story.append(InputService.getCue("Enter", () => finishGetName()));
 
         inputFirst.addEventListener("keydown", (e) => {
             if (e.key === " ") {
@@ -47,89 +74,75 @@ export default class StoryManager {
 
         inputFirst.focus();
 
-        inputFirst.onblur = (e) => {
-            if (e.relatedTarget !== inputSecond) inputFirst.focus();
-        };
-        inputSecond.onblur = (e) => {
-            if (e.relatedTarget !== inputFirst) inputSecond.focus()
-        };
     }
 
-    async getGender(p, inputs) {
-        this.core.ui.unlockPanel(this.core.ui.news).then(() => {
-            this.core.clock.resume();
-            this.core.ui.pushUpdate("You wake up from a strange dream.");
-            this.core.mc.unlockStatus(inputs[0].value, inputs[1].value);
-            let n = 0;
-            // collapse both the unnecessary spans and the inputs so they mesh with the text
-            InputService.clearInput(p).then(() => {
-                TypingService.collapseP(p, (i) =>
-                    `<span class='fakegetname settled' style='font-size: 0.9em; display: inline-block; text-align: center; 
-                    width: ${p.querySelectorAll("input")[n++].getBoundingClientRect().width}px; 
-                    transition: width 0.2s;'>` + i.firstChild.value + "</span>"
-                );
-                document.querySelectorAll(".fakegetname").forEach(n => {
-                    n.style.width = InputService.getTrueWidthName(this.core.ui.story, n.innerText) + "px";
-                    n.ontransitionend = () => n.style.width = "min-content";
+    async getGender() {
+        this.storyProg.tutorial = 1;
+        this.storyText.tutorial = this.textSnapshot();
+
+        setTimeout(async () => {
+            this.typePWithSpans("You roll out of bed, " +
+                "hoping you haven’t missed the first bell. Your father said the meeting today had to be as " +
+                "early as possible. Maybe that explained the odd sleep: you had a suspicion that this might be " +
+                "The Meeting, the one long awaited by any firstborn @ / @ of a king.",
+                ["sonChoice", "daughterChoice"], ["son", "daughter"]).then(([p, spans]) => {
+                let [sonChoice, daughterChoice] = spans;
+                [sonChoice, daughterChoice].forEach(c => {
+                    c.onclick = () => {
+                        if (c.parentNode.querySelector(".selected"))
+                            c.parentNode.querySelector(".selected").classList.remove("selected");
+                        c.classList.add("selected");
+                    };
+                    c.onpointerdown = () => c.classList.add("nudged");
                 });
 
-                setTimeout(async () => {
-                    this.typePWithSpans("You roll out of bed, " +
-                        "hoping you haven’t missed the first bell. Your father said the meeting today had to be as " +
-                        "early as possible. Maybe that explained the odd sleep: you had a suspicion that this might be " +
-                        "The Meeting, the one long awaited by any firstborn @ / @ of a king.",
-                        ["sonChoice", "daughterChoice"], ["son", "daughter"]).then(([p, spans]) => {
-                        let [sonChoice, daughterChoice] = spans;
-                        [sonChoice, daughterChoice].forEach(c => {
-                            c.onclick = () => {
-                                if (c.parentNode.querySelector(".selected"))
-                                    c.parentNode.querySelector(".selected").classList.remove("selected");
-                                c.classList.add("selected");
-                            };
-                            c.onpointerdown = () => c.classList.add("nudged");
-                        });
+                const finishGetGender = () => {
+                    let hinge = [...p.children].find(span => span.innerText === "/");
+                    hinge.classList.add("hide");
+                    hinge.previousElementSibling.classList.add("hide");
+                    hinge.nextElementSibling.classList.add("hide");
+                    p.querySelector("#sonChoice:not(.selected), #daughterChoice:not(.selected)").classList.add("hide");
 
-                        this.core.ui.story.append(InputService.getCue("Enter", () => this.getSpecialty(p)));
-                    });
-                }, 200);
-            });
-        });
-
-    }
-
-    async getSpecialty(p) {
-        let hinge = [...p.children].find(span => span.innerText === "/");
-        hinge.classList.add("hide");
-        hinge.previousElementSibling.classList.add("hide");
-        hinge.nextElementSibling.classList.add("hide");
-        p.querySelector("#sonChoice:not(.selected), #daughterChoice:not(.selected)").classList.add("hide");
-
-        let selected = p.querySelector("#sonChoice.selected, #daughterChoice.selected");
-        let color;
-        if (selected.innerText === "son") {
-            color = "hsl(200, 70%, 80%)";
-            this.core.mc.gender = "M";
-        } else {
-            color = "hsl(330, 70%, 80%)";
-            this.core.mc.gender = "F";
-        }
-        selected.classList.add("settled");
-        setTimeout(() => {
-            InputService.clearInput(p, "#sonChoice, #daughterChoice");
-            TypingService.collapseP(p, (i) => i.classList.contains("selected") ?
-                `<span class='settled' style='font-size: 0.9em; display: inline-block; 
+                    let selected = p.querySelector("#sonChoice.selected, #daughterChoice.selected");
+                    let color;
+                    if (selected.innerText === "son") {
+                        color = "hsl(200, 70%, 80%)";
+                        this.core.mc.gender = "M";
+                    } else {
+                        color = "hsl(330, 70%, 80%)";
+                        this.core.mc.gender = "F";
+                    }
+                    selected.classList.add("settled");
+                    setTimeout(() => {
+                        InputService.clearInput(p, "#sonChoice, #daughterChoice").then(() => {
+                            TypingService.collapseP(p, (i) => i.classList.contains("selected") ?
+                                `<span class='settled' style='font-size: 0.9em; display: inline-block; 
                     font-family: Vinque, serif; color: ${color}'>${i.innerText}</span>` : "");
-
-            this.typePWithChoices("After throwing on some clothes, you check your reflection in the mirror, wondering " +
-                `if you will make a good ${this.core.mc.genderSwitch("king", "queen")}. You do ` +
-                "already know what your strong suit will be:", ["leading the people to " +
-            "economic prosperity", "waging fierce military campaigns", "spearheading fortuitous " +
-            "new discoveries"]);
-
+                            this.getSpecialty();
+                        });
+                    }, 200);
+                };
+                this.core.ui.story.append(InputService.getCue("Enter", () => finishGetGender()));
+            });
         }, 200);
     }
 
-    async resumeFrom(phase) {
+    async getSpecialty() {
+        this.storyProg.tutorial = 2;
+        this.storyText.tutorial = this.textSnapshot();
+        await this.typePWithChoices("After throwing on some clothes, you check your reflection in the mirror, wondering " +
+            `if you will make a good ${this.core.mc.genderSwitch("king", "queen")}. You do ` +
+            "already know what your strong suit will be:", ["leading the people to " +
+        "economic prosperity", "waging fierce military campaigns", "spearheading fortuitous " +
+        "new discoveries"]);
+    }
+
+    textSnapshot() {
+        return this.core.ui.story.innerHTML;
+    }
+
+    async tutorialResumeFrom(phase) {
+        this.core.ui.story.innerHTML = this.storyText.tutorial;
         switch (phase) {
             case 0:
                 await this.beginTutorial();
@@ -145,21 +158,24 @@ export default class StoryManager {
 
     serialize() {
         return {
-            phase: this.phase
+            storyProg: this.storyProg,
+            storyText: this.storyText
         };
 
     }
 
     deserialize(data) {
-        this.phase = data.phase;
+        this.storyProg = data.storyProg;
+        this.storyText = data.storyText;
+        if (this.storyProg.tutorial === 0)
+            this.core.clock.pause();
 
-        if (this.phase >= 1) {
-            this.core.ui.unlockPanel(this.core.ui.news);
-            this.core.ui.unlockPanel(this.core.ui.userstatus);
+        if (this.storyProg.tutorial >= 1) {
+            this.core.news.renderNews();
         }
 
-        if (this.phase !== -1)
-            this.resumeFrom(this.phase);
+        if (this.storyProg.tutorial !== -1)
+            this.tutorialResumeFrom(this.storyProg.tutorial);
     }
 }
 

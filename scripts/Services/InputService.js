@@ -1,6 +1,4 @@
 export default class InputService {
-    static currentCue = null;
-
     static isAlphabetic(text) {
         return [...text].every(c => "abcdefghijklmnopqrstuvwxyz".includes(c.toLowerCase()))
     }
@@ -43,7 +41,7 @@ export default class InputService {
 
             // Clean up event listener when focus is lost
             input.onblur = (e) => {
-                if (!e.relatedTarget?.closest("input")) {
+                if (!e.relatedTarget?.closest("input, dialog")) {
                     e.target.focus();
                 }
             };
@@ -69,13 +67,11 @@ export default class InputService {
             document.removeEventListener("keydown", wrapKeydown);
             cue.removeEventListener("click", cueReceived);
             cue.classList.add("done");
-
-            InputService.currentCue = null;
+            cb();
 
             cue.addEventListener("transitionend", function h() {
                 cue.removeEventListener("transitionend", h);
                 cue.remove();
-                cb();
             });
         }
 
@@ -87,7 +83,6 @@ export default class InputService {
 
         document.addEventListener("keydown", wrapKeydown);
         cue.addEventListener("click", cueReceived);
-        this.currentCue = cue;
         return cue;
     };
 
@@ -129,7 +124,7 @@ export default class InputService {
             target.parentNode.style.transitionDuration = "";
             target.style.width = "";
             target.parentNode.style.width = "";
-            InputService.currentCue.classList.remove("visible");
+            target.closest("#story").querySelector(".cue").classList.remove("visible");
         }
 
         const updateKeyboardCase = (isEmpty) => {
@@ -181,9 +176,9 @@ export default class InputService {
 
             if (e.target.parentNode.nextElementSibling.nextElementSibling?.firstChild?.value?.length
                 || e.target.parentNode.previousSibling.previousSibling.firstChild?.value?.length) {
-                InputService.currentCue.classList.add("visible");
+                e.target.closest("#story").querySelector(".cue").classList.add("visible");
             } else {
-                InputService.currentCue.classList.remove("visible");
+                e.target.closest("#story").querySelector(".cue").classList.remove("visible");
             }
         } else {
             resetField(e.target);

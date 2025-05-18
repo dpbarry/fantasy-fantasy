@@ -6,6 +6,8 @@ import StoryManager from "./Managers/StoryManager.js";
 import CityManager from "./Managers/CityManager.js";
 import HeroManager from "./Managers/HeroManager.js";
 import UserManager from "./Managers/UserManager.js";
+import NewsManager from "./Managers/NewsManager.js";
+import HackService from "./Services/HackService.js";
 
 export default class GameCore {
     static instance = null;
@@ -22,6 +24,7 @@ export default class GameCore {
         this.city = new CityManager(this);
         this.story = new StoryManager(this);
         this.mc = new UserManager(this);
+        this.news = new NewsManager(this);
 
         this.registerSaveableComponent('clock', this.clock);
 
@@ -45,13 +48,17 @@ export default class GameCore {
     }
 
     async initialize() {
-        // if (!await this.loadLastSave())
-        await this.story.beginTutorial();
+        HackService.initialize(this);
+
+        if (!await this.loadLastSave())
+            await this.story.beginTutorial();
 
         this.isRunning = true;
         this.gameLoop(Date.now());
 
-        window.addEventListener('beforeunload', () => this.save());
+        window.onbeforeunload = () => {
+            this.save();
+        };
     }
 
 
@@ -77,6 +84,13 @@ export default class GameCore {
         requestAnimationFrame((time) => this.gameLoop(time));
     }
 
+    pause() {
+        this.isRunning = false;
+    }
+
+    resume() {
+        this.isRunning = true;
+    }
 
     // Register a component that needs to be saved
     registerSaveableComponent(key, component) {

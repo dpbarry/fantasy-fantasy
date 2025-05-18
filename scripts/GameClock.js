@@ -17,7 +17,6 @@ export default class GameClock {
         this.realTimeListeners = new Map();
         this.gameTimeListeners = new Map();
 
-
         this.months = [
             'Snowmoon', 'Bitterfrost', 'Icemelt',
             'Rainbloom', 'Greentime', 'Warmreach',
@@ -86,7 +85,7 @@ export default class GameClock {
         this.gameTimeListeners.delete(listener);
     }
 
-    getDate(options = {format: null | 'full' | 'short' | 'numeric'}) {
+    gameDate(options = {format: null | 'full' | 'short' | 'numeric'}) {
         let remaining = this.totalSeconds;
 
         const years = Math.floor(remaining / this.SECONDS_PER_YEAR);
@@ -127,11 +126,11 @@ export default class GameClock {
 
 
     getSeason() {
-        return ['Winter', 'Spring', 'Summer', 'Autumn'][Math.floor(this.getDate().month / 3)];
+        return ['Winter', 'Spring', 'Summer', 'Autumn'][Math.floor(this.gameDate().month / 3)];
     }
 
     gameTime(options = {format: null | 'full' | 'short'}) {
-        const date = this.getDate();
+        const date = this.gameDate();
         const hours = date.hour.toString().padStart(2, '0');
         const minutes = date.minute.toString().padStart(2, '0');
         const seconds = date.second.toString().padStart(2, '0');
