@@ -26,12 +26,10 @@ export default class GameClock {
     }
 
     advance(dt) {
-        if (this.isPaused) return; // Add this line at the start of advance
-
+        if (this.isPaused) return;
         const previousSeconds = this.totalSeconds;
         this.totalSeconds += dt * this.timeScale;
 
-        // Handle real-time listeners
         this.realTimeListeners.forEach((config, listener) => {
             const {interval, lastTrigger, oneTime} = config;
             if (Date.now() - lastTrigger >= interval * 1000) { // Convert to milliseconds
@@ -44,7 +42,6 @@ export default class GameClock {
             }
         });
 
-        // Handle game-time listeners
         this.gameTimeListeners.forEach((config, listener) => {
             const {interval, lastTrigger, oneTime} = config;
             if (this.totalSeconds - lastTrigger >= interval) {
@@ -58,7 +55,6 @@ export default class GameClock {
         });
     }
 
-    // Subscribe to real-world time events
     subscribeRealTime(listener, options = {}) {
         const config = {
             interval: options.interval || 0, // in seconds
@@ -69,7 +65,6 @@ export default class GameClock {
         return listener;
     }
 
-    // Subscribe to game-time events
     subscribeGameTime(listener, options = {}) {
         const config = {
             interval: options.interval || 0, // in game seconds

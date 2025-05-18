@@ -2,7 +2,7 @@ import GeneralService from "./GeneralService.js";
 import InputService from "./InputService.js";
 
 export default class TypingService {
-    static TYPE_DELAY = 12;
+    static TYPE_DELAY = 5;
 
     static async typeOn(text, body) {
         // first add all the characters invisibly to establish justified alignment
@@ -135,8 +135,12 @@ export default class TypingService {
                 const choiceElement = document.createElement('div');
                 choiceElement.className = 'choice';
                 choiceElement.innerText = choice;
-                choiceElement.style.setProperty('--choice-index', index);
-                choiceElement.style.animationDelay = `${index * 0.3}s`;
+                choiceElement.style.animationDelay = `${index * 0.2}s`;
+                choiceElement.style.pointerEvents = "none";
+                choiceElement.onanimationend = () => {
+                    choiceElement.onanimationed = null;
+                    choiceElement.style.pointerEvents = "";
+                }
                 choiceContainer.appendChild(choiceElement);
                 return choiceElement;
             });
@@ -144,42 +148,30 @@ export default class TypingService {
             return new Promise(resolve => {
                 choiceElements.forEach((choiceElement, index) => {
                     choiceElement.onclick = () => {
-                        // Disable all click handlers
                         choiceElements.forEach(el => el.onclick = null);
 
-                        // Add selected class for initial animation
                         choiceElement.classList.add('selected');
 
-                        // Start fading out others
                         const unselectedElements = choiceElements.filter(el => el !== choiceElement);
                         unselectedElements.forEach(el => el.classList.add('unselected'));
 
-                        // Calculate delays based on position
-                        const fadeTime = 150;
-                        const collapseTime = 150;
-                        const paddingTime = 150;
-
-                        // If it's the first choice, skip collapse delay
-                        const needsRising = index > 0;
-                        const collapseDelay = needsRising ? fadeTime : 0;
-
-                        // Start height collapse after fade
-                        setTimeout(() => {
-                            unselectedElements.forEach(el => el.classList.add('removing'));
-
-                            // Final padding transition
+                        if (index === 0) {
+                            unselectedElements[0].ontransitionend = () => {
+                                unselectedElements[0].ontransitionend = null;
+                                unselectedElements.forEach(el => el.remove());
+                                resolve({
+                                    i: index,
+                                    el: choiceElement,
+                                });
+                            };
+                        } else
                             setTimeout(() => {
-                                choiceElement.classList.add('settled');
+                                resolve({
+                                    i: index,
+                                    el: choiceElement
+                                });
+                            }, 550);
 
-                                setTimeout(() => {
-                                    resolve({
-                                        index: index,
-                                        element: choiceElement,
-                                        paragraph: p
-                                    });
-                                }, paddingTime);
-                            }, collapseTime); // Only wait for collapse if we need to rise
-                        }, collapseDelay);
                     };
                 });
             });
@@ -187,7 +179,16 @@ export default class TypingService {
     }
 
 
-    static collapseP(p, opt = (x) => x.firstChild.value) {
+    static async choiceNote(el, msg, spanIDs=[], spanTexts=[]) {
+        const note = document.createElement("p");
+        note.className = "choice-note";
+        el.after(note);
+        this.typePWithSpans(msg, note, spanIDs, spanTexts).then(() => {this.collapseP(note.firstChild); return Promise.resolve(note);});
+
+    }
+
+
+    static collapseP(p, opt = (x) => x.outerHTML) {
         p.innerHTML = [...p.children].reduce((acc, x) => {
             if (!x.className.trim())
                 return acc + x.innerHTML;
@@ -196,4 +197,5 @@ export default class TypingService {
         }, "");
         return p;
     }
+
 }

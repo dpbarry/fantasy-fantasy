@@ -54,7 +54,8 @@ export default class GameCore {
             await this.story.beginTutorial();
 
         this.isRunning = true;
-        this.gameLoop(Date.now());
+        this.lastFrameTime =  performance.now();
+        this.gameLoop(this.lastFrameTime);
 
         window.onbeforeunload = () => {
             this.save();
@@ -68,7 +69,6 @@ export default class GameCore {
         const dt = (currentTime - this.lastFrameTime) / 1000;
         this.lastFrameTime = currentTime;
 
-        // Update game time
         this.clock.advance(dt);
 
         // Handle throttled saving

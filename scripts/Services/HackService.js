@@ -70,7 +70,6 @@ export default class HackService {
         if (this.#isInitialized) return;
         this.#isInitialized = true;
 
-        // Create console element
         this.#consoleElement = document.createElement('dialog');
         this.#consoleElement.className = 'dev-console';
 
@@ -107,7 +106,6 @@ export default class HackService {
                 }
             } else {
                 this.#currentIndex = 0;
-                // Check if the wrong key was the start of sequence
                 if (e.key === this.#sequence[0]) {
                     this.#currentIndex = 1;
                 }
