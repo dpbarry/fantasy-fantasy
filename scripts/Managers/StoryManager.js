@@ -112,15 +112,15 @@ export default class StoryManager {
                         color = "hsl(330, 70%, 80%)";
                         this.core.mc.gender = "F";
                     }
-                    selected.classList.add("settled");
-                    setTimeout(() => {
-                        InputService.clearInput(p, "#sonChoice, #daughterChoice").then(() => {
+                    InputService.clearInput(p, "#sonChoice, #daughterChoice").then(() => {
+                        setTimeout(() => {
                             TypingService.collapseP(p, (i) => i.classList.contains("selected") ?
                                 `<span class='settled' style='font-size: 0.9em; display: inline-block; 
                     font-family: Vinque, serif; color: ${color}'>${i.innerText}</span>` : "");
                             this.getSpecialty();
-                        });
-                    }, 200);
+                        }, 150);
+
+                    });
                 };
                 this.core.ui.story.append(InputService.getCue("Enter", () => finishGetGender()));
             });

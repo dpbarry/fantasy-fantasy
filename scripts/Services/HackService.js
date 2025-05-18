@@ -42,7 +42,7 @@ export default class HackService {
             
         .dev-console.visible {
                 display: block;
-                animation: fadeInConsole 0.2s ease-out;
+                animation: fadeInConsole 0.15s;
         }
             
         .dev-console-feedback {
@@ -50,7 +50,7 @@ export default class HackService {
                 font-size: 0.9rem;
                 height: fit-content;
                 opacity: 0;
-                transition: opacity 0.15s ease-out;
+                transition: opacity 0.05s;
         }
         
         .dev-console-feedback.visible {
@@ -138,13 +138,17 @@ export default class HackService {
         cueWrapper.appendChild(escCue);
         escCue.classList.add('visible');
 
+        const feedback = this.#consoleElement.querySelector('.dev-console-feedback');
+
+        feedback.textContent = "";
+
 
         const handleCommand = async (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 const command = input.textContent.trim();
-                if (this.#consoleElement.querySelector(".dev-console-feedback").classList.contains('visible')) {
-                    this.#consoleElement.querySelector(".dev-console-feedback").classList.remove('visible');
+                if (feedback && feedback.classList.contains('visible')) {
+                    feedback.classList.remove('visible');
                     await GeneralService.delay(150);
                 }
                 await this.executeCommand(command, core);
@@ -159,7 +163,7 @@ export default class HackService {
         if (this.#consoleElement) {
             const feedback = this.#consoleElement.querySelector('.dev-console-feedback');
             const cueWrapper = this.#consoleElement.querySelector('div[style*="position: absolute"]');
-            if (feedback) feedback.remove();
+            feedback.classList.remove('visible');
             if (cueWrapper) cueWrapper.remove();
 
             this.#consoleElement.classList.remove('visible');

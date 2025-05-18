@@ -2,7 +2,7 @@ import GeneralService from "./GeneralService.js";
 import InputService from "./InputService.js";
 
 export default class TypingService {
-    static TYPE_DELAY = 0;
+    static TYPE_DELAY = 12;
 
     static async typeOn(text, body) {
         // first add all the characters invisibly to establish justified alignment
@@ -126,36 +126,63 @@ export default class TypingService {
     }
 
     static async typePWithChoices(text, body, choices) {
-        this.typeP(text, body).then((p) => {
+        return this.typeP(text, body).then((p) => {
             const choiceContainer = document.createElement('div');
             choiceContainer.className = 'choice-container';
             p.after(choiceContainer);
 
-            choices.forEach((choice, index) => {
+            const choiceElements = choices.map((choice, index) => {
                 const choiceElement = document.createElement('div');
                 choiceElement.className = 'choice';
                 choiceElement.innerText = choice;
+                choiceElement.style.setProperty('--choice-index', index);
                 choiceElement.style.animationDelay = `${index * 0.3}s`;
-
-                choiceElement.onclick = () => {
-                    choiceElement.classList.add('selected');
-                    choiceContainer.querySelectorAll('.choice').forEach(el => {
-                        el.onclick = null;
-                        if (el !== choiceElement) {
-                            el.classList.add('unselected');
-                        }
-                    });
-                    Promise.resolve({
-                        index: index,
-                        element: choiceElement,
-                        paragraph: p
-                    });
-                };
-
                 choiceContainer.appendChild(choiceElement);
+                return choiceElement;
             });
 
+            return new Promise(resolve => {
+                choiceElements.forEach((choiceElement, index) => {
+                    choiceElement.onclick = () => {
+                        // Disable all click handlers
+                        choiceElements.forEach(el => el.onclick = null);
 
+                        // Add selected class for initial animation
+                        choiceElement.classList.add('selected');
+
+                        // Start fading out others
+                        const unselectedElements = choiceElements.filter(el => el !== choiceElement);
+                        unselectedElements.forEach(el => el.classList.add('unselected'));
+
+                        // Calculate delays based on position
+                        const fadeTime = 150;
+                        const collapseTime = 150;
+                        const paddingTime = 150;
+
+                        // If it's the first choice, skip collapse delay
+                        const needsRising = index > 0;
+                        const collapseDelay = needsRising ? fadeTime : 0;
+
+                        // Start height collapse after fade
+                        setTimeout(() => {
+                            unselectedElements.forEach(el => el.classList.add('removing'));
+
+                            // Final padding transition
+                            setTimeout(() => {
+                                choiceElement.classList.add('settled');
+
+                                setTimeout(() => {
+                                    resolve({
+                                        index: index,
+                                        element: choiceElement,
+                                        paragraph: p
+                                    });
+                                }, paddingTime);
+                            }, collapseTime); // Only wait for collapse if we need to rise
+                        }, collapseDelay);
+                    };
+                });
+            });
         });
     }
 

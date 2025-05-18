@@ -67,11 +67,11 @@ export default class InputService {
             document.removeEventListener("keydown", wrapKeydown);
             cue.removeEventListener("click", cueReceived);
             cue.classList.add("done");
-            cb();
 
             cue.addEventListener("transitionend", function h() {
                 cue.removeEventListener("transitionend", h);
                 cue.remove();
+                cb();
             });
         }
 
@@ -82,7 +82,7 @@ export default class InputService {
         };
 
         document.addEventListener("keydown", wrapKeydown);
-        cue.addEventListener("click", cueReceived);
+        cue.addEventListener("pointerdown", cueReceived);
         return cue;
     };
 
