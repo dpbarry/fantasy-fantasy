@@ -105,10 +105,10 @@ export default class TypingService {
 
             if (span.className === "inputwrap") {
                 const input = InputService.getInput(ids[inputIndex++], cb);
-
+                input.style.width = "0";
                 inputs.push(input);
                 span.appendChild(input);
-
+                setTimeout(()=> input.style.width = "", 10);
 
                 await GeneralService.waitForEvent(input, "transitionend");
             } else {
@@ -120,6 +120,8 @@ export default class TypingService {
 
         return Promise.resolve([p, inputs]);
     }
+
+
 
     static async typePWithChoices(text, body, choices) {
         return this.typeP(text, body).then((p) => {
@@ -134,7 +136,7 @@ export default class TypingService {
                 choiceElement.style.animationDelay = `${index * 0.2}s`;
                 choiceElement.style.pointerEvents = "none";
                 choiceElement.onanimationend = () => {
-                    choiceElement.onanimationed = null;
+                    choiceElement.onanimationend = null;
                     choiceElement.style.pointerEvents = "";
                 }
                 choiceContainer.appendChild(choiceElement);
@@ -145,32 +147,66 @@ export default class TypingService {
                 choiceElements.forEach((choiceElement, index) => {
                     choiceElement.onclick = () => {
                         choiceElements.forEach(el => el.onclick = null);
-
                         choiceElement.classList.add('selected');
 
                         const unselectedElements = choiceElements.filter(el => el !== choiceElement);
-                        unselectedElements.forEach(el => el.classList.add('unselected'));
 
-                        if (index === 0) {
-                            unselectedElements[0].ontransitionend = () => {
-                                unselectedElements[0].ontransitionend = null;
-                                unselectedElements.forEach(el => el.remove());
-                                resolve({
-                                    i: index, el: choiceElement,
-                                });
-                            };
-                        } else setTimeout(() => {
-                            resolve({
-                                i: index, el: choiceElement
+                        // Calculate heights before any changes
+                        const story = document.getElementById('story');
+                        const containerRect = choiceContainer.getBoundingClientRect();
+                        const containerBottom = containerRect.bottom;
+                        const viewportBottom = story.getBoundingClientRect().bottom;
+                        const scrollAdjustment = containerBottom > viewportBottom ?
+                            containerRect.height : 0;
+
+                        // Clone unselected elements and position them after the container
+                        const clones = unselectedElements.map(el => {
+                            const clone = el.cloneNode(true);
+                            clone.style.fontSize = '0';
+                            clone.style.pointerEvents = "none";
+                            clone.style.opacity = '0';
+
+                            clone.classList.add('clone', 'choice');
+                            choiceContainer.after(clone);
+                            return clone;
+                        });
+
+                        // Start transitions
+                        requestAnimationFrame(() => {
+                            // Original choices shrink
+                            unselectedElements.forEach(el => {
+                                el.classList.add('unselected');
                             });
-                        }, 550);
 
+                            // Add scroll adjustment right as the choices start collapsing
+                            if (scrollAdjustment > 0) {
+                                story.scrollTop += scrollAdjustment;
+                            }
+
+                            // Clones grow after the filter transition
+                            setTimeout(() => {
+                                clones.forEach(clone => {
+                                    clone.style.fontSize = '';
+                                });
+                            }, 250); // Match the filter transition time
+
+                            // Final cleanup after both transitions
+                            setTimeout(() => {
+                                // Clean up
+                                clones.forEach(clone => clone.remove());
+                                unselectedElements.forEach(el => el.remove());
+
+                                resolve({
+                                    i: index,
+                                    el: choiceElement
+                                });
+                            }, 550); // Total time: 250ms (filter) + 300ms (font-size)
+                        });
                     };
                 });
             });
         });
     }
-
 
     static async choiceNote(el, msg, spanIDs = [], spanTexts = []) {
         const note = document.createElement("p");

@@ -11,6 +11,38 @@ export default class StoryManager {
             tutorial: ""
         }
         core.registerSaveableComponent('story', this);
+        this.setupAutoScroll();
+    }
+
+    setupAutoScroll() {
+        let scrollTimeout;
+        const observer = new MutationObserver(() => {
+            clearTimeout(scrollTimeout);
+
+            scrollTimeout = setTimeout(() => {
+                const storyEl = this.core.ui.story;
+                const lastChild = storyEl.lastElementChild;
+                if (!lastChild) return;
+
+                // Check if last element's bottom edge is below the viewport
+                const containerRect = storyEl.getBoundingClientRect();
+                const lastChildRect = lastChild.getBoundingClientRect();
+
+                // If the bottom of the last child is below the container's visible area
+                if (lastChildRect.bottom > containerRect.bottom) {
+                    storyEl.scrollTo({
+                        top: storyEl.scrollHeight,
+                        behavior: 'smooth'
+                    });
+                }
+            }, 100);
+        });
+
+        observer.observe(this.core.ui.story, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
     }
 
     async typePWithInputs(text, width, ids, cb) {
@@ -122,7 +154,7 @@ export default class StoryManager {
         this.storyProg.tutorial = 2;
         this.storyText.tutorial = this.textSnapshot();
         await this.typePWithChoices("After throwing on some clothes, you check your reflection in the mirror, wondering " + `if you will make a good ${this.core.mc.genderSwitch("king", "queen")}. You do ` + "already know what your strong suit will be:", ["leading the people to " + "economic prosperity", "waging fierce military campaigns", "spearheading fortuitous " + "new discoveries"]).then(async res => {
-           let choice;
+            let choice;
             await TypingService.choiceNote(res.el, ...(function () {
                 switch (res.i) {
                     case 0:
@@ -137,7 +169,7 @@ export default class StoryManager {
                 }
             })());
 
-            this.core.ui.addHint("Many things in the game can be hovered over or long-held to show a tooltip. Try it now on "+choice+"!");
+            this.core.ui.addHint("Many things in the game can be hovered over or long-held to show a tooltip. Try it now on " + choice + "!");
         });
     }
 

@@ -8,25 +8,14 @@ import HeroManager from "./Managers/HeroManager.js";
 import UserManager from "./Managers/UserManager.js";
 import NewsManager from "./Managers/NewsManager.js";
 import HackService from "./Services/HackService.js";
+import LoadingService from "./Services/LoadingService.js";
 
 export default class GameCore {
     static instance = null;
 
     constructor() {
         if (GameCore.instance) return GameCore.instance;
-        this.saveableComponents = new Map();
-
-        this.clock = new GameClock();
-        this.storage = new GameStorage();
-
-        this.ui = new GameUI(this);
-        this.heroes = new HeroManager(this);
-        this.city = new CityManager(this);
-        this.story = new StoryManager(this);
-        this.mc = new UserManager(this);
-        this.news = new NewsManager(this);
-
-        this.registerSaveableComponent('clock', this.clock);
+        GameCore.instance = this;
 
         this.lastFrameTime = 0;
         this.isRunning = false;
@@ -36,9 +25,11 @@ export default class GameCore {
         this.saveThrottleMS = 1000;
         this.pendingSave = false;
 
-        GameCore.instance = this;
-        this.initialize();
+        this.saveableComponents = new Map();
+        this.#initializeGame();
+        
     }
+
 
     static getInstance() {
         if (!GameCore.instance) {
@@ -47,19 +38,33 @@ export default class GameCore {
         return GameCore.instance;
     }
 
-    async initialize() {
+    async #initializeGame() {
+        this.clock = new GameClock();
+        this.storage = new GameStorage();
+        this.registerSaveableComponent('clock', this.clock);
+
+        this.ui = new GameUI(this);
+        this.heroes = new HeroManager(this);
+        this.city = new CityManager(this);
+        this.story = new StoryManager(this);
+        this.mc = new UserManager(this);
+        this.news = new NewsManager(this);
         HackService.initialize(this);
 
-        if (!await this.loadLastSave())
-            await this.story.beginTutorial();
+        await LoadingService.initialize();
+        
+        LoadingService.hide();
+        if (!await this.loadLastSave()) await this.story.beginTutorial();
 
         this.isRunning = true;
-        this.lastFrameTime =  performance.now();
+        this.lastFrameTime = performance.now();
         this.gameLoop(this.lastFrameTime);
 
         window.onbeforeunload = () => {
             this.save();
         };
+
+
     }
 
 
@@ -94,8 +99,7 @@ export default class GameCore {
 
     // Register a component that needs to be saved
     registerSaveableComponent(key, component) {
-        if (typeof component.serialize !== 'function' ||
-            typeof component.deserialize !== 'function') {
+        if (typeof component.serialize !== 'function' || typeof component.deserialize !== 'function') {
             throw new Error(`Component ${key} must implement serialize and deserialize methods`);
         }
         this.saveableComponents.set(key, component);
@@ -110,9 +114,7 @@ export default class GameCore {
             }
 
             const snapshot = {
-                version: '0.0',
-                timestamp: Date.now(),
-                data: componentsData
+                version: '0.0', timestamp: Date.now(), data: componentsData
             };
 
             await this.storage.save(snapshot);
