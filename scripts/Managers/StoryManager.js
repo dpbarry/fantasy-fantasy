@@ -1,5 +1,6 @@
 import InputService from "../Services/InputService.js";
 import TypingService from "../Services/TypingService.js";
+import GeneralService from "../Services/GeneralService.js";
 
 export default class StoryManager {
     constructor(core) {
@@ -16,7 +17,7 @@ export default class StoryManager {
 
     setupAutoScroll() {
         let scrollTimeout;
-        const observer = new MutationObserver(() => {
+        this.observer = new MutationObserver(() => {
             clearTimeout(scrollTimeout);
 
             scrollTimeout = setTimeout(() => {
@@ -38,11 +39,13 @@ export default class StoryManager {
             }, 100);
         });
 
-        observer.observe(this.core.ui.story, {
+        this.observer.observe(this.core.ui.story, {
             childList: true,
             subtree: true,
             characterData: true
         });
+        this.core.ui.story._mutationObserver = this.observer;
+
     }
 
     async typePWithInputs(text, width, ids, cb) {
@@ -63,6 +66,7 @@ export default class StoryManager {
 
     async beginTutorial() {
         this.core.clock.pause();
+        await GeneralService.delay(300); // might increase for release
         this.typePWithInputs('You jolt awake, your head spinning. What a wild dream that must have been. ' + 'You can hardly even remember your own name... But of course, it is @ @!', "5.5em", ["getFirstName", "getLastName"], InputService.nameValidate).then(this.getName.bind(this));
     }
 
@@ -155,19 +159,37 @@ export default class StoryManager {
         this.storyText.tutorial = this.textSnapshot();
         await this.typePWithChoices("After throwing on some clothes, you check your reflection in the mirror, wondering " + `if you will make a good ${this.core.mc.genderSwitch("king", "queen")}. You do ` + "already know what your strong suit will be:", ["leading the people to " + "economic prosperity", "waging fierce military campaigns", "spearheading fortuitous " + "new discoveries"]).then(async res => {
             let choice;
-            await TypingService.choiceNote(res.el, ...(function () {
+            let note = await TypingService.choiceNote(res.el, ...(() => {
                 switch (res.i) {
                     case 0:
-                        choice = "<span class='savvyWord'>savvy</span>";
+                        choice = "<span class='savvyWord hastip' data-tip='savvy'>savvy</span>";
+                        this.core.mc.savvy = 10;
                         return ["+10 @", ["savvyWord"], ["savvy"]];
                     case 1:
-                        choice = "<span class='valorWord'>valor</span>";
+                        choice = "<span class='valorWord hastip' data-tip='valor'>valor</span>";
+                        this.core.mc.valor = 10;
                         return ["+10 @", ["valorWord"], ["valor"]];
                     case 2:
-                        choice = "<span class='wisdomWord'>wisdom</span>";
+                        choice = "<span class='wisdomWord hastip' data-tip='wisdom'>wisdom</span>";
+                        this.core.mc.valor = 10;
                         return ["+10 @", ["wisdomWord"], ["wisdom"]];
                 }
             })());
+
+            let deadSpan = note.querySelector("#savvyWord, #valorWord, #wisdomWord");
+            deadSpan.classList.add("hastip");
+            deadSpan.dataset.tip = deadSpan.id.replace("Word", "");
+
+            this.core.ui.registerTip('savvy', () => {
+                return `<i>Measures economic know-how.</i><br>Each point of <span class="savvyWord">Savvy</span> grants a +1% bonus to GDP. <br>Current bonus: ${this.core.mc.savvy}%`
+            });
+            this.core.ui.registerTip('valor', () => {
+                return `<i>Measures military expertise.</i><br>Each point of <span class="valorWord">Valor</span> grants a +1% bonus to the Militia’s Offense and Defense. <br>Current bonus: ${this.core.mc.valor}%`
+            });
+            this.core.ui.registerTip('wisdom', () => {
+                return `<i>Measures scholastic prowess.</i><br>Each point of <span class="wisdomWord">Wisdom</span> grants a +1% bonus to Project Speed. <br>Current bonus: ${this.core.mc.wisdom}%`
+            });
+
 
             this.core.ui.addHint("Many things in the game can be hovered over or long-held to show a tooltip. Try it now on " + choice + "!");
         });
@@ -178,6 +200,8 @@ export default class StoryManager {
     }
 
     async tutorialResumeFrom(phase) {
+        if (phase > 0)
+            await GeneralService.delay(300);
         this.core.ui.story.innerHTML = this.storyText.tutorial;
         switch (phase) {
             case 0:

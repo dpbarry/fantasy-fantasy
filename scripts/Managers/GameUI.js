@@ -4,10 +4,12 @@ export default class GameUI {
         this.story = document.getElementById("story");
         this.news = document.getElementById("updates");
         this.userstatus = document.getElementById("user-status");
-        this.setupEventListeners();
+
+        this.tooltips = new Map();
+        this.initialize();
     }
 
-    setupEventListeners() {
+    initialize() {
         document.getElementById("logo").onclick = () => location.href = location.href;
         document.querySelectorAll("#navbar button").forEach(b => b.onpointerdown = () => {
             b.classList.add("chosen");
@@ -53,108 +55,220 @@ export default class GameUI {
                 }, 0);
             };
         });
+
+        this.observeTooltips();
     }
 
-    /**
-     * @param {HTMLElement} el
-     */
-    unlockPanel(el) {
-        el.querySelector(".lockedpanel").classList.add("hide");
-        return new Promise(resolve => {
-            el.querySelector(".lockedpanel").ontransitionend = () => {
-                el.querySelector(".lockedpanel").remove();
-                resolve();
-            }
-        })
-    }
+    observeTooltips() {
+        const attach = (el) => {
+            // Mouse hover
+            el.addEventListener('mouseenter', () => this.showTooltip(el));
+            el.addEventListener('mouseleave', () => this.destroyTooltip(el));
 
-    addHint(msg) {
-        const box = document.createElement('div');
-        const text = document.createElement('div');
-        box.className = 'hintbox';
-        text.innerHTML = msg;
-        box.appendChild(text);
-        this.story.appendChild(box);
+            // Touch handling
+            el.addEventListener('pointerdown', (e) => {
+                if (e.pointerType === 'mouse') return;
+                e.preventDefault();
+                this.showTooltip(el);
+                const dismissHandler = (e) => {
+                    if (e.target === el) return;
+                    this.destroyTooltip(el);
+                    document.removeEventListener('pointerdown', dismissHandler);
+                    document.removeEventListener('pointerup', dismissHandler);
+                    document.removeEventListener('scroll', dismissHandler);
+                };
 
-        return {
-            destroy: () => {
-                box.style.opacity = '0';
-                box.addEventListener('transitionend', () => {
-                    box.remove();
+                // Add handler on next tick to avoid immediate triggering
+                setTimeout(() => {
+                    document.addEventListener('pointerdown', dismissHandler);
+                    document.addEventListener('pointerup', dismissHandler);
+                    document.addEventListener('scroll', dismissHandler);
+                }, 0);
+            });
+        };
+
+
+            const observer = new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    if (mutation.type === 'childList') {
+                        mutation.addedNodes.forEach(node => {
+                            if (node.nodeType !== Node.ELEMENT_NODE) return;
+                            [...(node.classList?.contains('hastip') ? [node] : []), ...node.querySelectorAll('.hastip')]
+                                .forEach(el => {
+                                    attach.call(this, el);
+                                });
+                        });
+                    } else if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        const node = mutation.target;
+                        if (node.classList.contains('hastip')) {
+                            attach.call(this, node);
+                        }
+                    }
                 });
+            });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                characterData: true,
+                attributes: true,
+                attributeFilter: ['class']
+            });
+
+            document.querySelectorAll('.hastip').forEach(el => {
+                attach.call(this, el);
+            });
+
+        }
+
+        showTooltip(el)
+        {
+            if (el.querySelector('.tooltip')) return;
+            const tooltipElement = document.createElement('div');
+            tooltipElement.className = 'tooltip';
+            tooltipElement.dataset.tip = el.dataset.tip;
+            tooltipElement.style.opacity = "0"; // Start invisible for measurement
+            tooltipElement.innerHTML = this.getTip(el);
+            document.body.appendChild(tooltipElement);
+
+            const PADDING = 8; // Minimum padding from viewport edges
+            const MARGIN = 3; // Padding between tooltip and element
+
+            const rect = el.getBoundingClientRect();
+            const tooltipRect = tooltipElement.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            // Calculate available space in each direction
+            const spaceAbove = rect.top;
+            const spaceBelow = viewportHeight - rect.bottom;
+            const spaceLeft = rect.left;
+            const spaceRight = viewportWidth - rect.right;
+
+            // Determine best position
+            let position;
+            if (spaceAbove >= tooltipRect.height + PADDING && spaceLeft + rect.width >= tooltipRect.width) {
+                position = 'above';
+            } else if (spaceBelow >= tooltipRect.height + PADDING && spaceLeft + rect.width >= tooltipRect.width) {
+                position = 'below';
+            } else if (spaceLeft >= tooltipRect.width + PADDING) {
+                position = 'left';
+            } else if (spaceRight >= tooltipRect.width + PADDING) {
+                position = 'right';
+            } else {
+                position = 'above'; // Fallback to above if no good position found
             }
-        };
-    }
 
+            // Position the tooltip
+            let top, left;
+            tooltipElement.classList.remove('tooltip-above', 'tooltip-below', 'tooltip-left', 'tooltip-right');
 
-    createTooltip(element, content) {
-        return new this.Tooltip(element, content);
-    }
-
-    createInteractiveTooltip(element, func, interval = 1000) {
-        let tooltip = new this.Tooltip(element, "Loading...");
-
-
-        async function updateContent() {
-            tooltip.tooltipElement.innerHTML = await func();
-        }
-
-
-
-        const originalShow = tooltip.show.bind(tooltip);
-
-        tooltip.showHandler = async function () {
-            await updateContent();
-            originalShow();
-
-            this.updateInterval = setInterval(() => {
-                updateContent();
-            }, interval);
-        };
-
-        const originalDestroy = tooltip.destroy.bind(tooltip);
-        tooltip.destroyHandler = function () {
-            if (this.updateInterval) {
-                clearInterval(this.updateInterval);
-                this.updateInterval = null;
+            switch (position) {
+                case 'above':
+                    top = rect.top - tooltipRect.height - MARGIN;
+                    left = rect.left + (rect.width - tooltipRect.width) / 2;
+                    tooltipElement.classList.add('tooltip-above');
+                    break;
+                case 'below':
+                    top = rect.bottom + MARGIN;
+                    left = rect.left + (rect.width - tooltipRect.width) / 2;
+                    tooltipElement.classList.add('tooltip-below');
+                    break;
+                case 'left':
+                    top = rect.top + (rect.height - tooltipRect.height) / 2;
+                    left = rect.left - tooltipRect.width - MARGIN;
+                    tooltipElement.classList.add('tooltip-left');
+                    break;
+                case 'right':
+                    top = rect.top + (rect.height - tooltipRect.height) / 2;
+                    left = rect.right + MARGIN;
+                    tooltipElement.classList.add('tooltip-right');
+                    break;
             }
-            originalDestroy();
-        };
-        tooltip.element.removeEventListener('mouseenter', tooltip.showHandler);
-        tooltip.element.removeEventListener('mouseleave', tooltip.destroyHandler);
-        tooltip.element.addEventListener('mouseenter', tooltip.showHandler.bind(tooltip));
-        tooltip.element.addEventListener('mouseleave', tooltip.destroyHandler.bind(tooltip));
 
+            // Adjust if tooltip would go outside viewport
+            left = Math.max(PADDING, Math.min(left, viewportWidth - tooltipRect.width - PADDING));
+            top = Math.max(PADDING, Math.min(top, viewportHeight - tooltipRect.height - PADDING));
 
-        return tooltip;
-    }
+            tooltipElement.style.top = `${top}px`;
+            tooltipElement.style.left = `${left}px`;
+            tooltipElement.style.opacity = ""; // Make visible after positioning
 
-    Tooltip = class {
-        constructor(element, content) {
-            this.element = element;
-            this.tooltipElement = document.createElement('div');
-            this.tooltipElement.className = 'tooltip';
-            this.tooltipElement.innerHTML = content;
-            this.showHandler = this.show.bind(this);
-            this.destroyHandler = this.destroy.bind(this);
-            this.element.addEventListener('mouseenter', this.showHandler);
-            this.element.addEventListener('mouseleave', this.destroyHandler);
+            // Setup update interval
+            let updateInterval = setInterval(() => {
+                try {
+                    tooltipElement.innerHTML = this.getTip(el);
+                } catch {
+                    clearInterval(updateInterval);
+                }
+            }, 100);
         }
 
-        show() {
-            this.tooltipElement.style.opacity = "";
-            this.tooltipElement.ontransitionend = null;
-            document.body.appendChild(this.tooltipElement);
-            const rect = this.element.getBoundingClientRect();
-            this.tooltipElement.style.top = `${rect.top - this.tooltipElement.offsetHeight}px`;
-            this.tooltipElement.style.left = `${rect.left + (rect.width - this.tooltipElement.offsetWidth) / 2}px`;
+        destroyTooltip(el)
+        {
+            const tooltips = [...document.body.querySelectorAll('.tooltip')]
+                .filter(t => t.dataset.tip === el.dataset.tip);
+
+            tooltips.forEach(tooltip => {
+                if (tooltip.isRemoving) return;
+                tooltip.isRemoving = true;
+
+                tooltip.style.opacity = "0";
+                tooltip.ontransitionend = () => tooltip.remove();
+
+                // Failsafe removal
+                setTimeout(() => {
+                    if (tooltip.isConnected) tooltip.remove();
+                }, 300);
+            });
         }
 
-        destroy() {
-            this.tooltipElement.style.opacity = "0";
-            this.tooltipElement.ontransitionend = () => {
-                this.tooltipElement.remove();
+        getTip(el)
+        {
+            const cb = this.tooltips.get(el.dataset.tip);
+            if (!cb) {
+                el.classList.remove("hastip");
+                this.destroyTooltip(el);
+                return;
+            }
+            return cb(el);
+        }
+
+        registerTip(type, cb)
+        {
+            this.tooltips.set(type, cb);
+        }
+
+        /**
+         * @param {HTMLElement} el
+         */
+        unlockPanel(el)
+        {
+            el.querySelector(".lockedpanel").classList.add("hide");
+            return new Promise(resolve => {
+                el.querySelector(".lockedpanel").ontransitionend = () => {
+                    el.querySelector(".lockedpanel").remove();
+                    resolve();
+                }
+            })
+        }
+
+        addHint(msg)
+        {
+            const box = document.createElement('div');
+            const text = document.createElement('div');
+            box.className = 'hintbox';
+            text.innerHTML = msg;
+            box.appendChild(text);
+            this.story.appendChild(box);
+
+            return {
+                destroy: () => {
+                    box.style.opacity = '0';
+                    box.addEventListener('transitionend', () => {
+                        box.remove();
+                    });
+                }
             };
         }
     }
-}

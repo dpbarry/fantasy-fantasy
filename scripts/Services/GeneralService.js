@@ -1,15 +1,30 @@
 export default class GeneralService {
+    
     static async delay(ms) {
         return new Promise(res => setTimeout(res, ms));
     }
 
-    static async waitForEvent(el, ev) {
-       return new Promise(res =>
-            el.addEventListener(ev, function h(e) {
+    static async waitForEvent(el, ev, escape= 0) {
+        return new Promise(res => {
+            let timeoutId;
+
+            const handler = function h(e) {
+                if (timeoutId) clearTimeout(timeoutId);
                 el.removeEventListener(ev, h);
                 res(e);
-            })
-        );
+            };
+
+            if (escape > 0) {
+                if (typeof escape === 'number') {
+                    timeoutId = setTimeout(() => {
+                        el.removeEventListener(ev, handler);
+                        res(null);
+                    }, escape);
+                }
+            }
+            el.addEventListener(ev, handler);
+        });
+
     }
 
     static verticalScroll(el, moe) {

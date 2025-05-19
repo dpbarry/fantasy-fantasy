@@ -6,6 +6,9 @@ export default class UserManager {
         this.firstName = "";
         this.lastName = "";
         this.gender = "";
+        this.savvy = 0;
+        this.valor = 0;
+        this.wisdom = 0;
     }
 
     unlockStatus(firstName, lastName) {
@@ -20,11 +23,20 @@ export default class UserManager {
         // Create and setup the panel content
         const nameElement = document.createElement('div');
         nameElement.id = 'character-name';
+        nameElement.className = 'hastip';
+        nameElement.dataset.tip = 'mc-name';
+        this.core.ui.registerTip('mc-name', () => {
+            return `<span class='savvyWord'>Savvy</span>  ${this.savvy}<br>
+                    <span class='valorWord'>Valor</span>  ${this.valor}<br>
+                    <span class='wisdomWord'>Wisdom</span>  ${this.wisdom}<br>`;
+        });
         nameElement.textContent = `${this.firstName} ${this.lastName}`;
 
         const dateElement = document.createElement('div');
         dateElement.id = 'game-date';
-        this.core.ui.createInteractiveTooltip(dateElement, () => {
+        dateElement.className = 'hastip';
+        dateElement.dataset.tip = 'verbosedate';
+        this.core.ui.registerTip('verbosedate', () => {
             return this.core.clock.gameDate({format: "verbose"});
         });
 

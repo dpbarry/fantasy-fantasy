@@ -108,9 +108,10 @@ export default class TypingService {
                 input.style.width = "0";
                 inputs.push(input);
                 span.appendChild(input);
-                setTimeout(()=> input.style.width = "", 10);
 
-                await GeneralService.waitForEvent(input, "transitionend");
+                setTimeout(() => input.style.width = "", 10);
+
+                await GeneralService.waitForEvent(input, "transitionend", 250);
             } else {
                 Object.assign(span.style, {
                     color: "", pointerEvents: "", userSelect: ""
@@ -120,8 +121,6 @@ export default class TypingService {
 
         return Promise.resolve([p, inputs]);
     }
-
-
 
     static async typePWithChoices(text, body, choices) {
         return this.typeP(text, body).then((p) => {
@@ -142,66 +141,30 @@ export default class TypingService {
                 choiceContainer.appendChild(choiceElement);
                 return choiceElement;
             });
-
             return new Promise(resolve => {
                 choiceElements.forEach((choiceElement, index) => {
                     choiceElement.onclick = () => {
+                        body._mutationObserver.disconnect();
                         choiceElements.forEach(el => el.onclick = null);
                         choiceElement.classList.add('selected');
 
                         const unselectedElements = choiceElements.filter(el => el !== choiceElement);
-
-                        // Calculate heights before any changes
-                        const story = document.getElementById('story');
-                        const containerRect = choiceContainer.getBoundingClientRect();
-                        const containerBottom = containerRect.bottom;
-                        const viewportBottom = story.getBoundingClientRect().bottom;
-                        const scrollAdjustment = containerBottom > viewportBottom ?
-                            containerRect.height : 0;
-
-                        // Clone unselected elements and position them after the container
-                        const clones = unselectedElements.map(el => {
-                            const clone = el.cloneNode(true);
-                            clone.style.fontSize = '0';
-                            clone.style.pointerEvents = "none";
-                            clone.style.opacity = '0';
-
-                            clone.classList.add('clone', 'choice');
-                            choiceContainer.after(clone);
-                            return clone;
+                        unselectedElements.forEach(el => {
+                            el.classList.add('unselected');
+                            el.style.fontSize = '0';
                         });
 
-                        // Start transitions
-                        requestAnimationFrame(() => {
-                            // Original choices shrink
-                            unselectedElements.forEach(el => {
-                                el.classList.add('unselected');
+                        setTimeout(() => {
+                            body._mutationObserver.observe(body, {
+                                childList: true,
+                                subtree: true,
+                                characterData: true
                             });
 
-                            // Add scroll adjustment right as the choices start collapsing
-                            if (scrollAdjustment > 0) {
-                                story.scrollTop += scrollAdjustment;
-                            }
-
-                            // Clones grow after the filter transition
-                            setTimeout(() => {
-                                clones.forEach(clone => {
-                                    clone.style.fontSize = '';
-                                });
-                            }, 250); // Match the filter transition time
-
-                            // Final cleanup after both transitions
-                            setTimeout(() => {
-                                // Clean up
-                                clones.forEach(clone => clone.remove());
-                                unselectedElements.forEach(el => el.remove());
-
-                                resolve({
-                                    i: index,
-                                    el: choiceElement
-                                });
-                            }, 550); // Total time: 250ms (filter) + 300ms (font-size)
-                        });
+                            resolve({
+                                i: index, el: choiceElement
+                            });
+                        }, 250);
                     };
                 });
             });
@@ -212,11 +175,10 @@ export default class TypingService {
         const note = document.createElement("p");
         note.className = "choice-note";
         el.after(note);
-        this.typePWithSpans(msg, note, spanIDs, spanTexts).then(() => {
+        return this.typePWithSpans(msg, note, spanIDs, spanTexts).then(() => {
             this.collapseP(note.firstChild);
-            return Promise.resolve(note);
+            return note.firstChild;
         });
-
     }
 
 
