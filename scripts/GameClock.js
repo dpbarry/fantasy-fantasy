@@ -108,6 +108,8 @@ export default class GameClock {
         };
 
         switch (options.format) {
+            case 'verbose':
+                return `${this.ordinal(date.day)} ${this.months[date.month]} (${this.getSeason()}), ${date.year}`;
             case 'full':
                 return `${date.day} ${this.months[date.month]}, ${date.year}`;
             case 'short':
@@ -119,6 +121,11 @@ export default class GameClock {
         }
     }
 
+    ordinal(n) {
+        const s = ['th', 'st', 'nd', 'rd'];
+        const v = n % 100;
+        return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    }
 
     getSeason() {
         return ['Winter', 'Spring', 'Summer', 'Autumn'][Math.floor(this.gameDate().month / 3)];

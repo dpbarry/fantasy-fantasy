@@ -195,6 +195,8 @@ export default class HackService {
                     break;
                 case 'restart':
                     feedback.textContent = "Restarting game...";
+                    feedback.classList.add('visible');
+                    await GeneralService.delay(300);
                     core.pause();
                     window.onbeforeunload = null;
                     await new Promise(resolve => {

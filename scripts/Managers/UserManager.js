@@ -24,7 +24,9 @@ export default class UserManager {
 
         const dateElement = document.createElement('div');
         dateElement.id = 'game-date';
-        this.core.ui.createTooltip(dateElement, "<p>Current date</p>");
+        this.core.ui.createInteractiveTooltip(dateElement, () => {
+            return this.core.clock.gameDate({format: "verbose"});
+        });
 
         const updateDate = () => {
             dateElement.textContent = this.core.clock.gameDate({format: "numeric"});
@@ -42,17 +44,17 @@ export default class UserManager {
                     dateElement.style.color = "hsl(50, 35%, 80%)";
                     break;
             }
-        }
+        };
 
-        updateDate();
-        // Subscribe to time updates with a 1-second interval
-        this.core.clock.subscribeGameTime(() => {
             updateDate();
-        }, {interval: 1});
+            // Subscribe to time updates with a 1-second interval
+            this.core.clock.subscribeGameTime(() => {
+                updateDate();
+            }, {interval: 1});
 
-        this.core.ui.userstatus.appendChild(nameElement);
-        this.core.ui.userstatus.appendChild(dateElement);
-    }
+            this.core.ui.userstatus.appendChild(nameElement);
+            this.core.ui.userstatus.appendChild(dateElement);
+        }
 
 
     genderSwitch(male, female) {

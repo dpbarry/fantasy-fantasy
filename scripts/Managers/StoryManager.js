@@ -121,17 +121,23 @@ export default class StoryManager {
     async getSpecialty() {
         this.storyProg.tutorial = 2;
         this.storyText.tutorial = this.textSnapshot();
-        await this.typePWithChoices("After throwing on some clothes, you check your reflection in the mirror, wondering " + `if you will make a good ${this.core.mc.genderSwitch("king", "queen")}. You do ` + "already know what your strong suit will be:", ["leading the people to " + "economic prosperity", "waging fierce military campaigns", "spearheading fortuitous " + "new discoveries"]).then(res => {
-            TypingService.choiceNote(res.el, ...(function () {
+        await this.typePWithChoices("After throwing on some clothes, you check your reflection in the mirror, wondering " + `if you will make a good ${this.core.mc.genderSwitch("king", "queen")}. You do ` + "already know what your strong suit will be:", ["leading the people to " + "economic prosperity", "waging fierce military campaigns", "spearheading fortuitous " + "new discoveries"]).then(async res => {
+           let choice;
+            await TypingService.choiceNote(res.el, ...(function () {
                 switch (res.i) {
                     case 0:
+                        choice = "<span class='savvyWord'>savvy</span>";
                         return ["+10 @", ["savvyWord"], ["savvy"]];
                     case 1:
+                        choice = "<span class='valorWord'>valor</span>";
                         return ["+10 @", ["valorWord"], ["valor"]];
                     case 2:
+                        choice = "<span class='wisdomWord'>wisdom</span>";
                         return ["+10 @", ["wisdomWord"], ["wisdom"]];
                 }
             })());
+
+            this.core.ui.createTutorialHighlight("Many things in the game can be hovered over or long-held to show a tooltip. Try it now on the "+choice+" above!");
         });
     }
 

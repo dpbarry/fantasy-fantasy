@@ -9,7 +9,7 @@ export default class InputService {
      * @param {string} type
      * @returns {HTMLInputElement}
      */
-    static getInput(id, cb, type="alpha") {
+    static getInput(id, cb, type = "alpha") {
         const input = document.createElement("input");
         input.id = id;
         input.autocomplete = "off";
@@ -76,7 +76,7 @@ export default class InputService {
         }
 
         const wrapKeydown = (e) => {
-            if (e.key === key && window.getComputedStyle(cue).getPropertyValue("opacity") !== "0"){
+            if (e.key === key && window.getComputedStyle(cue).getPropertyValue("opacity") !== "0") {
                 cueReceived();
             }
         };
@@ -113,11 +113,13 @@ export default class InputService {
     };
 
 
-
     /**
      * @param {InputEvent} e
      */
     static nameValidate(e) {
+
+        if (!e.target.closest("#story").querySelector(".cue")) return;
+
         const resetField = (target) => {
             target.classList.remove("full");
             target.style.transitionDuration = "";

@@ -30,9 +30,7 @@ export default class TypingService {
             } else {
                 await GeneralService.delay(this.TYPE_DELAY);
                 Object.assign(span.style, {
-                    color: "",
-                    pointerEvents: "",
-                    userSelect: ""
+                    color: "", pointerEvents: "", userSelect: ""
                 });
             }
         }
@@ -115,9 +113,7 @@ export default class TypingService {
                 await GeneralService.waitForEvent(input, "transitionend");
             } else {
                 Object.assign(span.style, {
-                    color: "",
-                    pointerEvents: "",
-                    userSelect: ""
+                    color: "", pointerEvents: "", userSelect: ""
                 });
             }
         }
@@ -160,17 +156,14 @@ export default class TypingService {
                                 unselectedElements[0].ontransitionend = null;
                                 unselectedElements.forEach(el => el.remove());
                                 resolve({
-                                    i: index,
-                                    el: choiceElement,
+                                    i: index, el: choiceElement,
                                 });
                             };
-                        } else
-                            setTimeout(() => {
-                                resolve({
-                                    i: index,
-                                    el: choiceElement
-                                });
-                            }, 550);
+                        } else setTimeout(() => {
+                            resolve({
+                                i: index, el: choiceElement
+                            });
+                        }, 550);
 
                     };
                 });
@@ -179,21 +172,21 @@ export default class TypingService {
     }
 
 
-    static async choiceNote(el, msg, spanIDs=[], spanTexts=[]) {
+    static async choiceNote(el, msg, spanIDs = [], spanTexts = []) {
         const note = document.createElement("p");
         note.className = "choice-note";
         el.after(note);
-        this.typePWithSpans(msg, note, spanIDs, spanTexts).then(() => {this.collapseP(note.firstChild); return Promise.resolve(note);});
+        this.typePWithSpans(msg, note, spanIDs, spanTexts).then(() => {
+            this.collapseP(note.firstChild);
+            return Promise.resolve(note);
+        });
 
     }
 
 
     static collapseP(p, opt = (x) => x.outerHTML) {
         p.innerHTML = [...p.children].reduce((acc, x) => {
-            if (!x.className.trim())
-                return acc + x.innerHTML;
-            else
-                return acc + opt(x);
+            if (!x.className.trim()) return acc + x.innerHTML; else return acc + opt(x);
         }, "");
         return p;
     }
