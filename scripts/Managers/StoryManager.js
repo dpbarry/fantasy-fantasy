@@ -137,7 +137,7 @@ export default class StoryManager {
                 }
             })());
 
-            this.core.ui.createTutorialHighlight("Many things in the game can be hovered over or long-held to show a tooltip. Try it now on the "+choice+" above!");
+            this.core.ui.addHint("Many things in the game can be hovered over or long-held to show a tooltip. Try it now on "+choice+"!");
         });
     }
 

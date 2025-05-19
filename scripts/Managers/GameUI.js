@@ -68,12 +68,11 @@ export default class GameUI {
         })
     }
 
-    createTutorialHighlight(content) {
+    addHint(msg) {
         const box = document.createElement('div');
         const text = document.createElement('div');
-        box.className = 'tutorial-highlight';
-        text.className = 'tutorial-highlight-text';
-        text.innerHTML = content;
+        box.className = 'hintbox';
+        text.innerHTML = msg;
         box.appendChild(text);
         this.story.appendChild(box);
 
