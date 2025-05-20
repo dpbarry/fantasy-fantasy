@@ -75,14 +75,14 @@ export default class GameUI {
                     this.destroyTooltip(el);
                     document.removeEventListener('pointerdown', dismissHandler);
                     document.removeEventListener('pointerup', dismissHandler);
-                    document.removeEventListener('scroll', dismissHandler);
+                    window.removeEventListener('scroll', dismissHandler, true);
                 };
 
                 // Add handler on next tick to avoid immediate triggering
                 setTimeout(() => {
                     document.addEventListener('pointerdown', dismissHandler);
                     document.addEventListener('pointerup', dismissHandler);
-                    document.addEventListener('scroll', dismissHandler);
+                    window.addEventListener('scroll', dismissHandler, true);
                 }, 0);
             });
         };
