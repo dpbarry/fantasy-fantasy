@@ -190,7 +190,6 @@ export default class StoryManager {
                 return `<i>Measures scholastic prowess.</i><br>Each point of <span class="wisdomWord">Wisdom</span> grants a +1% bonus to Project Speed. <br>Current bonus: ${this.core.mc.wisdom}%`
             });
 
-
             this.core.ui.addHint("Many things in the game can be hovered over or tapped to show a tooltip. Try it now on " + choice + "!");
         });
     }

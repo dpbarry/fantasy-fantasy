@@ -1,3 +1,5 @@
+import GeneralService from "../Services/GeneralService.js";
+
 export default class GameUI {
     constructor(core) {
         this.core = core;
@@ -57,6 +59,13 @@ export default class GameUI {
         });
 
         this.observeTooltips();
+
+        this.story.addEventListener('scroll', () => {
+            GeneralService.verticalScroll(this.story, 2);
+        });
+        window.addEventListener("resize", () => {
+            GeneralService.verticalScroll(this.story, 2);
+        })
     }
 
     observeTooltips() {

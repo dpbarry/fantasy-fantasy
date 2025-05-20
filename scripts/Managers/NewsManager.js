@@ -15,6 +15,9 @@ export default class NewsManager {
             grid.addEventListener('scroll', () => {
                 GeneralService.verticalScroll(grid, 2);
             });
+            window.addEventListener("resize", () => {
+                GeneralService.verticalScroll(grid, 2);
+            });
             this.core.ui.news.appendChild(grid);
         }
 

@@ -109,9 +109,12 @@ export default class TypingService {
                 inputs.push(input);
                 span.appendChild(input);
 
-                setTimeout(() => input.style.width = "", 10);
 
-                await GeneralService.waitForEvent(input, "transitionend", 250);
+                requestAnimationFrame(() => {
+
+                })
+                setTimeout(() => input.style.width = "", 25);
+                await GeneralService.waitForEvent(input, "transitionend", 300);
             } else {
                 Object.assign(span.style, {
                     color: "", pointerEvents: "", userSelect: ""
