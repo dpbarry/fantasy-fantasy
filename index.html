@@ -44,7 +44,7 @@
 
         :root {
             --boxGap: 0.5rem;
-            --sidebarWidth: 25vw;
+            --sidebarWidth: 24vw;
 
             --topFontSize: clamp(0.4rem, 1.5vw, 1.1rem);
 
@@ -75,7 +75,7 @@
         }
 
         .box {
-            background: var(--bgColor);
+            background: transparent;
             border: 2px solid var(--boxColor);
             border-radius: 3px;
             padding: var(--boxGap);
@@ -120,12 +120,11 @@
             align-items: center;
         }
 
-        *:has(> .lockedpanel)  *:not(.lockedpanel) {
+        *:has(> .lockedpanel) *:not(.lockedpanel) {
             position: absolute;
             opacity: 0;
             pointer-events: none;
         }
-
 
 
         .lockedpanel {
@@ -141,7 +140,7 @@
             bottom: 5px;
         }
 
-        #navbar {
+        #navbar, #herobar, #citybar {
             display: flex;
             gap: var(--boxGap);
             overflow-x: auto;
@@ -150,7 +149,7 @@
             width: 100%;
         }
 
-        #navbar button {
+        .navbutton {
             display: flex;
             padding: 0;
             align-items: center;
@@ -161,7 +160,7 @@
             font-weight: 600;
             border: 0;
 
-            transition: filter 0.1s;
+            transition: filter 0.1s, scale 0.1s;
             white-space: nowrap;
             cursor: pointer;
 
@@ -174,17 +173,17 @@
             &:focus, &:active, &.chosen {
                 filter: var(--accentFilter);
             }
-        }
 
-        @media (pointer: fine) and (hover: hover) {
-            #navbar button:hover {
-                filter: var(--accentFilter);
+            &.locked {
+                cursor: default;
+                opacity: 0.5;
             }
         }
 
-        main {
-            display: flex;
-            flex-direction: column;
+        @media (pointer: fine) and (hover: hover) {
+           .navbutton:not(.locked, .nudged):hover {
+                scale: 1.06;
+            }
         }
 
         #story {
@@ -193,14 +192,12 @@
             margin: 0;
             font-size: clamp(0.75rem, 1.5vw + 1.5vh, 1.3rem);
             font-weight: 300;
-            padding-left: 0.1rem;
-            padding-right: 0.1rem;
             position: relative;
             padding-bottom: 18vh;
-            min-height: 100%;
+            height: 100%;
             scroll-behavior: smooth;
 
-            p {
+            p, .hintbox {
                 line-height: 1.15;
                 text-align: justify;
                 margin-bottom: 0.75rem;
@@ -514,7 +511,7 @@
             opacity: 0;
             color: var(--accent);
             font-weight: 650;
-            transition: opacity 0.2s 0.2s;
+            transition: opacity 0.2s 0.2s, padding 0.18s;
             user-select: none;
             pointer-events: none;
             z-index: 2;
@@ -557,14 +554,21 @@
                 pointer-events: all;
             }
 
+            &.fadeincue {
+                cursor: pointer;
+                pointer-events: all;
+                animation: fadeincue 0.3s ease forwards;
+            }
+
             @media (pointer: fine) and (hover: hover) {
                 &:hover::after {
                     animation: none;
                     opacity: 1;
                 }
 
-                &:not(.nudged):hover::after, &:not(.nudged):hover::before {
-                    scale: 1.1;
+                &:hover {
+                    padding-left: 0.5em;
+                    padding-right: 0.5em;
                 }
             }
 
@@ -572,6 +576,15 @@
                 transition: opacity 0.2s, scale 0.3s !important;
                 opacity: 0;
                 scale: 0;
+            }
+        }
+
+        @keyframes fadeincue {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 0.8;
             }
         }
 
@@ -637,7 +650,7 @@
             }
 
             &.hideicon::before {
-               opacity: 0;
+                opacity: 0;
             }
         }
 
@@ -675,9 +688,11 @@
         .statgrid {
             display: grid;
             grid-template-columns: min-content auto;
+
             span:not(:nth-of-type(1), :nth-of-type(2)) {
                 padding-top: 0.2em;
             }
+
             span:not(:nth-last-of-type(1), :nth-last-of-type(2)) {
                 padding-bottom: 0.2em;
                 border-bottom: 1px solid var(--midBaseColor);
@@ -686,6 +701,14 @@
 
         #navbar-wrap {
             grid-area: navbar;
+        }
+
+        #herobar-wrap {
+            grid-area: herobar;
+        }
+
+        #citybar-wrap {
+            grid-area: citybar;
         }
 
         #left-wrap {
@@ -706,6 +729,9 @@
 
         #main-wrap {
             grid-area: main;
+            display: flex;
+            flex-direction: column;
+            row-gap: var(--boxGap);
         }
 
 
@@ -719,7 +745,7 @@
         }
 
 
-        #dash-wrap, #left-wrap, #right-wrap {
+        #dash-wrap, #left-wrap, #right-wrap, #herobar-wrap, #citybar-wrap {
             display: none;
             opacity: 0;
         }
@@ -748,16 +774,23 @@
 
         #updates {
             position: relative;
+
             #notifbutton {
                 position: absolute;
+                height: min-content;
                 right: 0.7em;
                 bottom: 0.6em;
                 padding: 0;
                 background: transparent;
                 border: 0;
                 cursor: pointer;
-                img {filter: invert(0.97); height: 1.8em;}
+
+                img {
+                    filter: invert(0.97);
+                    height: 1.8em;
+                }
             }
+
             #wrapupdates {
                 display: grid;
                 overflow-y: scroll;
@@ -866,6 +899,12 @@
         #alphaboard {
             grid-template-columns: repeat(6, 1fr);
             gap: 6px;
+            transition: height 0.15s ease-out, opacity 0.2s;
+            height: 12em;
+            @starting-style {
+                height: 9em;
+                opacity: 0;
+            }
         }
 
         .tooltip {
@@ -979,7 +1018,7 @@
                 grid-template-columns: var(--sidebarWidth) 1fr var(--sidebarWidth);
                 grid-template-rows: min-content auto 0.15fr 0.05fr 0.1fr;
                 grid-template-areas:
-            "left navbar right"
+            "herobar navbar citybar"
             "left main right"
             "left main dash"
             "left status dash"
@@ -987,7 +1026,7 @@
             }
 
 
-            #dash-wrap, #left-wrap, #right-wrap, #logo {
+            #dash-wrap, #left-wrap, #right-wrap, #citybar-wrap, #herobar-wrap {
                 display: flex;
                 opacity: 1;
             }
@@ -997,43 +1036,10 @@
                 width: var(--sidebarWidth);
             }
 
-            #logo {
-                display: flex;
-                align-items: center;
-                width: fit-content;
-                justify-content: center;
-                font-size: var(--topFontSize);
-                cursor: pointer;
-                transition: scale 0.05s, opacity 0.1s;
-                opacity: 1;
-
-                i {
-                    color: hsl(200, 30%, 70%);
-                    position: relative;
-                    top: 0.1rem;
-                    font-size: 1.05em;
-                    margin-right: 0.15rem;
-                }
-
-                #firstword {
-                    font-family: varsity, sans serif;
-                    font-size: 1.25em;
-                    margin-right: 0.065rem;
-                    color: hsl(20, 70%, 48%);
-                }
-
-                #secondword {
-                    font-family: devinneswash, serif;
-                    font-size: 1.1em;
-                    position: relative;
-                    bottom: 0.05em;
-                    color: hsl(45, 70%, 48%);
-                }
-            }
         }
 
         .nudged, .nudged::before, .nudged::after {
-            scale: 0.985;
+            scale: 0.96;
         }
 
 
@@ -1135,17 +1141,57 @@
     </div>
 </div>
 
+<div class="wrapper" id="herobar-wrap">
+    <div class="box" id="herobar">
+        <button class="nudge navbutton locked" data-panel="team" id="teamnav"><img alt="Team" src="assets/TEAM.svg">
+        </button>
+        <button class="nudge navbutton locked" data-panel="hero" id="heronav"><img alt="Hero" src="assets/HERO.svg">
+        </button>
+        <button class="nudge navbutton locked" data-panel="equipment" id="equipmentnav"><img alt="Equipment"
+                                                                                             src="assets/INVENTORY.svg">
+        </button>
+        <button class="nudge navbutton locked" data-panel="grow" id="grownav"><img alt="Growth" src="assets/GROW.svg">
+        </button>
+        <button class="nudge navbutton locked" data-panel="upgrade" id="upgradenav"><img alt="Upgrade"
+                                                                                         src="assets/TREE.svg"></button>
+    </div>
+</div>
+
 <div class="wrapper" id="navbar-wrap">
-    <div id="navbar" class="box">
-        <button class="nudge" data-panel="story" id="storynav"><img alt="Story" src="assets/STORY.svg"></button>
-        <button class="nudge" data-panel="castle" id="castlenav"><img alt="Castle" src="assets/CASTLE.svg?v2"></button>
-        <button class="nudge" data-panel="city" id="citynav"><img alt="City" src="assets/CITY.svg"></button>
-        <button class="nudge" data-panel="industry" id="industrynav"><img alt="Industry" src="assets/FARM.svg"></button>
-        <button class="nudge" data-panel="adventure" id="adventurenav"><img alt="Adventure" src="assets/ADVENTURE.svg"></button>
-        <button class="nudge" data-panel="militia" id="militianav"><img alt="Militia" src="assets/MILITIA.svg"></button>
-        <button class="nudge" data-panel="innovation" id="innovationnav"><img alt="Innovation" src="assets/INNOVATION.svg"></button>
-        <button class="nudge" data-panel="settings" id="settingsnav"><img alt="Settings" src="assets/COG.svg"></button>
-        <button class="nudge" data-panel="codex" id="codexnav"><img alt="Codex" src="assets/INFO.svg"></button>
+    <div class="box" id="navbar">
+        <button class="nudge navbutton" data-panel="story" id="storynav"><img alt="Story" src="assets/STORY.svg">
+        </button>
+        <button class="nudge navbutton locked" data-panel="city" id="citynav"><img alt="City" src="assets/CITY.svg"></button>
+        <button class="nudge navbutton locked" data-panel="adventure" id="adventurenav"><img alt="Adventure"
+                                                                                      src="assets/DUNGEON.svg">
+        </button>
+        <button class="nudge locked navbutton" data-panel="industry" id="industrynav"><img alt="Industry" src="assets/FARM.svg">
+        </button>
+        <button class="nudge locked navbutton" data-panel="militia" id="militianav"><img alt="Militia"
+                                                                                         src="assets/MILITIA.svg">
+        </button>
+        <button class="nudge locked navbutton" data-panel="innovation" id="innovationnav"><img alt="Innovation"
+                                                                                               src="assets/INNOVATION.svg">
+        </button>
+        <button class="nudge locked navbutton" data-panel="globe" id="globenav"><img alt="Globe" src="assets/GLOBE.svg">
+        </button>
+    </div>
+</div>
+
+<div class="wrapper" id="citybar-wrap">
+    <div class="box" id="citybar">
+        <button class="nudge locked navbutton" data-panel="cityinfo" id="cityinfonav"><img alt="City Info"
+                                                                                           src="assets/CASTLE.svg">
+        </button>
+        <button class="nudge locked navbutton" data-panel="chart" id="chartnav"><img alt="Charts"
+                                                                                     src="assets/CHART.svg"></button>
+        <button class="nudge navbutton" data-panel="settings" id="settingsnav"><img alt="Settings" src="assets/COG.svg">
+        </button>
+        <button class="nudge navbutton" data-panel="codex" id="codexnav"><img alt="Codex" src="assets/CODEX.svg">
+        </button>
+        <button class="nudge locked navbutton" data-panel="achievements" id="achievenav"><img alt="Achievements"
+                                                                                              src="assets/TROPHY.svg">
+        </button>
     </div>
 </div>
 
@@ -1157,44 +1203,9 @@
 </div>
 
 <div class="wrapper" id="main-wrap">
-    <main class="box">
-        <div id="story"></div>
-    </main>
-</div>
-
-<div class="wrapper" id="status-wrap">
-    <aside class="box" id="user-status">
-        <h1 class="lockedpanel"> LOCKED </h1>
-    </aside>
-</div>
-
-<div class="wrapper" id="updates-wrap">
-    <aside class="box" id="updates">
-        <div id="wrapupdates"></div>
-        <button id="notifbutton" class="nudge"><img src="assets/NOTIFS.svg" alt="Notifs"></button>
-        <h1 class="lockedpanel"> LOCKED </h1>
-    </aside>
-    <aside class="keyboard" id="numboard">
-        <div class="key">1</div>
-        <div class="key">2</div>
-        <div class="key">3</div>
-        <div class="key">4</div>
-        <div class="key">5</div>
-        <div class="key">6</div>
-        <div class="key">7</div>
-        <div class="key">8</div>
-        <div class="key">9</div>
-        <div class="key">0</div>
-        <div class="key">.</div>
-        <div class="key action bkspc">⟵</div>
-        <div class="key action">⏎</div>
-    </aside>
-</div>
-
-<div class="wrapper sidebar" id="right-wrap">
-    <aside class="box" id="kingdom">
-        <h1 class="lockedpanel"> LOCKED </h1>
-    </aside>
+    <div class="box" id="story-wrap">
+        <div data-masksize="28" id="story"></div>
+    </div>
     <aside class="keyboard" id="alphaboard">
         <div class="key">A</div>
         <div class="key">B</div>
@@ -1225,6 +1236,42 @@
         <div class="key action bkspc">⟵</div>
         <div class="key action spc">SPC</div>
         <div class="key action">⏎</div>
+    </aside>
+    <aside class="keyboard" id="numboard">
+        <div class="key">1</div>
+        <div class="key">2</div>
+        <div class="key">3</div>
+        <div class="key">4</div>
+        <div class="key">5</div>
+        <div class="key">6</div>
+        <div class="key">7</div>
+        <div class="key">8</div>
+        <div class="key">9</div>
+        <div class="key">0</div>
+        <div class="key">.</div>
+        <div class="key action bkspc">⟵</div>
+        <div class="key action">⏎</div>
+    </aside>
+</div>
+
+<div class="wrapper" id="status-wrap">
+    <aside class="box" id="user-status">
+        <h1 class="lockedpanel"> LOCKED </h1>
+    </aside>
+</div>
+
+<div class="wrapper" id="updates-wrap">
+    <aside class="box" id="updates">
+        <div data-masksize="20" id="wrapupdates"></div>
+        <button class="nudge navbutton" id="notifbutton"><img alt="Notifs" src="assets/NOTIFS.svg"></button>
+        <h1 class="lockedpanel"> LOCKED </h1>
+    </aside>
+
+</div>
+
+<div class="wrapper sidebar" id="right-wrap">
+    <aside class="box" id="kingdom">
+        <h1 class="lockedpanel"> LOCKED </h1>
     </aside>
 </div>
 

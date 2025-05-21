@@ -60,10 +60,10 @@ export default class GameUI {
         this.observeTooltips();
 
         this.story.addEventListener('scroll', () => {
-            GeneralService.verticalScroll(this.story, 2);
+            GeneralService.verticalScroll(this.story, 5);
         });
         window.addEventListener("resize", () => {
-            GeneralService.verticalScroll(this.story, 2);
+            GeneralService.verticalScroll(this.story, 5);
         });
 
         this.initializeConstants();
@@ -76,7 +76,7 @@ export default class GameUI {
     }
     
     initializeConstants() {
-
+        
     }
 
     observeTooltips() {

@@ -55,9 +55,10 @@ export default class InputService {
     /**
      * @param {string} key
      * @param {function} cb
+     * @param {boolean} immediatelyVisible
      * @returns {HTMLSpanElement}
      */
-    static getCue(key, cb) {
+    static getCue(key, cb, immediatelyVisible=false) {
         const cue = document.createElement("span");
         cue.className = `cue ${key.toLowerCase()}`;
         cue.addEventListener("pointerdown", () =>
@@ -83,6 +84,7 @@ export default class InputService {
 
         document.addEventListener("keydown", wrapKeydown);
         cue.addEventListener("pointerdown", cueReceived);
+        if (immediatelyVisible) cue.classList.add("fadeincue");
         return cue;
     };
 

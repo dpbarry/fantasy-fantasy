@@ -37,6 +37,7 @@ export default class NewsManager {
     }
 
     deserialize(data) {
+        if (!data.logs) return;
         this.core.ui.news.querySelector(".lockedpanel").remove();
         this.logGrid.innerHTML = data.logs;
     }

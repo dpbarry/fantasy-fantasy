@@ -154,7 +154,7 @@ export default class StoryManager {
     async getSpecialty() {
         this.storyProg.tutorial = 2;
         this.storyText.tutorial = this.textSnapshot();
-        await this.typePWithChoices("After throwing on some clothes, you check your reflection in the mirror. Presentable enough. No point overdressing for what might be a run-of-the-mill meeting. Still, you find yourself wondering " + `whether you will make a good ${this.core.mc.genderSwitch("king", "queen")}. You do ` + "already know what your strong suit would be:", ["leading the people to " + "economic prosperity", "waging fierce military campaigns", "spearheading fortuitous " + "new discoveries"]).then(async res => {
+        await this.typePWithChoices("After throwing on some clothes, you check your reflection in the mirror. Presentable enough. No point in overdressing for what might just be a run-of-the-mill meeting. Still, you find yourself wondering " + `whether you will make a good ${this.core.mc.genderSwitch("king", "queen")}. You do ` + "already know what your strong suit would be:", ["leading the people to " + "economic prosperity", "waging fierce military campaigns", "spearheading fortuitous " + "new discoveries"]).then(async res => {
             let choice;
             await TypingService.choiceNote(res.el, ...(() => {
                 switch (res.i) {
@@ -191,6 +191,12 @@ export default class StoryManager {
 <p>Current boost: +${this.core.mc.wisdom}%</p>`
             });
             this.core.ui.addHint("Many things in the game can be hovered over or tapped to show a tooltip. Try it now on @! For more in-depth information, see the codex.", [choice.toLowerCase() + "Word"], [choice], [choice.toLowerCase()]);
+
+            await GeneralService.delay(2000);
+
+            this.core.ui.story.appendChild(InputService.getCue("Enter", () => {
+            }, true));
+
         });
     }
 
