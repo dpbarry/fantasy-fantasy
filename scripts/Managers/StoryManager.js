@@ -32,17 +32,14 @@ export default class StoryManager {
                 // If the bottom of the last child is below the container's visible area
                 if (lastChildRect.bottom > containerRect.bottom) {
                     storyEl.scrollTo({
-                        top: storyEl.scrollHeight,
-                        behavior: 'smooth'
+                        top: storyEl.scrollHeight, behavior: 'smooth'
                     });
                 }
             }, 100);
         });
 
         this.observer.observe(this.core.ui.story, {
-            childList: true,
-            subtree: true,
-            characterData: true
+            childList: true, subtree: true, characterData: true
         });
         this.core.ui.story._mutationObserver = this.observer;
 
@@ -78,7 +75,7 @@ export default class StoryManager {
         const finishGetName = () => {
             this.core.ui.unlockPanel(this.core.ui.news).then(() => {
                 this.core.clock.resume();
-                this.core.news.update("You wake up from a strange dream.");
+                this.core.news.update("You woke up from a strange dream.");
                 this.core.mc.unlockStatus(inputFirst.value, inputSecond.value);
                 let n = 0;
                 // collapse both the unnecessary spans and the inputs so they mesh with the text
@@ -114,7 +111,7 @@ export default class StoryManager {
         setTimeout(async () => {
             this.storyText.tutorial = this.textSnapshot();
 
-            this.typePWithSpans("You roll out of bed, " + "hoping you haven’t missed the first bell. Your father said the meeting today had to be as " + "early as possible. Maybe that explained the odd sleep: you had a suspicion that this might be " + "The Meeting, the one long awaited by any firstborn @ / @ of a king.", ["sonChoice", "daughterChoice"], ["son", "daughter"]).then(([p, spans]) => {
+            this.typePWithSpans("You roll out of bed, " + "hoping you haven’t missed the first bell. Your father said the meeting today had to be as " + "early as possible. Maybe that explained the odd sleep—you had a suspicion that this might be " + "“The Meeting,” the one long awaited by any firstborn @ / @ of a king.", ["sonChoice", "daughterChoice"], ["son", "daughter"]).then(([p, spans]) => {
                 let [sonChoice, daughterChoice] = spans;
                 [sonChoice, daughterChoice].forEach(c => {
                     c.onclick = () => {
@@ -157,40 +154,43 @@ export default class StoryManager {
     async getSpecialty() {
         this.storyProg.tutorial = 2;
         this.storyText.tutorial = this.textSnapshot();
-        await this.typePWithChoices("After throwing on some clothes, you check your reflection in the mirror, wondering " + `if you will make a good ${this.core.mc.genderSwitch("king", "queen")}. You do ` + "already know what your strong suit will be:", ["leading the people to " + "economic prosperity", "waging fierce military campaigns", "spearheading fortuitous " + "new discoveries"]).then(async res => {
+        await this.typePWithChoices("After throwing on some clothes, you check your reflection in the mirror. Presentable enough. No point overdressing for what might be a run-of-the-mill meeting. Still, you find yourself wondering " + `whether you will make a good ${this.core.mc.genderSwitch("king", "queen")}. You do ` + "already know what your strong suit would be:", ["leading the people to " + "economic prosperity", "waging fierce military campaigns", "spearheading fortuitous " + "new discoveries"]).then(async res => {
             let choice;
-            let note = await TypingService.choiceNote(res.el, ...(() => {
+            await TypingService.choiceNote(res.el, ...(() => {
                 switch (res.i) {
                     case 0:
-                        choice = "<span class='savvyWord hastip' data-tip='savvy'>savvy</span>";
+                        choice = "Savvy";
                         this.core.mc.savvy = 10;
-                        return ["+10 @", ["savvyWord"], ["savvy"]];
+                        return ["+10 @", ["savvyWord"], ["Savvy"], ["savvy"]];
                     case 1:
-                        choice = "<span class='valorWord hastip' data-tip='valor'>valor</span>";
+                        choice = "Valor";
                         this.core.mc.valor = 10;
-                        return ["+10 @", ["valorWord"], ["valor"]];
+                        return ["+10 @", ["valorWord"], ["Valor"], ["valor"]];
                     case 2:
-                        choice = "<span class='wisdomWord hastip' data-tip='wisdom'>wisdom</span>";
-                        this.core.mc.valor = 10;
-                        return ["+10 @", ["wisdomWord"], ["wisdom"]];
+                        choice = "Wisdom";
+                        this.core.mc.wisdom = 10;
+                        return ["+10 @", ["wisdomWord"], ["Wisdom"], ["wisdom"]];
                 }
             })());
 
-            let deadSpan = note.querySelector("#savvyWord, #valorWord, #wisdomWord");
-            deadSpan.classList.add("hastip");
-            deadSpan.dataset.tip = deadSpan.id.replace("Word", "");
-
             this.core.ui.registerTip('savvy', () => {
-                return `<i>Measures economic know-how.</i><br>Each point of <span class="savvyWord">Savvy</span> grants a +1% bonus to GDP. <br>Current bonus: ${this.core.mc.savvy}%`
-            });
-            this.core.ui.registerTip('valor', () => {
-                return `<i>Measures military expertise.</i><br>Each point of <span class="valorWord">Valor</span> grants a +1% bonus to the Militia’s Offense and Defense. <br>Current bonus: ${this.core.mc.valor}%`
-            });
-            this.core.ui.registerTip('wisdom', () => {
-                return `<i>Measures scholastic prowess.</i><br>Each point of <span class="wisdomWord">Wisdom</span> grants a +1% bonus to Project Speed. <br>Current bonus: ${this.core.mc.wisdom}%`
+                return `<p><i>Measures economic know-how.</i></p>
+<p>Each point of <span class="savvyWord">Savvy</span> grants a +1% boost to all stats related to the economy.</p>
+<p>Current boost: +${this.core.mc.savvy}%</p>`
             });
 
-            this.core.ui.addHint("Many things in the game can be hovered over or tapped to show a tooltip. Try it now on " + choice + "!");
+            this.core.ui.registerTip('valor', () => {
+                return `<p><i>Measures military expertise.</i></p>
+<p>Each point of <span class="valorWord">Valor</span> grants a +1% boost to all stats related to the army.</p>
+<p>Current boost: +${this.core.mc.valor}%</p>`
+            });
+
+            this.core.ui.registerTip('wisdom', () => {
+                return `<p><i>Measures scholastic prowess.</i></p>
+<p>Each point of <span class="wisdomWord">Wisdom</span> grants a +1% boost to all stats related to research.</p>
+<p>Current boost: +${this.core.mc.wisdom}%</p>`
+            });
+            this.core.ui.addHint("Many things in the game can be hovered over or tapped to show a tooltip. Try it now on @! For more in-depth information, see the codex.", [choice.toLowerCase() + "Word"], [choice], [choice.toLowerCase()]);
         });
     }
 
@@ -199,9 +199,9 @@ export default class StoryManager {
     }
 
     async tutorialResumeFrom(phase) {
-        if (phase > 0)
-            await GeneralService.delay(300);
+        if (phase > 0) await GeneralService.delay(300);
         this.core.ui.story.innerHTML = this.storyText.tutorial;
+        this.core.ui.activatePanel(this.core.ui.story);
         switch (phase) {
             case 0:
                 await this.beginTutorial();

@@ -27,7 +27,7 @@ export default class GameCore {
 
         this.saveableComponents = new Map();
         this.#initializeGame();
-        
+
     }
 
 
@@ -51,10 +51,15 @@ export default class GameCore {
         this.news = new NewsManager(this);
         HackService.initialize(this);
 
+        this.activePanel = null;
+
         await LoadingService.initialize();
-        
+
         LoadingService.hide();
-        if (!await this.loadLastSave()) await this.story.beginTutorial();
+        if (!await this.loadLastSave()) {
+            this.ui.activatePanel(this.ui.story);
+            await this.story.beginTutorial();
+        }
 
         this.isRunning = true;
         this.lastFrameTime = performance.now();
@@ -63,10 +68,7 @@ export default class GameCore {
         window.onbeforeunload = () => {
             this.save();
         };
-
-
     }
-
 
     gameLoop(currentTime) {
         if (!this.isRunning) return;
@@ -96,6 +98,7 @@ export default class GameCore {
     resume() {
         this.isRunning = true;
     }
+
 
     // Register a component that needs to be saved
     registerSaveableComponent(key, component) {

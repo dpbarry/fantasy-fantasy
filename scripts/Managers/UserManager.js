@@ -26,10 +26,15 @@ export default class UserManager {
         nameElement.className = 'hastip';
         nameElement.dataset.tip = 'mc-name';
         this.core.ui.registerTip('mc-name', () => {
-            return `<span class='savvyWord'>Savvy</span>  ${this.savvy}<br>
-                    <span class='valorWord'>Valor</span>  ${this.valor}<br>
-                    <span class='wisdomWord'>Wisdom</span>  ${this.wisdom}<br>`;
+            const stats = [
+                { name: "Savvy", value: this.savvy, class: "savvyWord" },
+                { name: "Valor", value: this.valor, class: "valorWord" },
+                { name: "Wisdom", value: this.wisdom, class: "wisdomWord" }
+            ];
+
+            return this.core.ui.createStatsGrid(stats);
         });
+
         nameElement.textContent = `${this.firstName} ${this.lastName}`;
 
         const dateElement = document.createElement('div');

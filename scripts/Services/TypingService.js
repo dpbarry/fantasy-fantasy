@@ -2,7 +2,7 @@ import GeneralService from "./GeneralService.js";
 import InputService from "./InputService.js";
 
 export default class TypingService {
-    static TYPE_DELAY = 5;
+    static TYPE_DELAY = 0;
 
     static async typeOn(text, body) {
         // first add all the characters invisibly to establish justified alignment
@@ -25,6 +25,7 @@ export default class TypingService {
     static async renderText(p) {
         for (const span of [...p.children]) {
             if (span.classList.contains("deep")) {
+                span.classList.remove("hideicon");
                 await this.renderText(span);
                 span.classList.add("visible");
             } else {
@@ -41,40 +42,17 @@ export default class TypingService {
             let span = document.createElement("span");
             span.innerText = c;
             span.style.color = "transparent";
+            span.style.transition = "color 0.15s";
             span.style.pointerEvents = "none";
             span.style.userSelect = "none";
             body.appendChild(span);
         });
     }
 
-    static async typePWithSpans(text, body, spanIDs, spanTexts) {
+    static async typePWithSpans(text, body, spanIDs, spanTexts, spanTips=[]) {
         let p = document.createElement("p");
         body.appendChild(p);
-        let spans = [];
-
-        let count = 0;
-        [...text].forEach(c => {
-            let span = document.createElement("span");
-            if (c === "@") {
-                span.classList.add("deep");
-                span.id = spanIDs[count];
-                this.hideText(spanTexts[count++], span);
-                spans.push(span);
-            } else {
-                span.style.color = "transparent";
-                span.style.pointerEvents = "none";
-                span.style.userSelect = "none";
-                span.innerText = c;
-            }
-            p.appendChild(span);
-
-        });
-
-        await this.renderText(p);
-
-
-        p.querySelectorAll(".deep").forEach((elem) => this.collapseP(elem));
-        return Promise.resolve([p, spans]);
+        return this.typeWithSpans(text, p, spanIDs, spanTexts, spanTips);
     }
 
 
@@ -89,6 +67,7 @@ export default class TypingService {
                 span.style.width = width;
             } else {
                 span.style.color = "transparent";
+                span.style.transition = "color 0.15s";
                 span.style.pointerEvents = "none";
                 span.style.userSelect = "none";
                 span.innerText = c;
@@ -109,10 +88,6 @@ export default class TypingService {
                 inputs.push(input);
                 span.appendChild(input);
 
-
-                requestAnimationFrame(() => {
-
-                })
                 setTimeout(() => input.style.width = "", 25);
                 await GeneralService.waitForEvent(input, "transitionend", 300);
             } else {
@@ -125,6 +100,38 @@ export default class TypingService {
         return Promise.resolve([p, inputs]);
     }
 
+    static async typeWithSpans(text, body, spanIDs, spanTexts, spanTips=[]) {
+        let spans = [];
+
+        let count = 0;
+        [...text].forEach(c => {
+            let span = document.createElement("span");
+            if (c === "@") {
+                span.classList.add("deep");
+                span.id = spanIDs[count];
+                if (spanTips.length > count) {
+                    span.dataset.tip = spanTips[count];
+                    span.classList.add("hastip");
+                   span.classList.add("hideicon");
+                }
+                this.hideText(spanTexts[count++], span);
+                spans.push(span);
+            } else {
+                span.style.color = "transparent";
+                span.style.transition = "color 0.15s";
+                span.style.pointerEvents = "none";
+                span.style.userSelect = "none";
+                span.innerText = c;
+            }
+            body.appendChild(span);
+
+        });
+
+        await this.renderText(body);
+
+        body.querySelectorAll(".deep").forEach((elem) => this.collapseP(elem));
+        return Promise.resolve([body, spans]);
+    }
     static async typePWithChoices(text, body, choices) {
         return this.typeP(text, body).then((p) => {
             const choiceContainer = document.createElement('div');
@@ -167,20 +174,20 @@ export default class TypingService {
                             resolve({
                                 i: index, el: choiceElement
                             });
-                        }, 250);
+                        }, 550);
                     };
                 });
             });
         });
     }
 
-    static async choiceNote(el, msg, spanIDs = [], spanTexts = []) {
+    static async choiceNote(el, msg, spanIDs = [], spanTexts = [], spanTips = []) {
         const note = document.createElement("p");
         note.className = "choice-note";
         el.after(note);
-        return this.typePWithSpans(msg, note, spanIDs, spanTexts).then(() => {
-            this.collapseP(note.firstChild);
-            return note.firstChild;
+        return this.typeWithSpans(msg, note, spanIDs, spanTexts, spanTips).then(() => {
+            this.collapseP(note);
+            return note;
         });
     }
 

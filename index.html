@@ -44,7 +44,7 @@
 
         :root {
             --boxGap: 0.5rem;
-            --sidebarWidth: 22vw;
+            --sidebarWidth: 25vw;
 
             --topFontSize: clamp(0.4rem, 1.5vw, 1.1rem);
 
@@ -100,11 +100,10 @@
             color: var(--baseColor);
             font-family: ysabeau, monospace;
             display: grid;
-            grid-template-rows: min-content 50% 25% 5% auto;
+            grid-template-rows: min-content 75% 5% auto;
             grid-template-areas:
-             "header header header"
+             "navbar navbar navbar"
              "main main main"
-             "right right right"
              "status status status"
              "updates updates updates";
             gap: var(--boxGap);
@@ -138,42 +137,40 @@
             display: flex;
             gap: var(--boxGap);
             overflow-x: auto;
-            justify-content: center;
-            flex: 1;
+            justify-content: space-around;
             align-items: center;
             width: 100%;
         }
 
         #navbar button {
             display: flex;
+            padding: 0;
             align-items: center;
             justify-content: center;
-            flex-grow: 1;
+            background: transparent;
             color: var(--baseColor);
             height: 100%;
             font-weight: 600;
-            font-size: 1.55rem;
-            box-shadow: inset 0 0 0 1.5px var(--bgColor);
+            border: 0;
 
-            transition: background 0.05s, border 0.05s, box-shadow 0.05s, scale 0.05s;
+            transition: filter 0.1s;
             white-space: nowrap;
             cursor: pointer;
 
             img {
-                height: 1em;
+                height: 2.2em;
                 filter: invert(0.97);
                 user-select: none;
             }
 
             &:focus, &:active, &.chosen {
-                outline: none;
-                border-color: var(--accent);
+                filter: var(--accentFilter);
             }
         }
 
         @media (pointer: fine) and (hover: hover) {
             #navbar button:hover {
-                border-color: var(--accent);
+                filter: var(--accentFilter);
             }
         }
 
@@ -194,6 +191,7 @@
             padding-bottom: 18vh;
             min-height: 100%;
             scroll-behavior: smooth;
+
             p {
                 line-height: 1.15;
                 text-align: justify;
@@ -310,7 +308,9 @@
                     }
                 }
 
-                &:active {bottom: -0.075em;}
+                &:active {
+                    bottom: -0.075em;
+                }
 
                 &.selected {
                     margin: 0;
@@ -438,7 +438,7 @@
                         transition: color 0.2s ease,
                         padding-left 0.25s cubic-bezier(0.4, 0.0, 0.2, 1),
                         opacity 0.2s ease,
-                        font-weight 0.2s ease, text-decoration 0.34s 0.2s ease;
+                        font-weight 0.2s ease, text-decoration 0.3s 0.2s ease;
                         text-decoration-color: var(--darkAccent);
 
                         &::before {
@@ -481,7 +481,6 @@
         }
 
 
-
         @keyframes arrowPop {
             0% {
                 transform: scale(1);
@@ -512,7 +511,7 @@
             pointer-events: none;
             z-index: 2;
             position: relative;
-            bottom: 0.65rem;
+            bottom: 0.35em;
 
             &::before {
                 position: relative;
@@ -614,18 +613,23 @@
 
         #savvyWord, #wisdomWord, #valorWord, .savvyWord, .wisdomWord, .valorWord {
             white-space: nowrap;
+
             &::before {
                 display: inline-block;
                 height: 0.8em;
                 width: 0.8em;
-                top: 1px;
                 vertical-align: baseline;
                 position: relative;
                 margin-right: 0.025em;
                 background-size: contain;
                 background-repeat: no-repeat;
                 background-position: center;
+                transition: opacity 0.15s;
                 content: "";
+            }
+
+            &.hideicon::before {
+               opacity: 0;
             }
         }
 
@@ -635,6 +639,7 @@
             &::before {
                 background-image: url("./assets/SAVVY.svg");
                 filter: var(--savvyFilter);
+                top: 1px;
             }
         }
 
@@ -644,7 +649,7 @@
             &::before {
                 background-image: url("./assets/VALOR.svg");
                 filter: var(--valorFilter);
-                top: 1.5px;
+                top: 1px;
             }
         }
 
@@ -654,18 +659,25 @@
             &::before {
                 background-image: url("./assets/WISDOM.svg");
                 filter: var(--wisdomFilter);
-                top: 2px;
+                top: 1.5px;
                 margin-right: 0.075em;
             }
         }
 
-
-        #logo-wrap {
-            grid-area: logo;
+        .statgrid {
+            display: grid;
+            grid-template-columns: min-content auto;
+            span:not(:nth-of-type(1), :nth-of-type(2)) {
+                padding-top: 0.2em;
+            }
+            span:not(:nth-last-of-type(1), :nth-last-of-type(2)) {
+                padding-bottom: 0.2em;
+                border-bottom: 1px solid var(--midBaseColor);
+            }
         }
 
         #navbar-wrap {
-            grid-area: header;
+            grid-area: navbar;
         }
 
         #left-wrap {
@@ -699,7 +711,7 @@
         }
 
 
-        #logo-wrap, #dash-wrap, #left-wrap {
+        #dash-wrap, #left-wrap, #right-wrap {
             display: none;
             opacity: 0;
         }
@@ -717,7 +729,7 @@
 
             #character-name {
                 font-family: vinque, serif;
-                font-size: 1em;
+                font-size: 1.12em;
             }
 
             #game-date {
@@ -727,6 +739,17 @@
         }
 
         #updates {
+            position: relative;
+            #notifbutton {
+                position: absolute;
+                right: 0.7em;
+                bottom: 0.6em;
+                padding: 0;
+                background: transparent;
+                border: 0;
+                cursor: pointer;
+                img {filter: invert(0.97); height: 1.8em;}
+            }
             .wrapupdates {
                 display: grid;
                 overflow-y: scroll;
@@ -737,6 +760,7 @@
                 grid-template-rows: min-content;
 
                 column-gap: 0.5rem;
+
 
                 .timestamp, .message {
                     position: relative;
@@ -819,6 +843,7 @@
                 filter: var(--accentFilter);
                 color: transparent;
             }
+
             .key.spc {
                 font-size: 0.9em;
 
@@ -842,7 +867,7 @@
             border: 1.5px solid var(--baseColor);
             padding: 0.2rem 0.2rem;
             width: max-content;
-            max-width: 14rem;
+            max-width: 16.5rem;
             border-radius: 3px;
             color: var(--baseColor);
             font-size: 0.8em;
@@ -853,6 +878,10 @@
             font-family: Fraunces, serif;
             transition: opacity 0.1s;
             z-index: 1000;
+
+            p + p {
+                margin-top: 0.35em;
+            }
         }
 
         .tooltip-above::before {
@@ -913,11 +942,11 @@
             font-family: Fraunces, serif;
             font-size: 0.8em;
             font-weight: 325;
-            transition: opacity 0.4s cubic-bezier(0.34, 1, 0.64, 1), bottom 0.4s cubic-bezier(0.34, 1.1, 0.64, 1);
+            transition: opacity 0.4s, translate 0.4s;
 
             @starting-style {
                 opacity: 0;
-                bottom: -0.5rem;
+                translate: 0 1em;
             }
 
             &::before {
@@ -940,9 +969,9 @@
         @media (width > 850px) {
             body {
                 grid-template-columns: var(--sidebarWidth) 1fr var(--sidebarWidth);
-                grid-template-rows: min-content 60% 15% 5% auto;
+                grid-template-rows: min-content auto 0.15fr 0.05fr 0.1fr;
                 grid-template-areas:
-            "logo header right"
+            "left navbar right"
             "left main right"
             "left main dash"
             "left status dash"
@@ -950,18 +979,11 @@
             }
 
 
-            #dash-wrap, #left-wrap, #logo-wrap {
+            #dash-wrap, #left-wrap, #right-wrap, #logo {
                 display: flex;
                 opacity: 1;
             }
 
-            #navbar button {
-                font-size: var(--topFontSize);
-
-                img {
-                    height: 1.5em;
-                }
-            }
 
             .sidebar {
                 width: var(--sidebarWidth);
@@ -970,7 +992,7 @@
             #logo {
                 display: flex;
                 align-items: center;
-                width: var(--sidebarWidth);
+                width: fit-content;
                 justify-content: center;
                 font-size: var(--topFontSize);
                 cursor: pointer;
@@ -1105,22 +1127,20 @@
     </div>
 </div>
 
-
-<div class="wrapper" id="logo-wrap">
-    <div class="box nudge" id="logo">
-        <i class="ra ra-crossed-swords"></i>
-        <span id="firstword">Fantasy</span>
-        <span id="secondword">Fantasy</span>
-    </div>
-</div>
-
 <div class="wrapper" id="navbar-wrap">
-    <div id="navbar">
-        <button class="box nudge" id="field"><img alt="Campaign" src="assets/COMPASS.svg"></button>
-        <button class="box nudge" id="city"><img alt="City" src="assets/CITY.svg"></button>
-        <button class="box nudge" id="config"><img alt="Settings" src="assets/COG.svg"></button>
+    <div id="navbar" class="box">
+        <button class="nudge" data-panel="story" id="storynav"><img alt="Story" src="assets/STORY.svg"></button>
+        <button class="nudge" data-panel="castle" id="castlenav"><img alt="Castle" src="assets/CASTLE.svg?v2"></button>
+        <button class="nudge" data-panel="city" id="citynav"><img alt="City" src="assets/CITY.svg"></button>
+        <button class="nudge" data-panel="industry" id="industrynav"><img alt="Industry" src="assets/FARM.svg"></button>
+        <button class="nudge" data-panel="adventure" id="adventurenav"><img alt="Adventure" src="assets/ADVENTURE.svg"></button>
+        <button class="nudge" data-panel="militia" id="militianav"><img alt="Militia" src="assets/MILITIA.svg"></button>
+        <button class="nudge" data-panel="innovation" id="innovationnav"><img alt="Innovation" src="assets/INNOVATION.svg"></button>
+        <button class="nudge" data-panel="settings" id="settingsnav"><img alt="Settings" src="assets/COG.svg"></button>
+        <button class="nudge" data-panel="codex" id="codexnav"><img alt="Codex" src="assets/INFO.svg"></button>
     </div>
 </div>
+
 
 <div class="wrapper sidebar" id="left-wrap">
     <aside class="box" id="roster">
@@ -1142,6 +1162,7 @@
 
 <div class="wrapper" id="updates-wrap">
     <aside class="box" id="updates">
+        <button id="notifbutton" class="nudge"><img src="assets/NOTIFS.svg" alt="Notifs"></button>
         <h1 class="lockedpanel"> LOCKED </h1>
     </aside>
     <aside class="keyboard" id="numboard">
