@@ -120,6 +120,14 @@
             align-items: center;
         }
 
+        *:has(> .lockedpanel)  *:not(.lockedpanel) {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+
+
         .lockedpanel {
             transition: opacity 0.15s, bottom 0.2s;
             position: relative;
@@ -750,7 +758,7 @@
                 cursor: pointer;
                 img {filter: invert(0.97); height: 1.8em;}
             }
-            .wrapupdates {
+            #wrapupdates {
                 display: grid;
                 overflow-y: scroll;
                 width: 100%;
@@ -1162,6 +1170,7 @@
 
 <div class="wrapper" id="updates-wrap">
     <aside class="box" id="updates">
+        <div id="wrapupdates"></div>
         <button id="notifbutton" class="nudge"><img src="assets/NOTIFS.svg" alt="Notifs"></button>
         <h1 class="lockedpanel"> LOCKED </h1>
     </aside>

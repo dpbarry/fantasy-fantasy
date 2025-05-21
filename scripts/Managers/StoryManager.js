@@ -226,9 +226,6 @@ export default class StoryManager {
         this.storyProg = data.storyProg;
         this.storyText = data.storyText;
 
-        if (this.storyProg.tutorial >= 1) {
-            this.core.news.renderNews();
-        }
 
         if (this.storyProg.tutorial !== -1) this.tutorialResumeFrom(this.storyProg.tutorial);
     }
