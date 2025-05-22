@@ -4,15 +4,13 @@ export default class InputService {
     }
 
     /**
-     * @param {string} id
      * @param {function} cb
      * @param {string} type
      * @param {string} className
      * @returns {HTMLInputElement}
      */
-    static getInput(id, cb, type = "alpha", className = "") {
+    static getInput(cb, type = "alpha", className = "") {
         const input = document.createElement("input");
-        input.id = id;
         input.className = className;
         input.autocomplete = "off";
         input.inputMode = "none";

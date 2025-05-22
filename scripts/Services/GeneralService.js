@@ -27,9 +27,16 @@ export default class GeneralService {
 
     }
 
-    static verticalScroll(el, moe) {
+    static verticalScroll(el, moe, respectPadding= false) {
         el.style.overflowY = "auto";
-        const isScrollable = (el.scrollHeight > el.clientHeight + 1);
+        let clientHeight = el.clientHeight;
+        if (respectPadding) {
+            const computedStyle = window.getComputedStyle(el);
+            const paddingTop = parseFloat(computedStyle.paddingTop);
+            const paddingBottom = parseFloat(computedStyle.paddingBottom);
+            clientHeight -= (paddingTop + paddingBottom);
+        }
+        const isScrollable = (el.scrollHeight > clientHeight + 1);
         if (!isScrollable) {
             el.style.maskImage = "";
             el.style.overflow = "visible";
@@ -37,13 +44,12 @@ export default class GeneralService {
         }
         el.style.overflowY = "auto";
 
-
         // One pixel is added to the height to account for non-integer heights.
-        const isScrolledToBottom = el.scrollHeight < el.clientHeight + el.scrollTop + moe;
+        const isScrolledToBottom = el.scrollHeight < clientHeight + el.scrollTop + moe;
         const isScrolledToTop = isScrolledToBottom ? false : el.scrollTop < moe;
 
         let top = 0;
-        let bottom=0;
+        let bottom = 0;
 
         if (!isScrolledToBottom) {
             bottom = el.dataset.masksize || 40;

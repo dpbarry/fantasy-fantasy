@@ -65,10 +65,10 @@ export default class GameUI {
         this.observeTooltips();
 
         this.story.addEventListener('scroll', () => {
-            GeneralService.verticalScroll(this.story, 5);
+            GeneralService.verticalScroll(this.story, 5, true);
         });
         window.addEventListener("resize", () => {
-            GeneralService.verticalScroll(this.story, 5);
+            GeneralService.verticalScroll(this.story, 5, true);
         });
 
         this.initializeConstants();
@@ -101,37 +101,76 @@ export default class GameUI {
     }
 
     observeTooltips() {
+        const pointerDismissHandlers = new WeakMap();
+
         const attach = (el) => {
+            // Avoid double-binding
+            if (el._hastipBound) return;
+            el._hastipBound = true;
+
             // Mouse hover
             el.addEventListener('mouseenter', () => this.showTooltip(el));
             el.addEventListener('mouseleave', () => this.destroyTooltip(el));
 
-            // Touch handling
-            el.addEventListener('pointerdown', (e) => {
+            // Touch / pointer handling
+            const pointerDownHandler = (e) => {
                 if (e.pointerType === 'mouse') return;
                 e.preventDefault();
                 this.showTooltip(el);
+
                 const dismissHandler = (e) => {
                     if (e.target === el) return;
                     this.destroyTooltip(el);
                     document.removeEventListener('pointerdown', dismissHandler);
                     document.removeEventListener('pointerup', dismissHandler);
                     window.removeEventListener('scroll', dismissHandler, true);
+                    pointerDismissHandlers.delete(el); // Clean up reference
                 };
 
-                // Add handler on next tick to avoid immediate triggering
+                // Store for cleanup
+                pointerDismissHandlers.set(el, dismissHandler);
+
                 setTimeout(() => {
                     document.addEventListener('pointerdown', dismissHandler);
                     document.addEventListener('pointerup', dismissHandler);
                     window.addEventListener('scroll', dismissHandler, true);
                 }, 0);
-            });
+            };
+
+            el.addEventListener('pointerdown', pointerDownHandler);
+
+            // Store so we can remove the handler later
+            el._pointerDownHandler = pointerDownHandler;
         };
 
+        const detach = (el) => {
+            if (!el._hastipBound) return;
+            el._hastipBound = false;
+
+            el.removeEventListener('mouseenter', () => this.showTooltip(el));
+            el.removeEventListener('mouseleave', () => this.destroyTooltip(el));
+
+            if (el._pointerDownHandler) {
+                el.removeEventListener('pointerdown', el._pointerDownHandler);
+                delete el._pointerDownHandler;
+            }
+
+            const dismissHandler = pointerDismissHandlers.get(el);
+            if (dismissHandler) {
+                document.removeEventListener('pointerdown', dismissHandler);
+                document.removeEventListener('pointerup', dismissHandler);
+                window.removeEventListener('scroll', dismissHandler, true);
+                pointerDismissHandlers.delete(el);
+            }
+
+            // Ensure tooltip is removed
+            this.destroyTooltip(el);
+        };
 
         const observer = new MutationObserver(mutations => {
             mutations.forEach(mutation => {
                 if (mutation.type === 'childList') {
+                    // Added nodes
                     mutation.addedNodes.forEach(node => {
                         if (node.nodeType !== Node.ELEMENT_NODE) return;
                         [...(node.classList?.contains('hastip') ? [node] : []), ...node.querySelectorAll('.hastip')]
@@ -139,23 +178,39 @@ export default class GameUI {
                                 attach.call(this, el);
                             });
                     });
+
+                    // Removed nodes
+                    mutation.removedNodes.forEach(node => {
+                        if (node.nodeType !== Node.ELEMENT_NODE) return;
+                        [...(node.classList?.contains('hastip') ? [node] : []), ...node.querySelectorAll('.hastip')]
+                            .forEach(el => {
+                                detach.call(this, el);
+                            });
+                    });
+
                 } else if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
                     const node = mutation.target;
                     if (node.classList.contains('hastip')) {
                         attach.call(this, node);
+                    } else {
+                        detach.call(this, node);
                     }
                 }
             });
         });
 
         observer.observe(document.body, {
-            childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class']
+            childList: true,
+            subtree: true,
+            characterData: true,
+            attributes: true,
+            attributeFilter: ['class']
         });
 
+        // Initial setup
         document.querySelectorAll('.hastip').forEach(el => {
             attach.call(this, el);
         });
-
     }
 
     showTooltip(el) {
