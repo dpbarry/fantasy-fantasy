@@ -57,7 +57,7 @@ export default class TypingService {
 
 
     // expects a string with @
-    static async typePWithInputs(text, body, width, ids, className="", cb, type="alpha") {
+    static async typePWithInputs(text, body, width, className="", cb, type="alpha") {
         let p = document.createElement("p");
         body.appendChild(p);
         [...text].forEach(c => {
@@ -77,14 +77,13 @@ export default class TypingService {
         });
 
 
-        let inputIndex = 0;
         let inputs = [];
 
         for (const span of [...p.children]) {
             await GeneralService.delay(this.TYPE_DELAY);
 
             if (span.className === "inputwrap") {
-                const input = InputService.getInput(ids[inputIndex++], cb, type, className);
+                const input = InputService.getInput(cb, type, className);
                 input.style.width = "0";
                 inputs.push(input);
                 span.appendChild(input);

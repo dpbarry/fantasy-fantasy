@@ -52,8 +52,8 @@ export default class StoryManager {
 
     }
 
-    async typePWithInputs(text, width, ids, className, cb, type) {
-        return TypingService.typePWithInputs(text, this.core.ui.story, width, ids, className, cb, type);
+    async typePWithInputs(text, width, className, cb, type) {
+        return TypingService.typePWithInputs(text, this.core.ui.story, width, className, cb, type);
     }
 
     async typePWithSpans(text, spanIDs, spanTexts, spanClasses = [], spanTips = []) {
@@ -71,7 +71,7 @@ export default class StoryManager {
     async beginTutorial() {
         this.core.clock.pause();
         await GeneralService.delay(300); // might increase for release
-        this.typePWithInputs('You jolt awake, your head spinning. What a wild dream that must have been. ' + 'You can hardly even remember your own name... But of course, it is @ @!', "5.5em", ["getFirstName", "getLastName"], "getname", InputService.firstlastNameValidate).then(this.getName.bind(this));
+        this.typePWithInputs('You jolt awake, your head spinning. What a wild dream that must have been. ' + 'You can hardly even remember your own name... But of course, it is @ @!', "5.5em", "getname", InputService.firstlastNameValidate).then(this.getName.bind(this));
     }
 
     async getName(res) {
@@ -79,14 +79,14 @@ export default class StoryManager {
         const inputFirst = inputs[0];
         const inputSecond = inputs[1];
 
-        const finishGetName = () => {
+        const finishGetName = async () => {
             this.core.ui.unlockPanel(this.core.ui.news).then(() => {
                 this.core.clock.resume();
                 this.core.news.update("You woke up from a strange dream.");
                 this.core.mc.unlockStatus(inputFirst.value, inputSecond.value);
                 let n = 0;
                 // collapse both the unnecessary spans and the inputs so they mesh with the text
-                InputService.clearInput(p).then(() => {
+                InputService.clearInput(p).then(async () => {
                     TypingService.collapseP(p, (i) => `<span class='getname settled' style='font-size: 0.9em; display: inline-block; text-align: center; 
                     width: ${p.querySelectorAll("input")[n++].getBoundingClientRect().width}px; 
                     transition: width 0.2s;'>` + i.firstChild.value + "</span>");
@@ -94,7 +94,8 @@ export default class StoryManager {
                         n.style.width = InputService.getTrueWidthName(this.core.ui.story, n.innerText) + "px";
                         n.ontransitionend = () => n.style.width = "min-content";
                     });
-                    this.getGender();
+                    await GeneralService.delay(200);
+                    await this.getGender();
                 });
             });
         };
@@ -115,47 +116,45 @@ export default class StoryManager {
     async getGender() {
         this.storyProg.tutorial = 1;
 
-        setTimeout(async () => {
-            this.storyText.tutorial = this.textSnapshot();
+        this.storyText.tutorial = this.textSnapshot();
 
-            this.typePWithSpans("You roll out of bed, " + "hoping you haven’t missed the first bell. Your father said the meeting today had to be as " + "early as possible. Maybe that explained the odd sleep—you had a suspicion that this might be " + "“The Meeting,” the one long awaited by any firstborn @ / @ of a king.", ["sonChoice", "daughterChoice"], ["son", "daughter"]).then(([p, spans]) => {
-                let [sonChoice, daughterChoice] = spans;
-                [sonChoice, daughterChoice].forEach(c => {
-                    c.onclick = () => {
-                        if (c.parentNode.querySelector(".selected")) c.parentNode.querySelector(".selected").classList.remove("selected");
-                        c.classList.add("selected");
-                    };
-                    c.onpointerdown = () => c.classList.add("nudged");
-                });
-
-                const finishGetGender = () => {
-                    let hinge = [...p.children].find(span => span.innerText === "/");
-                    hinge.classList.add("hide");
-                    hinge.previousElementSibling.classList.add("hide");
-                    hinge.nextElementSibling.classList.add("hide");
-                    p.querySelector("#sonChoice:not(.selected), #daughterChoice:not(.selected)").classList.add("hide");
-
-                    let selected = p.querySelector("#sonChoice.selected, #daughterChoice.selected");
-                    let color;
-                    if (selected.innerText === "son") {
-                        color = "hsl(200, 70%, 80%)";
-                        this.core.mc.gender = "M";
-                    } else {
-                        color = "hsl(330, 70%, 80%)";
-                        this.core.mc.gender = "F";
-                    }
-                    InputService.clearInput(p, "#sonChoice, #daughterChoice").then(() => {
-                        setTimeout(() => {
-                            TypingService.collapseP(p, (i) => i.classList.contains("selected") ? `<span class='settled' style='font-size: 0.9em; display: inline-block; 
-                    font-family: Vinque, serif; color: ${color}'>${i.innerText}</span>` : "");
-                            this.getSpecialty();
-                        }, 150);
-
-                    });
+        this.typePWithSpans("You roll out of bed, " + "hoping you haven’t missed the first bell. Your father said the meeting today had to be as " + "early as possible. Maybe that explained the odd sleep—you had a suspicion that this might be " + "“The Meeting,” the one long awaited by any firstborn @ / @ of a king.", ["sonChoice", "daughterChoice"], ["son", "daughter"]).then(([p, spans]) => {
+            let [sonChoice, daughterChoice] = spans;
+            [sonChoice, daughterChoice].forEach(c => {
+                c.onclick = () => {
+                    if (c.parentNode.querySelector(".selected")) c.parentNode.querySelector(".selected").classList.remove("selected");
+                    c.classList.add("selected");
                 };
-                this.core.ui.story.append(InputService.getCue("Enter", () => finishGetGender()));
+                c.onpointerdown = () => c.classList.add("nudged");
             });
-        }, 200);
+
+            const finishGetGender = () => {
+                let hinge = [...p.children].find(span => span.innerText === "/");
+                hinge.classList.add("hide");
+                hinge.previousElementSibling.classList.add("hide");
+                hinge.nextElementSibling.classList.add("hide");
+                p.querySelector("#sonChoice:not(.selected), #daughterChoice:not(.selected)").classList.add("hide");
+
+                let selected = p.querySelector("#sonChoice.selected, #daughterChoice.selected");
+                let color;
+                if (selected.innerText === "son") {
+                    color = "hsl(200, 70%, 80%)";
+                    this.core.mc.gender = "M";
+                } else {
+                    color = "hsl(330, 70%, 80%)";
+                    this.core.mc.gender = "F";
+                }
+                InputService.clearInput(p, "#sonChoice, #daughterChoice").then(() => {
+                    setTimeout(() => {
+                        TypingService.collapseP(p, (i) => i.classList.contains("selected") ? `<span class='settled' style='font-size: 0.9em; display: inline-block; 
+                    font-family: Vinque, serif; color: ${color}'>${i.innerText}</span>` : "");
+                        this.getSpecialty();
+                    }, 150);
+
+                });
+            };
+            this.core.ui.story.append(InputService.getCue("Enter", () => finishGetGender()));
+        });
     }
 
     async getSpecialty() {
@@ -195,16 +194,32 @@ export default class StoryManager {
 
     async getCityName() {
         let name;
-        await this.typePWithInputs("You leave your bedroom and begin walking down the corridor. Outside, you see @.", "5.5em", ["getCityName"], "getname", InputService.nameValidate).then(res => {
+        await this.typePWithInputs("You leave your bedroom and begin walking down the corridor. The walls are lined with grand paintings and statues of yesteryear’s kings and queens. Here and there, windows offer up sweeping views of your hometown (named @).", "5.5em", "getname", InputService.nameValidate).then(res => {
             let [p, inputs] = res;
             name = inputs[0];
-            name.focus();
             this.core.ui.story.append(InputService.getCue("Enter", () => finishGetCityName(p)));
+            name.focus();
         })
 
-        const finishGetCityName = () => {
+        const finishGetCityName = (p) => {
+            InputService.clearInput(p).then(async () => {
+                TypingService.collapseP(p, (i) => `<span class='getname settled' style='font-size: 0.9em; display: inline-block; text-align: center; 
+                    width: ${p.querySelector(".getname").getBoundingClientRect().width}px; 
+                    transition: width 0.2s;'>` + i.firstChild.value + "</span>");
 
-        }
+                let settledName = p.querySelector(".getname");
+                settledName.style.width = InputService.getTrueWidthName(this.core.ui.story, settledName.innerText) + "px";
+                settledName.ontransitionend = () => settledName.style.width = "min-content";
+                await GeneralService.delay(225);
+                await TypingService.typeOn(" It is a small but proud city, inhabited by honest farmers and artisans.", p);
+                await this.goToMeeting();
+            });
+        };
+    }
+
+    async goToMeeting() {
+        this.storyProg.tutorial = 4;
+        this.storyText.tutorial = this.textSnapshot();
     }
 
     textSnapshot() {
@@ -245,6 +260,7 @@ export default class StoryManager {
 
         if (this.storyProg.tutorial !== -1) this.tutorialResumeFrom(this.storyProg.tutorial);
     }
+
 }
 
 
