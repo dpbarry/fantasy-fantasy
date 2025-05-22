@@ -17,7 +17,7 @@ export default class StoryManager {
 
     setupAutoScroll() {
         let scrollTimeout;
-        this.observer = new MutationObserver(() => {
+        const autoScroll = () => {
             clearTimeout(scrollTimeout);
 
             scrollTimeout = setTimeout(() => {
@@ -36,7 +36,14 @@ export default class StoryManager {
                     });
                 }
             }, 100);
+        }
+        this.observer = new MutationObserver(() => {
+            autoScroll();
         });
+
+        window.addEventListener("resize", () => {
+            autoScroll();
+        })
 
         this.observer.observe(this.core.ui.story, {
             childList: true, subtree: true, characterData: true
@@ -45,12 +52,12 @@ export default class StoryManager {
 
     }
 
-    async typePWithInputs(text, width, ids, cb) {
-        return TypingService.typePWithInputs(text, this.core.ui.story, width, ids, cb);
+    async typePWithInputs(text, width, ids, className, cb, type) {
+        return TypingService.typePWithInputs(text, this.core.ui.story, width, ids, className, cb, type);
     }
 
-    async typePWithSpans(text, spanIDs, spanTexts) {
-        return TypingService.typePWithSpans(text, this.core.ui.story, spanIDs, spanTexts);
+    async typePWithSpans(text, spanIDs, spanTexts, spanClasses = [], spanTips = []) {
+        return TypingService.typePWithSpans(text, this.core.ui.story, spanIDs, spanTexts, spanClasses, spanTips);
     }
 
     typeP(text) {
@@ -64,7 +71,7 @@ export default class StoryManager {
     async beginTutorial() {
         this.core.clock.pause();
         await GeneralService.delay(300); // might increase for release
-        this.typePWithInputs('You jolt awake, your head spinning. What a wild dream that must have been. ' + 'You can hardly even remember your own name... But of course, it is @ @!', "5.5em", ["getFirstName", "getLastName"], InputService.nameValidate).then(this.getName.bind(this));
+        this.typePWithInputs('You jolt awake, your head spinning. What a wild dream that must have been. ' + 'You can hardly even remember your own name... But of course, it is @ @!', "5.5em", ["getFirstName", "getLastName"], "getname", InputService.firstlastNameValidate).then(this.getName.bind(this));
     }
 
     async getName(res) {
@@ -80,10 +87,10 @@ export default class StoryManager {
                 let n = 0;
                 // collapse both the unnecessary spans and the inputs so they mesh with the text
                 InputService.clearInput(p).then(() => {
-                    TypingService.collapseP(p, (i) => `<span class='fakegetname settled' style='font-size: 0.9em; display: inline-block; text-align: center; 
+                    TypingService.collapseP(p, (i) => `<span class='getname settled' style='font-size: 0.9em; display: inline-block; text-align: center; 
                     width: ${p.querySelectorAll("input")[n++].getBoundingClientRect().width}px; 
                     transition: width 0.2s;'>` + i.firstChild.value + "</span>");
-                    document.querySelectorAll(".fakegetname").forEach(n => {
+                    document.querySelectorAll(".getname").forEach(n => {
                         n.style.width = InputService.getTrueWidthName(this.core.ui.story, n.innerText) + "px";
                         n.ontransitionend = () => n.style.width = "min-content";
                     });
@@ -157,47 +164,47 @@ export default class StoryManager {
         await this.typePWithChoices("After throwing on some clothes, you check your reflection in the mirror. Presentable enough. No point in overdressing for what might just be a run-of-the-mill meeting. Still, you find yourself wondering " + `whether you will make a good ${this.core.mc.genderSwitch("king", "queen")}. You do ` + "already know what your strong suit would be:", ["leading the people to " + "economic prosperity", "waging fierce military campaigns", "spearheading fortuitous " + "new discoveries"]).then(async res => {
             let choice;
             await TypingService.choiceNote(res.el, ...(() => {
+                this.storyProg.tutorial = 3; // waste no time progressing to avoid reload shenanigans
                 switch (res.i) {
                     case 0:
                         choice = "Savvy";
                         this.core.mc.savvy = 10;
-                        return ["+10 @", ["savvyWord"], ["Savvy"], ["savvy"]];
+                        return ["+10 @", ["savvyWord"], ["Savvy"], ["term"], ["savvy"]];
                     case 1:
                         choice = "Valor";
                         this.core.mc.valor = 10;
-                        return ["+10 @", ["valorWord"], ["Valor"], ["valor"]];
+                        return ["+10 @", ["valorWord"], ["Valor"], ["term"], ["valor"]];
                     case 2:
                         choice = "Wisdom";
                         this.core.mc.wisdom = 10;
-                        return ["+10 @", ["wisdomWord"], ["Wisdom"], ["wisdom"]];
+                        return ["+10 @", ["wisdomWord"], ["Wisdom"], ["term"], ["wisdom"]];
                 }
             })());
+            this.storyText.tutorial = this.textSnapshot();
 
-            this.core.ui.registerTip('savvy', () => {
-                return `<p><i>Measures economic know-how.</i></p>
-<p>Each point of <span class="savvyWord">Savvy</span> grants a +1% boost to all stats related to the economy.</p>
-<p>Current boost: +${this.core.mc.savvy}%</p>`
-            });
+            let box = this.core.ui.addHint("Many things in the game can be hovered over or tapped to show a tooltip. Try it now on @! For more in-depth information, see the @.", [choice.toLowerCase() + "Word", ""], [choice, "Codex"], ["term", "codexWord term click"], [choice.toLowerCase()]);
 
-            this.core.ui.registerTip('valor', () => {
-                return `<p><i>Measures military expertise.</i></p>
-<p>Each point of <span class="valorWord">Valor</span> grants a +1% boost to all stats related to the army.</p>
-<p>Current boost: +${this.core.mc.valor}%</p>`
-            });
-
-            this.core.ui.registerTip('wisdom', () => {
-                return `<p><i>Measures scholastic prowess.</i></p>
-<p>Each point of <span class="wisdomWord">Wisdom</span> grants a +1% boost to all stats related to research.</p>
-<p>Current boost: +${this.core.mc.wisdom}%</p>`
-            });
-            this.core.ui.addHint("Many things in the game can be hovered over or tapped to show a tooltip. Try it now on @! For more in-depth information, see the codex.", [choice.toLowerCase() + "Word"], [choice], [choice.toLowerCase()]);
-
-            await GeneralService.delay(2000);
+            await GeneralService.delay(1000);
 
             this.core.ui.story.appendChild(InputService.getCue("Enter", () => {
+                box.destroy().then(() => this.getCityName());
             }, true));
 
         });
+    }
+
+    async getCityName() {
+        let name;
+        await this.typePWithInputs("You leave your bedroom and begin walking down the corridor. Outside, you see @.", "5.5em", ["getCityName"], "getname", InputService.nameValidate).then(res => {
+            let [p, inputs] = res;
+            name = inputs[0];
+            name.focus();
+            this.core.ui.story.append(InputService.getCue("Enter", () => finishGetCityName(p)));
+        })
+
+        const finishGetCityName = () => {
+
+        }
     }
 
     textSnapshot() {
@@ -217,6 +224,9 @@ export default class StoryManager {
                 break;
             case 2:
                 await this.getSpecialty();
+                break;
+            case 3:
+                await this.getCityName();
                 break;
         }
     }

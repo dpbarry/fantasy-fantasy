@@ -7,11 +7,13 @@ export default class InputService {
      * @param {string} id
      * @param {function} cb
      * @param {string} type
+     * @param {string} className
      * @returns {HTMLInputElement}
      */
-    static getInput(id, cb, type = "alpha") {
+    static getInput(id, cb, type = "alpha", className = "") {
         const input = document.createElement("input");
         input.id = id;
+        input.className = className;
         input.autocomplete = "off";
         input.inputMode = "none";
         input.whitespace = "nowrap";
@@ -20,6 +22,7 @@ export default class InputService {
         input.onfocus = () => {
             cb({data: "", target: input});
             document.body.classList.add(type + "active");
+            window.dispatchEvent(new Event("resize"));
 
             // Simulate key pushes
             const keydownHandler = (e) => {
@@ -58,22 +61,20 @@ export default class InputService {
      * @param {boolean} immediatelyVisible
      * @returns {HTMLSpanElement}
      */
-    static getCue(key, cb, immediatelyVisible=false) {
+    static getCue(key, cb, immediatelyVisible = false) {
         const cue = document.createElement("span");
         cue.className = `cue ${key.toLowerCase()}`;
-        cue.addEventListener("pointerdown", () =>
-            cue.classList.add("nudged"));
+        cue.addEventListener("pointerdown", () => cue.classList.add("nudged"));
 
         function cueReceived() {
             document.removeEventListener("keydown", wrapKeydown);
             cue.removeEventListener("click", cueReceived);
             cue.classList.add("done");
 
-            cue.addEventListener("transitionend", function h() {
-                cue.removeEventListener("transitionend", h);
+            setTimeout(() => {
                 cue.remove();
                 cb();
-            });
+            }, 200);
         }
 
         const wrapKeydown = (e) => {
@@ -98,8 +99,7 @@ export default class InputService {
             i.onfocus = null;
             i.classList.add("settled");
             i.style.transitionDuration = "";
-            if (i.closest(".inputwrap"))
-                i.parentNode.style.transitionDuration = "";
+            if (i.closest(".inputwrap")) i.parentNode.style.transitionDuration = "";
         });
         document.body.classList.remove("alphaactive");
         document.body.classList.remove("numactive");
@@ -114,12 +114,21 @@ export default class InputService {
         });
     };
 
+    static firstlastNameValidate(e) {
+        return InputService.nameValidate(e, () => {
+            if (e.target.parentNode.nextElementSibling.nextElementSibling?.firstChild?.value?.length || e.target.parentNode.previousSibling.previousSibling.firstChild?.value?.length) {
+                e.target.closest("#story").querySelector(".cue").classList.add("visible");
+            } else {
+                e.target.closest("#story").querySelector(".cue").classList.remove("visible");
+            }
+        })
+    }
 
     /**
      * @param {InputEvent} e
+     * @param {function} cueCheck
      */
-    static nameValidate(e) {
-
+    static nameValidate(e, cueCheck = null) {
         if (!e.target.closest("#story").querySelector(".cue")) return;
 
         const resetField = (target) => {
@@ -127,7 +136,7 @@ export default class InputService {
             target.style.transitionDuration = "";
             target.parentNode.style.transitionDuration = "";
             target.style.width = "";
-            target.parentNode.style.width = "";
+            target.parentNode.style.width = target.parentNode._width;
             target.closest("#story").querySelector(".cue").classList.remove("visible");
         }
 
@@ -156,10 +165,7 @@ export default class InputService {
             e.target.selectionEnd = store;
         }
 
-        if (e.target.value.length >= 15)
-            e.target.classList.add("full");
-        else
-            e.target.classList.remove("full");
+        if (e.target.value.length >= 15) e.target.classList.add("full"); else e.target.classList.remove("full");
 
         if (e.target.value.length) {
             let store = e.target.selectionStart;
@@ -178,17 +184,18 @@ export default class InputService {
                 e.target.parentNode.style.transitionDuration = "0s";
             }, 100);
 
-            if (e.target.parentNode.nextElementSibling.nextElementSibling?.firstChild?.value?.length
-                || e.target.parentNode.previousSibling.previousSibling.firstChild?.value?.length) {
-                e.target.closest("#story").querySelector(".cue").classList.add("visible");
+            if (cueCheck) {
+                cueCheck(e.target);
             } else {
-                e.target.closest("#story").querySelector(".cue").classList.remove("visible");
+                e.target.closest("#story").querySelector(".cue").classList.add("visible");
             }
+
         } else {
             resetField(e.target);
             updateKeyboardCase(true); // Show uppercase when empty
         }
     }
+
 
     /**
      * @param {HTMLDivElement} pStory
@@ -197,7 +204,7 @@ export default class InputService {
      */
     static getTrueWidthName(pStory, text) {
         let p = document.createElement("p");
-        p.className = "fakeinput fakegetname";
+        p.className = "fakeinput getname";
         p.style.color = "transparent";
         p.style.pointerEvents = "none";
         p.style.userSelect = "none";

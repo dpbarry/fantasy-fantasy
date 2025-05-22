@@ -2,7 +2,7 @@ import GeneralService from "./GeneralService.js";
 import InputService from "./InputService.js";
 
 export default class TypingService {
-    static TYPE_DELAY = 0;
+    static TYPE_DELAY = 5;
 
     static async typeOn(text, body) {
         // first add all the characters invisibly to establish justified alignment
@@ -49,15 +49,15 @@ export default class TypingService {
         });
     }
 
-    static async typePWithSpans(text, body, spanIDs, spanTexts, spanTips=[]) {
+    static async typePWithSpans(text, body, spanIDs, spanTexts, spanClasses = [], spanTips = []) {
         let p = document.createElement("p");
         body.appendChild(p);
-        return this.typeWithSpans(text, p, spanIDs, spanTexts, spanTips);
+        return this.typeWithSpans(text, p, spanIDs, spanTexts, spanClasses, spanTips);
     }
 
 
     // expects a string with @
-    static async typePWithInputs(text, body, width, ids, cb) {
+    static async typePWithInputs(text, body, width, ids, className="", cb, type="alpha") {
         let p = document.createElement("p");
         body.appendChild(p);
         [...text].forEach(c => {
@@ -65,6 +65,7 @@ export default class TypingService {
             if (c === "@") {
                 span.className = "inputwrap";
                 span.style.width = width;
+                span._width = width;
             } else {
                 span.style.color = "transparent";
                 span.style.transition = "color 0.15s";
@@ -83,7 +84,7 @@ export default class TypingService {
             await GeneralService.delay(this.TYPE_DELAY);
 
             if (span.className === "inputwrap") {
-                const input = InputService.getInput(ids[inputIndex++], cb);
+                const input = InputService.getInput(ids[inputIndex++], cb, type, className);
                 input.style.width = "0";
                 inputs.push(input);
                 span.appendChild(input);
@@ -100,19 +101,21 @@ export default class TypingService {
         return Promise.resolve([p, inputs]);
     }
 
-    static async typeWithSpans(text, body, spanIDs, spanTexts, spanTips=[]) {
+    static async typeWithSpans(text, body, spanIDs, spanTexts, spanClasses = [], spanTips = []) {
         let spans = [];
 
         let count = 0;
         [...text].forEach(c => {
             let span = document.createElement("span");
             if (c === "@") {
+                if (spanClasses.length > count)
+                    span.className = spanClasses[count];
                 span.classList.add("deep");
                 span.id = spanIDs[count];
+                span.classList.add("hideicon");
                 if (spanTips.length > count) {
                     span.dataset.tip = spanTips[count];
                     span.classList.add("hastip");
-                   span.classList.add("hideicon");
                 }
                 this.hideText(spanTexts[count++], span);
                 spans.push(span);
@@ -132,6 +135,7 @@ export default class TypingService {
         body.querySelectorAll(".deep").forEach((elem) => this.collapseP(elem));
         return Promise.resolve([body, spans]);
     }
+
     static async typePWithChoices(text, body, choices) {
         return this.typeP(text, body).then((p) => {
             const choiceContainer = document.createElement('div');
@@ -145,10 +149,13 @@ export default class TypingService {
                 choiceElement.style.animationDelay = `${index * 0.2}s`;
                 choiceElement.style.pointerEvents = "none";
                 choiceElement.onanimationend = () => {
+                    choiceElement.classList.remove('adding');
+                    choiceElement.classList.add('added');
                     choiceElement.onanimationend = null;
                     choiceElement.style.pointerEvents = "";
                 }
                 choiceContainer.appendChild(choiceElement);
+                choiceElement.classList.add('adding');
                 return choiceElement;
             });
             return new Promise(resolve => {
@@ -181,11 +188,11 @@ export default class TypingService {
         });
     }
 
-    static async choiceNote(el, msg, spanIDs = [], spanTexts = [], spanTips = []) {
+    static async choiceNote(el, msg, spanIDs = [], spanTexts = [], spanClasses = [], spanTips = []) {
         const note = document.createElement("p");
         note.className = "choice-note";
         el.after(note);
-        return this.typeWithSpans(msg, note, spanIDs, spanTexts, spanTips).then(() => {
+        return this.typeWithSpans(msg, note, spanIDs, spanTexts, spanClasses, spanTips).then(() => {
             this.collapseP(note);
             return note;
         });

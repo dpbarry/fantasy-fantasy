@@ -1,7 +1,7 @@
 export default class UserManager {
     constructor(core) {
         this.core = core;
-        core.registerSaveableComponent('hero', this);
+        core.registerSaveableComponent('user', this);
 
         this.firstName = "";
         this.lastName = "";
@@ -9,6 +9,7 @@ export default class UserManager {
         this.savvy = 0;
         this.valor = 0;
         this.wisdom = 0;
+        this.morality = 0;
     }
 
     unlockStatus(firstName, lastName) {
@@ -29,7 +30,8 @@ export default class UserManager {
             const stats = [
                 { name: "Savvy", value: this.savvy, class: "savvyWord" },
                 { name: "Valor", value: this.valor, class: "valorWord" },
-                { name: "Wisdom", value: this.wisdom, class: "wisdomWord" }
+                { name: "Wisdom", value: this.wisdom, class: "wisdomWord" },
+                { name: "Morality", value: this.morality, class: "moralWord" },
             ];
 
             return this.core.ui.createStatsGrid(stats);
@@ -80,7 +82,8 @@ export default class UserManager {
 
     serialize() {
         return {
-            firstName: this.firstName, lastName: this.lastName, gender: this.gender
+            firstName: this.firstName, lastName: this.lastName, gender: this.gender,
+            savvy: this.savvy, valor: this.valor, wisdom: this.wisdom, morality: this.morality
         }
     }
 
@@ -88,6 +91,10 @@ export default class UserManager {
         this.firstName = data.firstName;
         this.lastName = data.lastName;
         this.gender = data.gender;
+        this.savvy = data.savvy;
+        this.valor = data.valor;
+        this.wisdom = data.wisdom;
+        this.morality = data.morality;
 
         if (this.firstName) {
             this.core.ui.userstatus.querySelector(".lockedpanel").remove();

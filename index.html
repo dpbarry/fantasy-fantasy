@@ -50,6 +50,7 @@
 
             --bgColor: #000;
             --baseColor: #e0e0e0;
+            --baseFilter: invert(0.97);
             --darkBaseColor: color-mix(in hsl, var(--bgColor) 94%, var(--baseColor));
             --midBaseColor: color-mix(in hsl, var(--bgColor) 54%, var(--baseColor));
             --lightBaseColor: color-mix(in hsl, var(--bgColor) 20%, var(--baseColor));
@@ -65,6 +66,8 @@
             --valorFilter: brightness(0) saturate(100%) invert(33%) sepia(28%) saturate(3954%) hue-rotate(357deg) brightness(97%) contrast(89%);
             --wisdomColor: hsl(210, 82.5%, 45%);
             --wisdomFilter: brightness(0) saturate(100%) invert(32%) sepia(79%) saturate(1483%) hue-rotate(190deg) brightness(93%) contrast(92%);
+            --moralColor: hsl(0, 0%, 45%);
+            --moralFilter: invert(0.8);
         }
 
         *, *::before, *::after {
@@ -166,7 +169,7 @@
 
             img {
                 height: 2.2em;
-                filter: invert(0.97);
+                filter: var(--baseFilter);
                 user-select: none;
             }
 
@@ -181,13 +184,12 @@
         }
 
         @media (pointer: fine) and (hover: hover) {
-           .navbutton:not(.locked, .nudged):hover {
+            .navbutton:not(.locked, .nudged):hover {
                 scale: 1.06;
             }
         }
 
         #story {
-            flex: 1;
             overflow-y: auto;
             margin: 0;
             font-size: clamp(0.75rem, 1.5vw + 1.5vh, 1.3rem);
@@ -211,10 +213,7 @@
 
                 transition: width 0.25s linear;
 
-                &:has(#getFirstName, #getLastName) {
-                    width: 5.5em;
-                    max-width: 8em;
-                }
+                max-width: 8em;
             }
 
             .inputwrap::before {
@@ -267,7 +266,7 @@
             }
 
 
-            #getFirstName, #getLastName, .fakegetname {
+            .getname {
                 font-family: vinque, serif;
                 width: 5.5em;
                 max-width: 8em;
@@ -403,13 +402,20 @@
                     position: relative;
                     padding-left: 1.25rem;
                     opacity: 0;
-                    animation: choiceIn 0.35s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
                     transition: color 0.2s ease,
                     padding-left 0.2s ease,
                     opacity 0.2s ease,
                     font-weight 0.2s ease;
 
                     text-decoration: 1.5px underline transparent;
+
+                    &.adding {
+                        animation: choiceIn 0.35s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+                    }
+
+                    &.added {
+                        opacity: 1;
+                    }
 
                     &::before {
                         content: "→";
@@ -511,7 +517,7 @@
             opacity: 0;
             color: var(--accent);
             font-weight: 650;
-            transition: opacity 0.2s 0.2s, padding 0.18s;
+            transition: opacity 0.2s, padding 0.2s;
             user-select: none;
             pointer-events: none;
             z-index: 2;
@@ -567,8 +573,8 @@
                 }
 
                 &:hover {
-                    padding-left: 0.5em;
-                    padding-right: 0.5em;
+                    padding-left: 0.35em;
+                    padding-right: 0.35em;
                 }
             }
 
@@ -632,8 +638,9 @@
             }
         }
 
-        #savvyWord, #wisdomWord, #valorWord, .savvyWord, .wisdomWord, .valorWord {
+        .term {
             white-space: nowrap;
+            transition: color 0.15s;
 
             &::before {
                 display: inline-block;
@@ -641,16 +648,30 @@
                 width: 0.8em;
                 vertical-align: baseline;
                 position: relative;
-                margin-right: 0.025em;
+                top: 1px;
+                margin-right: 0.03em;
                 background-size: contain;
                 background-repeat: no-repeat;
                 background-position: center;
-                transition: opacity 0.15s;
+                transition: opacity 0.15s, filter 0.15s;
                 content: "";
             }
 
             &.hideicon::before {
-                opacity: 0;
+                opacity: 0 !important;
+            }
+
+            &.click {
+                font-weight: 500;
+                @media (hover: hover) and (pointer: fine) {
+                    &:hover {
+                        color: var(--accent);
+
+                        &::before {
+                            filter: var(--accentFilter);
+                        }
+                    }
+                }
             }
         }
 
@@ -660,7 +681,6 @@
             &::before {
                 background-image: url("./assets/SAVVY.svg");
                 filter: var(--savvyFilter);
-                top: 1px;
             }
         }
 
@@ -670,7 +690,6 @@
             &::before {
                 background-image: url("./assets/VALOR.svg");
                 filter: var(--valorFilter);
-                top: 1px;
             }
         }
 
@@ -683,6 +702,27 @@
                 top: 1.5px;
                 margin-right: 0.075em;
             }
+        }
+
+        .moralWord {
+            color: var(--moralColor);
+
+            &::before {
+                background-image: url("./assets/MORALITY.svg");
+                filter: var(--moralFilter);
+            }
+        }
+
+        .codexWord {
+            &::before {
+                background-image: url("./assets/CODEX.svg");
+                filter: var(--baseFilter);
+                margin-right: 0.045em;
+            }
+        }
+
+        .click {
+            cursor: pointer;
         }
 
         .statgrid {
@@ -727,11 +767,19 @@
             grid-area: updates;
         }
 
+        #story-wrap {
+            grid-area: story;
+        }
+
         #main-wrap {
             grid-area: main;
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            height: 100%;
+            grid-template-areas: "story";
+            grid-template-rows: minmax(0, 1fr);
             row-gap: var(--boxGap);
+            min-height: 0;
+            overflow: hidden;
         }
 
 
@@ -786,7 +834,7 @@
                 cursor: pointer;
 
                 img {
-                    filter: invert(0.97);
+                    filter: var(--baseFilter);
                     height: 1.8em;
                 }
             }
@@ -828,13 +876,15 @@
 
         @media (width <= 850px) {
             body.alphaactive {
-                #alphaboard {
-                    display: grid;
+                #main-wrap {
+                    grid-template-areas:
+        "story"
+        "alphaboard";
+                    grid-template-rows: minmax(0, 1fr) min-content;
                 }
 
-                #kingdom {
-                    display: none;
-                    opacity: 0;
+                #alphaboard {
+                    display: grid;
                 }
             }
         }
@@ -846,6 +896,7 @@
             border-color: var(--accent);
             display: none;
             font-family: vinque, serif;
+            min-height: fit-content;
 
             transition: opacity 0.1s;
             @starting-style {
@@ -897,6 +948,8 @@
         }
 
         #alphaboard {
+            grid-area: alphaboard;
+
             grid-template-columns: repeat(6, 1fr);
             gap: 6px;
             transition: height 0.15s ease-out, opacity 0.2s;
@@ -1020,11 +1073,14 @@
                 grid-template-areas:
             "herobar navbar citybar"
             "left main right"
-            "left main dash"
-            "left status dash"
-            "left updates dash";
+            "dash main right"
+            "dash status right"
+            "dash updates right";
             }
 
+            #story {
+                font-size: clamp(0.8rem, 1vw + 1vh, 1.25rem);
+            }
 
             #dash-wrap, #left-wrap, #right-wrap, #citybar-wrap, #herobar-wrap {
                 display: flex;
@@ -1037,6 +1093,7 @@
             }
 
         }
+
 
         .nudged, .nudged::before, .nudged::after {
             scale: 0.96;
@@ -1143,54 +1200,71 @@
 
 <div class="wrapper" id="herobar-wrap">
     <div class="box" id="herobar">
-        <button class="nudge navbutton locked" data-panel="team" id="teamnav"><img alt="Team" src="assets/TEAM.svg">
+        <button class="nudge navbutton locked hastip" data-panel="team" data-tip="teamnav" id="teamnav"><img alt="Team"
+                                                                                                             src="assets/TEAM.svg">
         </button>
-        <button class="nudge navbutton locked" data-panel="hero" id="heronav"><img alt="Hero" src="assets/HERO.svg">
+        <button class="nudge navbutton locked hastip" data-panel="hero" data-tip="heronav" id="heronav"><img alt="Hero"
+                                                                                                             src="assets/HERO.svg">
         </button>
-        <button class="nudge navbutton locked" data-panel="equipment" id="equipmentnav"><img alt="Equipment"
-                                                                                             src="assets/INVENTORY.svg">
+        <button class="nudge navbutton locked hastip" data-panel="equipment" data-tip="equipmentnav" id="equipmentnav">
+            <img alt="Equipment"
+                 src="assets/INVENTORY.svg">
         </button>
-        <button class="nudge navbutton locked" data-panel="grow" id="grownav"><img alt="Growth" src="assets/GROW.svg">
+        <button class="nudge navbutton locked hastip" data-panel="augment" data-tip="augmentnav" id="augmentnav"><img
+                alt="Augment" src="assets/AUGMENT.svg">
         </button>
-        <button class="nudge navbutton locked" data-panel="upgrade" id="upgradenav"><img alt="Upgrade"
-                                                                                         src="assets/TREE.svg"></button>
+        <button class="nudge navbutton locked hastip" data-panel="upgrade" data-tip="upgradenav" id="upgradenav"><img
+                alt="Upgrade"
+                src="assets/TREE.svg"></button>
     </div>
 </div>
 
 <div class="wrapper" id="navbar-wrap">
     <div class="box" id="navbar">
-        <button class="nudge navbutton" data-panel="story" id="storynav"><img alt="Story" src="assets/STORY.svg">
+        <button class="nudge navbutton hastip" data-panel="story" data-tip="storynav" id="storynav"><img alt="Story"
+                                                                                                         src="assets/STORY.svg">
         </button>
-        <button class="nudge navbutton locked" data-panel="city" id="citynav"><img alt="City" src="assets/CITY.svg"></button>
-        <button class="nudge navbutton locked" data-panel="adventure" id="adventurenav"><img alt="Adventure"
-                                                                                      src="assets/DUNGEON.svg">
+        <button class="nudge locked navbutton hastip" data-panel="city" data-tip="citynav" id="citynav"><img alt="City"
+                                                                                                             src="assets/CITY.svg">
         </button>
-        <button class="nudge locked navbutton" data-panel="industry" id="industrynav"><img alt="Industry" src="assets/FARM.svg">
+        <button class="nudge locked navbutton hastip" data-panel="adventure" data-tip="adventurenav" id="adventurenav">
+            <img alt="Adventure"
+                 src="assets/FAVICON.svg">
         </button>
-        <button class="nudge locked navbutton" data-panel="militia" id="militianav"><img alt="Militia"
-                                                                                         src="assets/MILITIA.svg">
+        <button class="nudge locked navbutton hastip" data-panel="industry" data-tip="industrynav" id="industrynav"><img
+                alt="Industry" src="assets/FARM.svg">
         </button>
-        <button class="nudge locked navbutton" data-panel="innovation" id="innovationnav"><img alt="Innovation"
-                                                                                               src="assets/INNOVATION.svg">
+        <button class="nudge locked navbutton hastip" data-panel="army" data-tip="armynav" id="armynav"><img alt="Army"
+                                                                                                             src="assets/ARMY.svg">
         </button>
-        <button class="nudge locked navbutton" data-panel="globe" id="globenav"><img alt="Globe" src="assets/GLOBE.svg">
+        <button class="nudge locked navbutton hastip" data-panel="innovation" data-tip="innovationnav"
+                id="innovationnav"><img alt="Innovation"
+                                        src="assets/INNOVATION.svg">
+        </button>
+        <button class="nudge locked navbutton hastip" data-panel="globe" data-tip="globenav" id="globenav"><img
+                alt="Globe" src="assets/GLOBE.svg">
         </button>
     </div>
 </div>
 
 <div class="wrapper" id="citybar-wrap">
     <div class="box" id="citybar">
-        <button class="nudge locked navbutton" data-panel="cityinfo" id="cityinfonav"><img alt="City Info"
-                                                                                           src="assets/CASTLE.svg">
+        <button class="nudge locked navbutton hastip" data-panel="cityinfo" data-tip="cityinfonav" id="cityinfonav"><img
+                alt="City Info"
+                src="assets/CASTLE.svg">
         </button>
-        <button class="nudge locked navbutton" data-panel="chart" id="chartnav"><img alt="Charts"
-                                                                                     src="assets/CHART.svg"></button>
-        <button class="nudge navbutton" data-panel="settings" id="settingsnav"><img alt="Settings" src="assets/COG.svg">
+        <button class="nudge locked navbutton hastip" data-panel="chart" data-tip="chartnav" id="chartnav"><img
+                alt="Charts"
+                src="assets/CHART.svg"></button>
+        <button class="nudge locked navbutton hastip" data-panel="achievements" data-tip="achievenav" id="achievenav">
+            <img alt="Achievements"
+                 src="assets/TROPHY.svg">
         </button>
-        <button class="nudge navbutton" data-panel="codex" id="codexnav"><img alt="Codex" src="assets/CODEX.svg">
+        <button class="nudge navbutton hastip" data-panel="codex" data-tip="codexnav" id="codexnav"><img alt="Codex"
+                                                                                                         src="assets/CODEX.svg">
         </button>
-        <button class="nudge locked navbutton" data-panel="achievements" id="achievenav"><img alt="Achievements"
-                                                                                              src="assets/TROPHY.svg">
+        <button class="nudge navbutton hastip" data-panel="settings" data-tip="settingsnav" id="settingsnav"><img
+                alt="Settings" src="assets/COG.svg">
         </button>
     </div>
 </div>

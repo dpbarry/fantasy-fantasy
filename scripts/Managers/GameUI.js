@@ -13,8 +13,13 @@ export default class GameUI {
     }
 
     initialize() {
-        document.querySelectorAll("#navbar button").forEach(b => b.onpointerdown = () => {
-           this.activatePanel(document.querySelector("#"+b.dataset.panel));
+        document.querySelectorAll(".navbutton").forEach(b => {
+            b.onpointerdown = () => {
+                this.activatePanel(document.querySelector("#" + b.dataset.panel));
+            }
+            this.registerTip(b.dataset.tip, () => {
+                return b.classList.contains("locked") ? "<i>Locked&nbsp;</i>" : b.firstChild.alt;
+            });
         });
 
         // Setup nudge effects
@@ -74,9 +79,25 @@ export default class GameUI {
         document.querySelectorAll('#navbar .chosen').forEach(el => el.classList.remove('chosen'));
         document.querySelector(`#navbar button[data-panel='${panel.id}']`).classList.add("chosen");
     }
-    
+
     initializeConstants() {
-        
+        this.registerTip('savvy', () => {
+            return `<p><i>Measures economic know-how.</i></p>
+<p>Each point of <span class="savvyWord term">Savvy</span> grants a +1% boost to all stats related to the economy.</p>
+<p>Current boost: +${this.core.mc.savvy}%</p>`
+        });
+
+        this.registerTip('valor', () => {
+            return `<p><i>Measures military expertise.</i></p>
+<p>Each point of <span class="valorWord term">Valor</span> grants a +1% boost to all stats related to the army.</p>
+<p>Current boost: +${this.core.mc.valor}%</p>`
+        });
+
+        this.registerTip('wisdom', () => {
+            return `<p><i>Measures scholastic prowess.</i></p>
+<p>Each point of <span class="wisdomWord term">Wisdom</span> grants a +1% boost to all stats related to research.</p>
+<p>Current boost: +${this.core.mc.wisdom}%</p>`
+        });
     }
 
     observeTooltips() {
@@ -264,21 +285,26 @@ export default class GameUI {
         })
     }
 
-    addHint(msg, spanIDs = [], spanTexts = [], spanTips = []) {
+    addHint(msg, spanIDs = [], spanTexts = [], spanClasses = [], spanTips = []) {
         const box = document.createElement('div');
         const text = document.createElement('div');
         box.className = 'hintbox';
         box.appendChild(text);
         this.story.appendChild(box);
 
-        TypingService.typeWithSpans(msg, text, spanIDs, spanTexts, spanTips);
+        TypingService.typeWithSpans(msg, text, spanIDs, spanTexts, spanClasses, spanTips).then(([body]) => {
+            TypingService.collapseP(body);
+        });
 
         return {
-            destroy: () => {
+            destroy: async () => {
+                box.style.transitionDuration = '0.2s';
                 box.style.opacity = '0';
-                box.addEventListener('transitionend', () => {
+                box.style.translate = '0 0.5em';
+                return GeneralService.waitForEvent(box, "transitionend", 200).then(() => {
                     box.remove();
-                });
+                    return Promise.resolve();
+                })
             }
         };
     }
@@ -295,7 +321,7 @@ export default class GameUI {
         return `<div class="statgrid">
         ${stats.map(stat => {
             const className = stat.class || '';
-            return `<span style="padding-right: 0.33em;" class='${className}'>${stat.name}</span>
+            return `<span style="padding-right: 0.33em;" class='term ${className}'>${stat.name}</span>
                     <span>${stat.value}</span>`;
         }).join('')}
     </div>`;
