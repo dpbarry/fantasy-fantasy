@@ -4,10 +4,14 @@ export default class HeroManager {
         core.registerSaveableComponent('hero', this);
     }
     serialize() {
-
+        const {core, ...rest} = this;
+        return rest;
     }
 
     deserialize(data) {
-
+        Object.assign(this, data);
     }
+
+    updateAccess() {}
+
 }

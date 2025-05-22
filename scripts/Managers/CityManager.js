@@ -3,11 +3,16 @@ export default class CityManager {
         this.core = core;
         core.registerSaveableComponent('city', this);
     }
-    serialize() {
 
+    serialize() {
+        const {core, ...rest} = this;
+        return rest;
     }
 
     deserialize(data) {
-
+        Object.assign(this, data);
     }
+
+    updateAccess() {}
+
 }

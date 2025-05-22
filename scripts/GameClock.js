@@ -1,4 +1,6 @@
 export default class GameClock {
+    #realTimeListeners;
+    #gameTimeListeners;
     constructor() {
         // Constants
         this.SECONDS_PER_MINUTE = 60;
@@ -14,8 +16,8 @@ export default class GameClock {
         this.timeScale = 1;
         this.isPaused = false;
 
-        this.realTimeListeners = new Map();
-        this.gameTimeListeners = new Map();
+        this.#realTimeListeners = new Map();
+        this.#gameTimeListeners = new Map();
 
         this.months = [
             'Snowmoon', 'Bitterfrost', 'Icemelt',
@@ -30,24 +32,24 @@ export default class GameClock {
         const previousSeconds = this.totalSeconds;
         this.totalSeconds += dt * this.timeScale;
 
-        this.realTimeListeners.forEach((config, listener) => {
+        this.#realTimeListeners.forEach((config, listener) => {
             const {interval, lastTrigger, oneTime} = config;
             if (Date.now() - lastTrigger >= interval * 1000) { // Convert to milliseconds
                 listener(dt);
                 if (oneTime) {
-                    this.realTimeListeners.delete(listener);
+                    this.#realTimeListeners.delete(listener);
                 } else {
                     config.lastTrigger = Date.now();
                 }
             }
         });
 
-        this.gameTimeListeners.forEach((config, listener) => {
+        this.#gameTimeListeners.forEach((config, listener) => {
             const {interval, lastTrigger, oneTime} = config;
             if (this.totalSeconds - lastTrigger >= interval) {
                 listener(this.totalSeconds - previousSeconds);
                 if (oneTime) {
-                    this.gameTimeListeners.delete(listener);
+                    this.#gameTimeListeners.delete(listener);
                 } else {
                     config.lastTrigger = this.totalSeconds;
                 }
@@ -61,7 +63,7 @@ export default class GameClock {
             lastTrigger: Date.now(),
             oneTime: options.oneTime || false
         };
-        this.realTimeListeners.set(listener, config);
+        this.#realTimeListeners.set(listener, config);
         return listener;
     }
 
@@ -71,13 +73,13 @@ export default class GameClock {
             lastTrigger: this.totalSeconds,
             oneTime: options.oneTime || false
         };
-        this.gameTimeListeners.set(listener, config);
+        this.#gameTimeListeners.set(listener, config);
         return listener;
     }
 
     unsubscribe(listener) {
-        this.realTimeListeners.delete(listener);
-        this.gameTimeListeners.delete(listener);
+        this.#realTimeListeners.delete(listener);
+        this.#gameTimeListeners.delete(listener);
     }
 
     gameDate(options = {format: null | 'full' | 'short' | 'numeric'}) {
@@ -155,16 +157,16 @@ export default class GameClock {
         this.isPaused = false;
     }
 
-
     serialize() {
-        return {
-            totalSeconds: this.totalSeconds,
-            timeScale: this.timeScale
-        };
+        const {core, ...rest} = this;
+        return rest;
     }
 
     deserialize(data) {
-        this.totalSeconds = data.totalSeconds;
-        this.timeScale = data.timeScale;
+        Object.assign(this, data);
+    }
+
+    updateAccess() {
+
     }
 }

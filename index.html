@@ -202,7 +202,7 @@
             p, .hintbox {
                 line-height: 1.15;
                 text-align: justify;
-                margin-bottom: 0.75rem;
+                margin-bottom: 0.6rem;
             }
 
             .inputwrap {
@@ -641,6 +641,7 @@
         .term {
             white-space: nowrap;
             transition: color 0.15s;
+            font-weight: 400;
 
             &::before {
                 display: inline-block;
@@ -662,11 +663,9 @@
             }
 
             &.click {
-                font-weight: 500;
                 @media (hover: hover) and (pointer: fine) {
                     &:hover {
                         color: var(--accent);
-
                         &::before {
                             filter: var(--accentFilter);
                         }

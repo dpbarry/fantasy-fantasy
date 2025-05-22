@@ -30,7 +30,6 @@ export default class GameCore {
 
     }
 
-
     static getInstance() {
         if (!GameCore.instance) {
             GameCore.instance = new GameCore();
@@ -99,8 +98,6 @@ export default class GameCore {
         this.isRunning = true;
     }
 
-
-    // Register a component that needs to be saved
     registerSaveableComponent(key, component) {
         if (typeof component.serialize !== 'function' || typeof component.deserialize !== 'function') {
             throw new Error(`Component ${key} must implement serialize and deserialize methods`);
@@ -141,6 +138,7 @@ export default class GameCore {
             for (const [key, component] of this.saveableComponents) {
                 if (snapshot.data[key]) {
                     component.deserialize(snapshot.data[key]);
+                    component.updateAccess();
                 } else {
                     console.warn(`No saved data found for component: ${key}`);
                 }
