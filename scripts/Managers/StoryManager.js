@@ -4,13 +4,14 @@ import Tutorial from "../Episodes/Tutorial.js";
 
 export default class StoryManager {
     #episodes;
+
     constructor(core) {
         this.core = core;
         this.storyProg = {
-            tutorial: 0
+            Tutorial: 0
         };
         this.storyText = {
-            tutorial: ""
+            Tutorial: ""
         }
         this.#episodes = {}; // namespace container
         this.initEpisodes();
@@ -24,10 +25,6 @@ export default class StoryManager {
 
     initEpisodes() {
         this.#episodes.Tutorial = Tutorial(this);
-    }
-
-    beginTutorial() {
-        this.#episodes.Tutorial.beginTutorial();
     }
 
     setupAutoScroll() {
@@ -87,29 +84,12 @@ export default class StoryManager {
         return this.core.ui.story.innerHTML;
     }
 
-    async tutorialResumeFrom(phase) {
-        if (phase > 0) await GeneralService.delay(300);
-        this.core.ui.story.innerHTML = this.storyText.tutorial;
-        this.core.ui.activatePanel(this.core.ui.story);
-        const T = this.#episodes.Tutorial;
-        switch (phase) {
-            case 0:
-                await T.beginTutorial();
-                break;
-            case 1:
-                await T.getGender();
-                break;
-            case 2:
-                await T.getSpecialty();
-                break;
-            case 3:
-                await T.getCityName();
-                break;
-            case 4:
-                await T.goToMeeting();
-                break;
-        }
+    async runEpisodeAt(episode, phase) {
+        this.core.ui.story.innerHTML = this.storyText[episode];
+        await GeneralService.delay(300);
+        await this.#episodes[episode].runFrom(phase);
     }
+
 
     serialize() {
         const {core, ...rest} = this;
@@ -121,8 +101,8 @@ export default class StoryManager {
     }
 
     updateAccess() {
-        if (this.storyProg.tutorial !== -1)
-            this.tutorialResumeFrom(this.storyProg.tutorial);
+        if (this.storyProg.Tutorial !== -1)
+            this.runEpisodeAt("Tutorial", this.storyProg.Tutorial);
     }
 }
 

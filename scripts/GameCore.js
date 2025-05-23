@@ -57,7 +57,7 @@ export default class GameCore {
         LoadingService.hide();
         if (!await this.loadLastSave()) {
             this.ui.activatePanel(this.ui.story);
-            await this.story.beginTutorial();
+            await this.story.runEpisodeAt("Tutorial", 0);
         }
 
         this.isRunning = true;
@@ -99,8 +99,8 @@ export default class GameCore {
     }
 
     registerSaveableComponent(key, component) {
-        if (typeof component.serialize !== 'function' || typeof component.deserialize !== 'function') {
-            throw new Error(`Component ${key} must implement serialize and deserialize methods`);
+        if (typeof component.serialize !== 'function' || typeof component.deserialize !== 'function' || typeof component.updateAccess !== 'function') {
+            throw new Error(`Component ${key} must implement proper methods.`);
         }
         this.saveableComponents.set(key, component);
     }
@@ -114,7 +114,7 @@ export default class GameCore {
             }
 
             const snapshot = {
-                version: '0.0', timestamp: Date.now(), data: componentsData
+                version: '0.0.1', timestamp: Date.now(), data: componentsData
             };
 
             await this.storage.save(snapshot);
@@ -130,8 +130,9 @@ export default class GameCore {
             const snapshot = await this.storage.load();
             if (!snapshot) return false;
 
-            if (snapshot.version !== '0.0') {
-                console.warn('Loading different save version');
+            if (snapshot.version !== '0.0.1') {
+                console.warn('Incompatible save version. Resetting.');
+                return false;
             }
 
             // Load data for each registered component
