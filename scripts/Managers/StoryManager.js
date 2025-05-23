@@ -4,18 +4,26 @@ import Tutorial from "../Episodes/Tutorial.js";
 
 export default class StoryManager {
     #episodes;
+    #storyRunning;
 
     constructor(core) {
         this.core = core;
+        this.#episodes = {}; // namespace container
+        this.#storyRunning = false;
+
+        this.core.registerSaveableComponent('story', this);
+        this.core.onTick(() => this.runStory());
+
         this.storyProg = {
             Tutorial: 0
         };
         this.storyText = {
             Tutorial: ""
         }
-        this.#episodes = {}; // namespace container
+        this.currentEpisode = null;
+
         this.initEpisodes();
-        core.registerSaveableComponent('story', this);
+
         this.setupAutoScroll();
     }
 
@@ -91,6 +99,27 @@ export default class StoryManager {
     }
 
 
+    runStory() {
+        if (this.core.activePanel === this.core.ui.story) {
+            if (!this.#storyRunning) {
+                this.#storyRunning = true;
+
+                if (this.currentEpisode) {
+                    this.runEpisodeAt(this.currentEpisode, this.storyProg[this.currentEpisode]);
+                } else {
+                    if (this.storyProg.Tutorial !== -1)
+                        this.runEpisodeAt("Tutorial", this.storyProg.Tutorial);
+                    else {
+                        // screen to review past stories or start new one
+                    }
+                }
+            }
+        } else {
+            this.#storyRunning = false;
+        }
+    }
+
+
     serialize() {
         const {core, ...rest} = this;
         return rest;
@@ -101,8 +130,6 @@ export default class StoryManager {
     }
 
     updateAccess() {
-        if (this.storyProg.Tutorial !== -1)
-            this.runEpisodeAt("Tutorial", this.storyProg.Tutorial);
     }
 }
 

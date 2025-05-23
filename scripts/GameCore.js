@@ -12,6 +12,7 @@ import LoadingService from "./Services/LoadingService.js";
 
 export default class GameCore {
     static instance = null;
+    #tickListeners;
 
     constructor() {
         if (GameCore.instance) return GameCore.instance;
@@ -26,8 +27,9 @@ export default class GameCore {
         this.pendingSave = false;
 
         this.saveableComponents = new Map();
+        this.#tickListeners = new Set();
+        
         this.#initializeGame();
-
     }
 
     static getInstance() {
@@ -49,16 +51,14 @@ export default class GameCore {
         this.mc = new UserManager(this);
         this.news = new NewsManager(this);
         HackService.initialize(this);
+        this.activePanel = this.ui.story;
 
-        this.activePanel = null;
 
         await LoadingService.initialize();
-
+        await this.loadLastSave();
         LoadingService.hide();
-        if (!await this.loadLastSave()) {
-            this.ui.activatePanel(this.ui.story);
-            await this.story.runEpisodeAt("Tutorial", 0);
-        }
+        
+        this.ui.activatePanel(this.activePanel); // Story is default
 
         this.isRunning = true;
         this.lastFrameTime = performance.now();
@@ -76,6 +76,10 @@ export default class GameCore {
         this.lastFrameTime = currentTime;
 
         this.clock.advance(dt);
+        
+        this.#tickListeners.forEach(listener => {
+            listener();
+        });
 
         // Handle throttled saving
         const now = Date.now();
@@ -88,6 +92,10 @@ export default class GameCore {
         }
 
         requestAnimationFrame((time) => this.gameLoop(time));
+    }
+    
+    onTick(cb) {
+        this.#tickListeners.add(cb);
     }
 
     pause() {
@@ -114,7 +122,7 @@ export default class GameCore {
             }
 
             const snapshot = {
-                version: '0.0.1', timestamp: Date.now(), data: componentsData
+                version: '0.0.2', timestamp: Date.now(), data: componentsData
             };
 
             await this.storage.save(snapshot);
@@ -130,7 +138,7 @@ export default class GameCore {
             const snapshot = await this.storage.load();
             if (!snapshot) return false;
 
-            if (snapshot.version !== '0.0.1') {
+            if (snapshot.version !== '0.0.2') {
                 console.warn('Incompatible save version. Resetting.');
                 return false;
             }
