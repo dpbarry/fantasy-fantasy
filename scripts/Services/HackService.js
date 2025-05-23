@@ -1,6 +1,5 @@
 import InputService from "./InputService.js";
 import GeneralService from "./GeneralService.js";
-import SnapshotService from "./SnapshotService.js";
 
 export default class HackService {
     static #sequence = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown'];
@@ -179,7 +178,7 @@ export default class HackService {
             switch (cmd.toLowerCase()) {
                 case 'help':
                     core.save();
-                    feedback.textContent = 'Commands: help, pause, resume, hardstop, restart, settime';
+                    feedback.textContent = 'Commands: help, pause, resume, hardstop, restart, settime, save, savep, load, loadp, delsave';
                     break;
                 case 'pause':
                     feedback.textContent = core.clock.isPaused ? "Already paused" : "Game paused";
@@ -228,8 +227,12 @@ export default class HackService {
                     core.clock.totalSeconds = parseInt(args[0]);
                     break;
                 case 'savep':
-                    SnapshotService.record(core, core.story.currentEpisode, core.story.storyProg[core.story.currentEpisode]);
-                    feedback.textContent = `Snapshot recorded for ${core.story.currentEpisode} phase ${core.story.storyProg[core.story.currentEpisode]}`;
+                    core.saves.record(core.story.currentEpisode, core.story.storyProg[core.story.currentEpisode], {overwrite: false});
+                    feedback.textContent = `Save recorded for ${core.story.currentEpisode} phase ${core.story.storyProg[core.story.currentEpisode]}`;
+                    break;
+                case 'save':
+                    core.saves.record(core);
+                    feedback.textContent = `Save recorded`;
                     break;
                 case 'loadp':
                     if (!args[0] || isNaN(args[0])) {
@@ -239,23 +242,52 @@ export default class HackService {
                     const episode = core.story.currentEpisode;
                     const phase = parseInt(args[0]);
                     try {
-                        SnapshotService.jumpToEp(core, episode, phase);
-                        feedback.textContent = `Restored snapshot for ${episode} phase ${phase}`;
+                        await core.saves.jumpToEp(episode, phase);
+                        feedback.textContent = `Restored save for ${episode} phase ${phase}`;
                     } catch (error) {
                         console.log(error);
-                        feedback.textContent =  `No snapshot found for ${episode} phase ${phase}`;
+                        feedback.textContent = `No save found for ${episode} phase ${phase}`;
                     }
                     break;
-                case 'savelist':
-                    const eps = Object.keys(core.story.storyProg);
-                    let lines = [`Snapshots:`];
-                    for (const ep of eps) {
-                        const max = core.snapshot?.[ep]?.length ?? 0;
-                        lines.push(`- ${ep}: ${max} phase${max === 1 ? "" : "s"}`);
+                case 'load':
+                    if (!args[0] || isNaN(args[0])) {
+                        feedback.textContent = `Usage: load <index>`;
+                        break;
                     }
-                    feedback.innerHTML = lines.join('<br>');
+                    const i = parseInt(args[0]);
+                    try {
+                        await core.saves.jump(i);
+                        feedback.textContent = `Restored save at index ${i}`;
+                    } catch (error) {
+                        console.log(error);
+                        feedback.textContent = `No save found at index ${i}`;
+                    }
                     break;
-
+                case 'slist':
+                    const lines = core.saves.list.map((s, idx) => {
+                        const timeAgo = HackService.#formatTimeAgo(s.timestamp);
+                        if (s.type === "story") return `[${idx}] [${s.episode} ${s.phase}] ${timeAgo}`; else return `[${idx}] ${timeAgo}`;
+                    });
+                    feedback.innerHTML = lines.length ? lines.join('<br>') : "No saves found";
+                    break;
+                case 'delsave':
+                    if (!args[0] || isNaN(args[0])) {
+                        feedback.textContent = `Usage: delsave <index>`;
+                        break;
+                    }
+                    const delIndex = parseInt(args[0]);
+                    if (!core.saves.list[delIndex]) {
+                        feedback.textContent = `No save to delete at index ${delIndex}`;
+                        break;
+                    }
+                    try {
+                        core.saves.delete(delIndex);
+                        feedback.textContent = `Deleted save at index ${delIndex}`;
+                    } catch (error) {
+                        console.error(error);
+                        feedback.textContent = `Failed to delete save at index ${delIndex}`;
+                    }
+                    break;
                 default:
                     feedback.textContent = `Unknown command: ${cmd}`;
             }
@@ -264,5 +296,20 @@ export default class HackService {
         } catch (error) {
             console.error('Command execution failed:', error);
         }
+    }
+
+    static #formatTimeAgo(timestamp) {
+        const now = Date.now();
+        const diff = now - timestamp;
+
+        const seconds = Math.floor(diff / 1000);
+        const minutes = Math.floor(diff / (1000 * 60));
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+        if (seconds < 60) return `${seconds} seconds ago`;
+        if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+        if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+        return `${days} day${days !== 1 ? 's' : ''} ago`;
     }
 }

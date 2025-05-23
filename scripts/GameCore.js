@@ -9,6 +9,7 @@ import UserManager from "./Managers/UserManager.js";
 import NewsManager from "./Managers/NewsManager.js";
 import HackService from "./Services/HackService.js";
 import LoadingService from "./Services/LoadingService.js";
+import SaveManager from "./Managers/SaveManager.js";
 
 export default class GameCore {
     static #instance = null;
@@ -19,7 +20,7 @@ export default class GameCore {
     #saveThrottleMS;
     #pendingSave;
     #saveableComponents;
-    #currentVersion = "0.0.2";
+    #currentVersion = "0.0.3";
 
     constructor() {
         if (GameCore.#instance) return GameCore.#instance;
@@ -69,6 +70,8 @@ export default class GameCore {
         this.story = new StoryManager(this);
         this.mc = new UserManager(this);
         this.news = new NewsManager(this);
+        this.saves = new SaveManager(this);
+
         HackService.initialize(this);
         this.activePanel = this.ui.story;
 

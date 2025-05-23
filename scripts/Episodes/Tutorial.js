@@ -5,6 +5,7 @@ import TypingService from "../Services/TypingService.js";
 export default function Tutorial(ctx) {
     return {
         beginTutorial: async () => {
+            ctx.epCheckpoint(0);
             ctx.core.clock.pause();
             ctx.typePWithInputs('You jolt awake, your head spinning. What a wild dream that must have been. ' + 'You can hardly even remember your own name... But of course, it is @ @!', "5.5em", "getname", InputService.firstlastNameValidate).then(ctx.episodes.Tutorial.getName);
         },

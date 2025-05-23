@@ -35,6 +35,12 @@ export default function TooltipService(core) {
       <p>Each point of <span class="wisdomWord term">Wisdom</span> grants a +1% boost to all stats related to research.</p>
       <p>Current boost: +${core.mc.wisdom}%</p>
     `);
+
+        registerTip('wisdom', () => `
+      <p><i>Measures scholastic prowess.</i></p>
+      <p>Each point of <span class="wisdomWord term">Wisdom</span> grants a +1% boost to all stats related to research.</p>
+      <p>Current boost: +${core.mc.wisdom}%</p>
+    `);
     }
 
     function showTooltip(el) {

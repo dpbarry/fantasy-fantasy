@@ -1,7 +1,6 @@
 import TypingService from "../Services/TypingService.js";
 import GeneralService from "../Services/GeneralService.js";
 import Tutorial from "../Episodes/Tutorial.js";
-import SnapshotService from "../Services/SnapshotService.js";
 
 export default class StoryManager {
     #episodes;
@@ -42,7 +41,7 @@ export default class StoryManager {
     epCheckpoint(n) {
         this.storyProg[this.currentEpisode] = n;
         this.storyText[this.currentEpisode] = this.textSnapshot();
-        SnapshotService.record(this.core, this.currentEpisode, n);
+        this.core.saves.record(this.currentEpisode, n, {overwrite: true});
     }
 
     setupAutoScroll() {

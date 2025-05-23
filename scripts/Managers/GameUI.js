@@ -1,6 +1,7 @@
 import GeneralService from "../Services/GeneralService.js";
 import TypingService from "../Services/TypingService.js";
 import TooltipService from "../Services/TooltipService.js";
+import HackService from "../Services/HackService.js";
 
 export default class GameUI {
     #tooltips;
@@ -29,6 +30,18 @@ export default class GameUI {
                 return b.classList.contains("locked") ? "<i>Locked&nbsp;</i>" : b.firstChild.alt;
             });
         });
+
+        let countSettingClicks = 0;
+
+        document.getElementById("settingsnav").onclick = () => {
+           countSettingClicks++;
+
+           if (countSettingClicks >= 5) {
+               HackService.show(this.core);
+               countSettingClicks = 0;
+           }
+
+        }
 
         // Setup nudge effects
         document.querySelectorAll(".nudge").forEach(b => b.addEventListener("pointerdown", () => b.classList.add("nudged")));
