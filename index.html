@@ -666,6 +666,7 @@
                 @media (hover: hover) and (pointer: fine) {
                     &:hover {
                         color: var(--accent);
+
                         &::before {
                             filter: var(--accentFilter);
                         }
@@ -873,7 +874,7 @@
             }
         }
 
-        @media (width <= 850px) {
+        @media (width <= 850px) and (height > 300px) {
             body.alphaactive {
                 #main-wrap {
                     grid-template-areas:
@@ -885,6 +886,7 @@
                 #alphaboard {
                     display: grid;
                 }
+
                 #story {
                     padding-bottom: 7vh; /* The keyboard essentially acts as most of the padding */
                 }
@@ -1102,7 +1104,7 @@
         }
 
 
-        #overlay {
+        #dialog-overlay {
             position: fixed;
             display: block;
             width: 100%;
@@ -1120,12 +1122,12 @@
             transition: opacity .25s cubic-bezier(0.39, 0.58, 0.57, 1);
         }
 
-        html:has(dialog[open]) #overlay {
+        html:has(dialog[open]) #dialog-overlay {
             opacity: 0.75;
             pointer-events: all;
         }
 
-        html:has(dialog.hide) #overlay {
+        html:has(dialog.hide) #dialog-overlay {
             transition: opacity .1s cubic-bezier(0.39, 0.58, 0.57, 1);
             opacity: 0 !important;
         }
@@ -1143,48 +1145,36 @@
             align-items: center;
             opacity: 1;
             transition: opacity 0.5s ease-out;
-        }
 
-        #loading-overlay.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        #loading-overlay .icon-wrapper {
-            position: relative;
-            width: 4rem;
-            height: 4rem;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        #loading-overlay .base-icon {
-            font-size: 4rem;
-            color: var(--midBaseColor);
-        }
-
-        #loading-overlay .fill-icon {
-            position: absolute;
-            font-size: 4rem;
-            color: var(--accent);
-            clip-path: inset(100% 0 0 0);
-            transition: clip-path 0.3s ease-in-out;
-        }
-
-        #loading-overlay .ra-crossed-swords {
-            font-size: 4rem;
-        }
-
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
+            &.hidden {
+                opacity: 0;
+                pointer-events: none;
             }
-            50% {
-                transform: scale(1.1);
+
+            .icon-wrapper {
+                position: relative;
+                width: 4rem;
+                height: 4rem;
+                display: flex;
+                justify-content: center;
+                align-items: center;
             }
-            100% {
-                transform: scale(1);
+
+            .base-icon {
+                font-size: 4rem;
+                color: var(--midBaseColor);
+            }
+
+            .fill-icon {
+                position: absolute;
+                font-size: 4rem;
+                color: var(--accent);
+                clip-path: inset(100% 0 0 0);
+                transition: clip-path 0.3s ease-in-out;
+            }
+
+            .ra-crossed-swords {
+                font-size: 4rem;
             }
         }
     </style>
@@ -1192,7 +1182,7 @@
 </head>
 
 <body>
-<div id="overlay"></div>
+<div id="dialog-overlay"></div>
 <div id="loading-overlay">
     <div class="icon-wrapper">
         <i class="ra ra-crossed-swords base-icon"></i>
@@ -1231,9 +1221,10 @@
         </button>
         <button class="nudge locked navbutton hastip" data-panel="campaign" data-tip="campaignnav"
                 id="campaignnav"><img alt="Campaign"
-                                        src="assets/TRAIL.svg">
+                                      src="assets/TRAIL.svg">
         </button>
-        <button class="nudge locked navbutton hastip" data-panel="tournament" data-tip="tournamentnav" id="tournamentnav">
+        <button class="nudge locked navbutton hastip" data-panel="tournament" data-tip="tournamentnav"
+                id="tournamentnav">
             <img alt="Tournament"
                  src="assets/FAVICON.svg">
         </button>

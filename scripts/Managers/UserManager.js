@@ -33,7 +33,7 @@ export default class UserManager {
             nameElement.id = 'character-name';
             nameElement.className = 'hastip';
             nameElement.dataset.tip = 'mc-name';
-            this.core.ui.registerTip('mc-name', () => {
+            this.core.ui.tooltips.registerTip('mc-name', () => {
                 const stats = [{name: "Savvy", value: this.savvy, class: "savvyWord"}, {
                     name: "Valor", value: this.valor, class: "valorWord"
                 }, {name: "Wisdom", value: this.wisdom, class: "wisdomWord"}, {
@@ -48,12 +48,11 @@ export default class UserManager {
         }
 
         if (this.statusAccess.date) {
-
             const dateElement = document.createElement('div');
             dateElement.id = 'game-date';
             dateElement.className = 'hastip';
             dateElement.dataset.tip = 'verbosedate';
-            this.core.ui.registerTip('verbosedate', () => {
+            this.core.ui.tooltips.registerTip('verbosedate', () => {
                 return this.core.clock.gameDate({format: "verbose"});
             });
 

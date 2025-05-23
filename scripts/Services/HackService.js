@@ -1,5 +1,6 @@
 import InputService from "./InputService.js";
 import GeneralService from "./GeneralService.js";
+import SnapshotService from "./SnapshotService.js";
 
 export default class HackService {
     static #sequence = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown'];
@@ -226,6 +227,35 @@ export default class HackService {
                     feedback.textContent = `Set game time to ${core.clock.gameTime({format: 'full'})} ${core.clock.gameDate({format: 'full'})}`;
                     core.clock.totalSeconds = parseInt(args[0]);
                     break;
+                case 'savep':
+                    SnapshotService.record(core, core.story.currentEpisode, core.story.storyProg[core.story.currentEpisode]);
+                    feedback.textContent = `Snapshot recorded for ${core.story.currentEpisode} phase ${core.story.storyProg[core.story.currentEpisode]}`;
+                    break;
+                case 'loadp':
+                    if (!args[0] || isNaN(args[0])) {
+                        feedback.textContent = `Usage: loadep <phaseNumber>`;
+                        break;
+                    }
+                    const episode = core.story.currentEpisode;
+                    const phase = parseInt(args[0]);
+                    try {
+                        SnapshotService.jumpToEp(core, episode, phase);
+                        feedback.textContent = `Restored snapshot for ${episode} phase ${phase}`;
+                    } catch (error) {
+                        console.log(error);
+                        feedback.textContent =  `No snapshot found for ${episode} phase ${phase}`;
+                    }
+                    break;
+                case 'savelist':
+                    const eps = Object.keys(core.story.storyProg);
+                    let lines = [`Snapshots:`];
+                    for (const ep of eps) {
+                        const max = core.snapshot?.[ep]?.length ?? 0;
+                        lines.push(`- ${ep}: ${max} phase${max === 1 ? "" : "s"}`);
+                    }
+                    feedback.innerHTML = lines.join('<br>');
+                    break;
+
                 default:
                     feedback.textContent = `Unknown command: ${cmd}`;
             }

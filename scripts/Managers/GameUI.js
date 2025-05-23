@@ -1,15 +1,23 @@
 import GeneralService from "../Services/GeneralService.js";
 import TypingService from "../Services/TypingService.js";
+import TooltipService from "../Services/TooltipService.js";
 
 export default class GameUI {
+    #tooltips;
+
     constructor(core) {
         this.core = core;
+        this.#tooltips = TooltipService(core);
+
         this.story = document.getElementById("story");
         this.news = document.getElementById("updates");
         this.userstatus = document.getElementById("user-status");
 
-        this.tooltips = new Map();
         this.initialize();
+    }
+
+    get tooltips() {
+        return this.#tooltips;
     }
 
     initialize() {
@@ -17,7 +25,7 @@ export default class GameUI {
             b.onpointerdown = () => {
                 this.activatePanel(document.querySelector("#" + b.dataset.panel));
             }
-            this.registerTip(b.dataset.tip, () => {
+            this.#tooltips.registerTip(b.dataset.tip, () => {
                 return b.classList.contains("locked") ? "<i>Locked&nbsp;</i>" : b.firstChild.alt;
             });
         });
@@ -62,7 +70,7 @@ export default class GameUI {
             };
         });
 
-        this.observeTooltips();
+        this.#tooltips.observeTooltips();
 
         this.story.addEventListener('scroll', () => {
             GeneralService.verticalScroll(this.story, 5, true);
@@ -71,7 +79,6 @@ export default class GameUI {
             GeneralService.verticalScroll(this.story, 5, true);
         });
 
-        this.initializeConstants();
     }
 
     activatePanel(panel) {
@@ -80,252 +87,6 @@ export default class GameUI {
         document.querySelector(`#navbar button[data-panel='${panel.id}']`).classList.add("chosen");
     }
 
-    initializeConstants() {
-        this.registerTip('savvy', () => {
-            return `<p><i>Measures economic know-how.</i></p>
-<p>Each point of <span class="savvyWord term">Savvy</span> grants a +1% boost to all stats related to the economy.</p>
-<p>Current boost: +${this.core.mc.savvy}%</p>`
-        });
-
-        this.registerTip('valor', () => {
-            return `<p><i>Measures military expertise.</i></p>
-<p>Each point of <span class="valorWord term">Valor</span> grants a +1% boost to all stats related to the army.</p>
-<p>Current boost: +${this.core.mc.valor}%</p>`
-        });
-
-        this.registerTip('wisdom', () => {
-            return `<p><i>Measures scholastic prowess.</i></p>
-<p>Each point of <span class="wisdomWord term">Wisdom</span> grants a +1% boost to all stats related to research.</p>
-<p>Current boost: +${this.core.mc.wisdom}%</p>`
-        });
-    }
-
-    observeTooltips() {
-        const pointerDismissHandlers = new WeakMap();
-
-        const attach = (el) => {
-            // Avoid double-binding
-            if (el._hastipBound) return;
-            el._hastipBound = true;
-
-            // Mouse hover
-            el.addEventListener('mouseenter', () => this.showTooltip(el));
-            el.addEventListener('mouseleave', () => this.destroyTooltip(el));
-
-            // Touch / pointer handling
-            const pointerDownHandler = (e) => {
-                if (e.pointerType === 'mouse') return;
-                e.preventDefault();
-                this.showTooltip(el);
-
-                const dismissHandler = (e) => {
-                    if (e.target === el) return;
-                    this.destroyTooltip(el);
-                    document.removeEventListener('pointerdown', dismissHandler);
-                    document.removeEventListener('pointerup', dismissHandler);
-                    window.removeEventListener('scroll', dismissHandler, true);
-                    pointerDismissHandlers.delete(el); // Clean up reference
-                };
-
-                // Store for cleanup
-                pointerDismissHandlers.set(el, dismissHandler);
-
-                setTimeout(() => {
-                    document.addEventListener('pointerdown', dismissHandler);
-                    document.addEventListener('pointerup', dismissHandler);
-                    window.addEventListener('scroll', dismissHandler, true);
-                }, 0);
-            };
-
-            el.addEventListener('pointerdown', pointerDownHandler);
-
-            // Store so we can remove the handler later
-            el._pointerDownHandler = pointerDownHandler;
-        };
-
-        const detach = (el) => {
-            if (!el._hastipBound) return;
-            el._hastipBound = false;
-
-            el.removeEventListener('mouseenter', () => this.showTooltip(el));
-            el.removeEventListener('mouseleave', () => this.destroyTooltip(el));
-
-            if (el._pointerDownHandler) {
-                el.removeEventListener('pointerdown', el._pointerDownHandler);
-                delete el._pointerDownHandler;
-            }
-
-            const dismissHandler = pointerDismissHandlers.get(el);
-            if (dismissHandler) {
-                document.removeEventListener('pointerdown', dismissHandler);
-                document.removeEventListener('pointerup', dismissHandler);
-                window.removeEventListener('scroll', dismissHandler, true);
-                pointerDismissHandlers.delete(el);
-            }
-
-            // Ensure tooltip is removed
-            this.destroyTooltip(el);
-        };
-
-        const observer = new MutationObserver(mutations => {
-            mutations.forEach(mutation => {
-                if (mutation.type === 'childList') {
-                    // Added nodes
-                    mutation.addedNodes.forEach(node => {
-                        if (node.nodeType !== Node.ELEMENT_NODE) return;
-                        [...(node.classList?.contains('hastip') ? [node] : []), ...node.querySelectorAll('.hastip')]
-                            .forEach(el => {
-                                attach.call(this, el);
-                            });
-                    });
-
-                    // Removed nodes
-                    mutation.removedNodes.forEach(node => {
-                        if (node.nodeType !== Node.ELEMENT_NODE) return;
-                        [...(node.classList?.contains('hastip') ? [node] : []), ...node.querySelectorAll('.hastip')]
-                            .forEach(el => {
-                                detach.call(this, el);
-                            });
-                    });
-
-                } else if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                    const node = mutation.target;
-                    if (node.classList.contains('hastip')) {
-                        attach.call(this, node);
-                    } else {
-                        detach.call(this, node);
-                    }
-                }
-            });
-        });
-
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true,
-            characterData: true,
-            attributes: true,
-            attributeFilter: ['class']
-        });
-
-        // Initial setup
-        document.querySelectorAll('.hastip').forEach(el => {
-            attach.call(this, el);
-        });
-    }
-
-    showTooltip(el) {
-        if (el.querySelector('.tooltip')) return;
-        const tooltipElement = document.createElement('div');
-        tooltipElement.className = 'tooltip';
-        tooltipElement.dataset.tip = el.dataset.tip;
-        tooltipElement.style.opacity = "0"; // Start invisible for measurement
-        tooltipElement.innerHTML = this.getTip(el);
-        document.body.appendChild(tooltipElement);
-
-        const PADDING = 8; // Minimum padding from viewport edges
-        const MARGIN = 3; // Padding between tooltip and element
-
-        const rect = el.getBoundingClientRect();
-        const tooltipRect = tooltipElement.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-
-        // Calculate available space in each direction
-        const spaceAbove = rect.top;
-        const spaceBelow = viewportHeight - rect.bottom;
-        const spaceLeft = rect.left;
-        const spaceRight = viewportWidth - rect.right;
-
-        // Determine best position
-        let position;
-        if (spaceAbove >= tooltipRect.height + PADDING && spaceLeft + rect.width >= tooltipRect.width) {
-            position = 'above';
-        } else if (spaceBelow >= tooltipRect.height + PADDING && spaceLeft + rect.width >= tooltipRect.width) {
-            position = 'below';
-        } else if (spaceLeft >= tooltipRect.width + PADDING) {
-            position = 'left';
-        } else if (spaceRight >= tooltipRect.width + PADDING) {
-            position = 'right';
-        } else {
-            position = 'above'; // Fallback to above if no good position found
-        }
-
-        // Position the tooltip
-        let top, left;
-        tooltipElement.classList.remove('tooltip-above', 'tooltip-below', 'tooltip-left', 'tooltip-right');
-
-        switch (position) {
-            case 'above':
-                top = rect.top - tooltipRect.height - MARGIN;
-                left = rect.left + (rect.width - tooltipRect.width) / 2;
-                tooltipElement.classList.add('tooltip-above');
-                break;
-            case 'below':
-                top = rect.bottom + MARGIN;
-                left = rect.left + (rect.width - tooltipRect.width) / 2;
-                tooltipElement.classList.add('tooltip-below');
-                break;
-            case 'left':
-                top = rect.top + (rect.height - tooltipRect.height) / 2;
-                left = rect.left - tooltipRect.width - MARGIN;
-                tooltipElement.classList.add('tooltip-left');
-                break;
-            case 'right':
-                top = rect.top + (rect.height - tooltipRect.height) / 2;
-                left = rect.right + MARGIN;
-                tooltipElement.classList.add('tooltip-right');
-                break;
-        }
-
-        // Adjust if tooltip would go outside viewport
-        left = Math.max(PADDING, Math.min(left, viewportWidth - tooltipRect.width - PADDING));
-        top = Math.max(PADDING, Math.min(top, viewportHeight - tooltipRect.height - PADDING));
-
-        tooltipElement.style.top = `${top}px`;
-        tooltipElement.style.left = `${left}px`;
-        tooltipElement.style.opacity = ""; // Make visible after positioning
-
-        // Setup update interval
-        let updateInterval = setInterval(() => {
-            try {
-                tooltipElement.innerHTML = this.getTip(el);
-            } catch {
-                clearInterval(updateInterval);
-            }
-        }, 100);
-    }
-
-    destroyTooltip(el) {
-        const tooltips = [...document.body.querySelectorAll('.tooltip')]
-            .filter(t => t.dataset.tip === el.dataset.tip);
-
-        tooltips.forEach(tooltip => {
-            if (tooltip.isRemoving) return;
-            tooltip.isRemoving = true;
-
-            tooltip.style.opacity = "0";
-            tooltip.ontransitionend = () => tooltip.remove();
-
-            // Failsafe removal
-            setTimeout(() => {
-                if (tooltip.isConnected) tooltip.remove();
-            }, 300);
-        });
-    }
-
-    getTip(el) {
-        const cb = this.tooltips.get(el.dataset.tip);
-        if (!cb) {
-            el.classList.remove("hastip");
-            this.destroyTooltip(el);
-            return;
-        }
-        return cb(el);
-    }
-
-    registerTip(type, cb) {
-        this.tooltips.set(type, cb);
-    }
 
     /**
      * @param {HTMLElement} el

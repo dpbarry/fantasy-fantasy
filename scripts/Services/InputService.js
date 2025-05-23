@@ -24,6 +24,10 @@ export default class InputService {
 
             // Simulate key pushes
             const keydownHandler = (e) => {
+                if (document.activeElement.nodeName !== "INPUT") {
+                    document.removeEventListener("keydown", keydownHandler);
+                    return;
+                }
                 const key = e.key.toLowerCase();
                 // Find the corresponding virtual key
                 const virtualKey = [...document.querySelectorAll(".key:not(.nudged)")].find(k => k.innerText.toLowerCase() === key);
@@ -66,6 +70,7 @@ export default class InputService {
 
         function cueReceived() {
             document.removeEventListener("keydown", wrapKeydown);
+            if (!cue) return;
             cue.removeEventListener("click", cueReceived);
             cue.classList.add("done");
 

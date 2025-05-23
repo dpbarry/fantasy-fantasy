@@ -7,6 +7,8 @@ export default class LoadingService {
     static #baseIcon = null;
     static #fillIcon = null;
 
+    static #resizeHandler = () => {};
+
     static async initialize() {
         this.#overlay = document.getElementById('loading-overlay');
         const iconWrapper = this.#overlay.querySelector('.icon-wrapper');
@@ -165,13 +167,13 @@ export default class LoadingService {
         this.#canvas.style.pointerEvents = 'none';
         this.#overlay.insertBefore(this.#canvas, this.#overlay.firstChild);
 
-        const updateCanvasSize = () => {
+        this.#resizeHandler = () => {
             this.#canvas.width = window.innerWidth;
             this.#canvas.height = window.innerHeight;
         };
 
-        updateCanvasSize();
-        window.addEventListener('resize', updateCanvasSize);
+        this.#resizeHandler();
+        window.addEventListener('resize', this.#resizeHandler);
 
         const ctx = this.#canvas.getContext('2d');
 
@@ -245,6 +247,7 @@ export default class LoadingService {
     }
 
     static hide() {
+        window.removeEventListener('resize', this.#resizeHandler);
         if (this.#fillIcon) {
             this.#fillIcon.style.clipPath = 'inset(0 0 0 0)';
         }

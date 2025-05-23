@@ -1,6 +1,7 @@
 import TypingService from "../Services/TypingService.js";
 import GeneralService from "../Services/GeneralService.js";
 import Tutorial from "../Episodes/Tutorial.js";
+import SnapshotService from "../Services/SnapshotService.js";
 
 export default class StoryManager {
     #episodes;
@@ -23,8 +24,11 @@ export default class StoryManager {
         this.currentEpisode = null;
 
         this.initEpisodes();
-
         this.setupAutoScroll();
+    }
+
+    set storyRunning(bool) {
+        this.#storyRunning = bool;
     }
 
     get episodes() {
@@ -33,6 +37,12 @@ export default class StoryManager {
 
     initEpisodes() {
         this.#episodes.Tutorial = Tutorial(this);
+    }
+
+    epCheckpoint(n) {
+        this.storyProg[this.currentEpisode] = n;
+        this.storyText[this.currentEpisode] = this.textSnapshot();
+        SnapshotService.record(this.core, this.currentEpisode, n);
     }
 
     setupAutoScroll() {
@@ -45,11 +55,9 @@ export default class StoryManager {
                 const lastChild = storyEl.lastElementChild;
                 if (!lastChild) return;
 
-                // Check if last element's bottom edge is below the viewport
                 const containerRect = storyEl.getBoundingClientRect();
                 const lastChildRect = lastChild.getBoundingClientRect();
 
-                // If the bottom of the last child is below the container's visible area
                 if (lastChildRect.bottom > containerRect.bottom) {
                     storyEl.scrollTo({
                         top: storyEl.scrollHeight, behavior: 'smooth'
@@ -93,6 +101,7 @@ export default class StoryManager {
     }
 
     async runEpisodeAt(episode, phase) {
+        this.currentEpisode = episode;
         this.core.ui.story.innerHTML = this.storyText[episode];
         await GeneralService.delay(300);
         await this.#episodes[episode].runFrom(phase);

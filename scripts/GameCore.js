@@ -11,32 +11,51 @@ import HackService from "./Services/HackService.js";
 import LoadingService from "./Services/LoadingService.js";
 
 export default class GameCore {
-    static instance = null;
+    static #instance = null;
     #tickListeners;
+    #lastFrameTime;
+    #isRunning;
+    #lastSaveTime;
+    #saveThrottleMS;
+    #pendingSave;
+    #saveableComponents;
+    #currentVersion = "0.0.2";
 
     constructor() {
-        if (GameCore.instance) return GameCore.instance;
-        GameCore.instance = this;
+        if (GameCore.#instance) return GameCore.#instance;
+        GameCore.#instance = this;
 
-        this.lastFrameTime = 0;
-        this.isRunning = false;
+        this.#lastFrameTime = 0;
+        this.#isRunning = false;
 
         // Save throttling
-        this.lastSaveTime = 0;
-        this.saveThrottleMS = 1000;
-        this.pendingSave = false;
+        this.#lastSaveTime = 0;
+        this.#saveThrottleMS = 1000;
+        this.#pendingSave = false;
 
-        this.saveableComponents = new Map();
+        this.#saveableComponents = new Map();
         this.#tickListeners = new Set();
         
         this.#initializeGame();
     }
 
+    get saveableComponents() {
+        return this.#saveableComponents;
+    }
+    get currentVersion() {
+        return this.#currentVersion;
+    }
+    get pendingSave() {
+        return this.#pendingSave;
+    }
+    get isRunning() {
+        return this.#isRunning;
+    }
     static getInstance() {
-        if (!GameCore.instance) {
-            GameCore.instance = new GameCore();
+        if (!GameCore.#instance) {
+            GameCore.#instance = new GameCore();
         }
-        return GameCore.instance;
+        return GameCore.#instance;
     }
 
     async #initializeGame() {
@@ -60,9 +79,9 @@ export default class GameCore {
         
         this.ui.activatePanel(this.activePanel); // Story is default
 
-        this.isRunning = true;
-        this.lastFrameTime = performance.now();
-        this.gameLoop(this.lastFrameTime);
+        this.#isRunning = true;
+        this.#lastFrameTime = performance.now();
+        this.gameLoop(this.#lastFrameTime);
 
         window.onbeforeunload = () => {
             this.save();
@@ -70,10 +89,10 @@ export default class GameCore {
     }
 
     gameLoop(currentTime) {
-        if (!this.isRunning) return;
+        if (!this.#isRunning) return;
 
-        const dt = (currentTime - this.lastFrameTime) / 1000;
-        this.lastFrameTime = currentTime;
+        const dt = (currentTime - this.#lastFrameTime) / 1000;
+        this.#lastFrameTime = currentTime;
 
         this.clock.advance(dt);
         
@@ -83,11 +102,11 @@ export default class GameCore {
 
         // Handle throttled saving
         const now = Date.now();
-        if (!this.pendingSave && now - this.lastSaveTime >= this.saveThrottleMS) {
-            this.pendingSave = true;
+        if (!this.#pendingSave && now - this.#lastSaveTime >= this.#saveThrottleMS) {
+            this.#pendingSave = true;
             this.save().finally(() => {
-                this.lastSaveTime = Date.now();
-                this.pendingSave = false;
+                this.#lastSaveTime = Date.now();
+                this.#pendingSave = false;
             });
         }
 
@@ -99,30 +118,29 @@ export default class GameCore {
     }
 
     pause() {
-        this.isRunning = false;
+        this.#isRunning = false;
     }
 
     resume() {
-        this.isRunning = true;
+        this.#isRunning = true;
     }
 
     registerSaveableComponent(key, component) {
         if (typeof component.serialize !== 'function' || typeof component.deserialize !== 'function' || typeof component.updateAccess !== 'function') {
             throw new Error(`Component ${key} must implement proper methods.`);
         }
-        this.saveableComponents.set(key, component);
+        this.#saveableComponents.set(key, component);
     }
 
     async save() {
         try {
-            // Collect all serialized data from registered components
             const componentsData = {};
-            for (const [key, component] of this.saveableComponents) {
+            for (const [key, component] of this.#saveableComponents) {
                 componentsData[key] = component.serialize();
             }
 
             const snapshot = {
-                version: '0.0.2', timestamp: Date.now(), data: componentsData
+                version: this.#currentVersion, timestamp: Date.now(), data: componentsData
             };
 
             await this.storage.save(snapshot);
@@ -138,13 +156,12 @@ export default class GameCore {
             const snapshot = await this.storage.load();
             if (!snapshot) return false;
 
-            if (snapshot.version !== '0.0.2') {
+            if (snapshot.version !== this.#currentVersion) {
                 console.warn('Incompatible save version. Resetting.');
                 return false;
             }
 
-            // Load data for each registered component
-            for (const [key, component] of this.saveableComponents) {
+            for (const [key, component] of this.#saveableComponents) {
                 if (snapshot.data[key]) {
                     component.deserialize(snapshot.data[key]);
                     component.updateAccess();

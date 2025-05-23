@@ -48,8 +48,7 @@ export default function Tutorial(ctx) {
         },
 
         getGender: async () => {
-            ctx.storyProg.Tutorial = 1;
-            ctx.storyText.Tutorial = ctx.textSnapshot();
+            ctx.epCheckpoint(1)
 
             ctx.typePWithSpans("You roll out of bed, " + "hoping you haven’t missed the first bell. Your father said the meeting today had to be as " + "early as possible. Maybe that explained the odd sleep—you had a suspicion that this might be " + "“The Meeting,” the one long awaited by any firstborn @ / @ of a king.", ["sonChoice", "daughterChoice"], ["son", "daughter"]).then(([p, spans]) => {
                 let [sonChoice, daughterChoice] = spans;
@@ -94,13 +93,11 @@ export default function Tutorial(ctx) {
         },
 
         getSpecialty: async () => {
-            ctx.storyProg.Tutorial = 2;
-            ctx.storyText.Tutorial = ctx.textSnapshot();
+            ctx.epCheckpoint(2)
 
             await ctx.typePWithChoices("After throwing on some clothes, you check your reflection in the mirror. Presentable enough. No point in overdressing for what might just be a run-of-the-mill meeting. Still, you find yourself wondering " + `whether you will make a good ${ctx.core.mc.genderSwitch("king", "queen")}. You do ` + "already know what your strong suit would be:", ["leading the people to economic prosperity", "waging fierce military campaigns", "spearheading fortuitous new discoveries"]).then(async (res) => {
                 let choice;
                 await TypingService.choiceNote(res.el, ...(() => {
-                    ctx.storyProg.Tutorial = 3;
                     switch (res.i) {
                         case 0:
                             choice = "Savvy";
@@ -116,8 +113,7 @@ export default function Tutorial(ctx) {
                             return ["+10 @", ["wisdomWord"], ["Wisdom"], ["term"], ["wisdom"]];
                     }
                 })());
-
-                ctx.storyText.Tutorial = ctx.textSnapshot();
+                ctx.epCheckpoint(3)
 
                 let box = ctx.core.ui.addHint("Many things in the game can be hovered over or tapped to show a tooltip. Try it now on @! For more in-depth information, see the @.", [choice.toLowerCase() + "Word", ""], [choice, "Codex"], ["term", "codexWord term click"], [choice.toLowerCase()]);
 
@@ -153,8 +149,8 @@ export default function Tutorial(ctx) {
         },
 
         goToMeeting: async () => {
-            ctx.storyProg.Tutorial = 4;
-            ctx.storyText.Tutorial = ctx.textSnapshot();
+            ctx.epCheckpoint(4)
+
             ctx.typeP("Soon enough, you arrive outside the royal study. ");
         },
 
