@@ -1,4 +1,4 @@
-export default class GameClock {
+export default class ClockManager {
     #realTimeListeners;
     #gameTimeListeners;
     constructor() {

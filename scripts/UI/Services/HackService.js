@@ -1,5 +1,5 @@
 import InputService from "./InputService.js";
-import GeneralService from "./GeneralService.js";
+import {delay} from "../../Utils.js";
 
 export default class HackService {
     static #sequence = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown'];
@@ -147,7 +147,7 @@ export default class HackService {
                 const command = input.textContent.trim();
                 if (feedback && feedback.classList.contains('visible')) {
                     feedback.classList.remove('visible');
-                    await GeneralService.delay(150);
+                    await delay(150);
                 }
                 await this.executeCommand(command, core);
             }
@@ -196,7 +196,7 @@ export default class HackService {
                 case 'restart':
                     feedback.textContent = "Restarting game...";
                     feedback.classList.add('visible');
-                    await GeneralService.delay(300);
+                    await delay(300);
                     core.pause();
                     window.onbeforeunload = null;
                     await new Promise(resolve => {

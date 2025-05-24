@@ -1,4 +1,6 @@
-export default function TooltipService(core) {
+import createStatsGrid from "../Components/StatGrid.js";
+
+export default function createTooltipService() {
     const tooltips = new Map();
     const pointerDismissHandlers = new WeakMap();
     let observer = null;
@@ -8,6 +10,7 @@ export default function TooltipService(core) {
     }
 
     function getTip(el) {
+        if (!el?.dataset?.tip) return '';
         const cb = tooltips.get(el.dataset.tip);
         if (!cb) {
             el.classList.remove('hastip');
@@ -17,7 +20,7 @@ export default function TooltipService(core) {
         return cb(el);
     }
 
-    function initializeConstants() {
+    function initialize(core) {
         registerTip('savvy', () => `
       <p><i>Measures economic know-how.</i></p>
       <p>Each point of <span class="savvyWord term">Savvy</span> grants a +1% boost to all stats related to the economy.</p>
@@ -36,15 +39,36 @@ export default function TooltipService(core) {
       <p>Current boost: +${core.mc.wisdom}%</p>
     `);
 
-        registerTip('wisdom', () => `
-      <p><i>Measures scholastic prowess.</i></p>
-      <p>Each point of <span class="wisdomWord term">Wisdom</span> grants a +1% boost to all stats related to research.</p>
-      <p>Current boost: +${core.mc.wisdom}%</p>
-    `);
+        registerTip('mc-name', () => {
+            const stats = [{name: "Savvy", value: core.mc.savvy, class: "savvyWord"}, {
+                name: "Valor", value: core.mc.valor, class: "valorWord"
+            }, {name: "Wisdom", value: core.mc.wisdom, class: "wisdomWord"}, {
+                name: "Morality", value: core.mc.morality, class: "moralWord"
+            },];
+
+            return createStatsGrid(stats);
+        });
+
+        registerTip('verbosedate', () => {
+            return core.clock.gameDate({format: "verbose"});
+        });
+
+        // NAVBAR
+        const navButtons = document.querySelectorAll(".navbutton");
+        navButtons.forEach(b => {
+            b.onpointerdown = () => core.activeScreen = b.dataset.panel;
+            registerTip(b.dataset.tip, () => {
+                return b.classList.contains("locked") ? "<i>Locked&nbsp;</i>" : b.firstChild.alt;
+            });
+        });
+
+        observeTooltips();
     }
+
 
     function showTooltip(el) {
         if (el.querySelector('.tooltip')) return;
+
         const tipBox = document.createElement('div');
         tipBox.className = 'tooltip';
         tipBox.dataset.tip = el.dataset.tip;
@@ -58,13 +82,9 @@ export default function TooltipService(core) {
         const vw = window.innerWidth, vh = window.innerHeight;
 
         const space = {
-            above:   r.top,
-            below:   vh - r.bottom,
-            left:    r.left,
-            right:   vw - r.right
+            above: r.top, below: vh - r.bottom, left: r.left, right: vw - r.right,
         };
 
-        // pick position
         let pos;
         if (space.above >= tb.height + PADDING && space.left + r.width >= tb.width) {
             pos = 'above';
@@ -79,34 +99,34 @@ export default function TooltipService(core) {
         }
 
         tipBox.classList.add(`tooltip-${pos}`);
+
         let top, left;
         switch (pos) {
             case 'above':
-                top  = r.top - tb.height - MARGIN;
-                left = r.left + (r.width - tb.width)/2;
+                top = r.top - tb.height - MARGIN;
+                left = r.left + (r.width - tb.width) / 2;
                 break;
             case 'below':
-                top  = r.bottom + MARGIN;
-                left = r.left + (r.width - tb.width)/2;
+                top = r.bottom + MARGIN;
+                left = r.left + (r.width - tb.width) / 2;
                 break;
             case 'left':
-                top  = r.top + (r.height - tb.height)/2;
+                top = r.top + (r.height - tb.height) / 2;
                 left = r.left - tb.width - MARGIN;
                 break;
             case 'right':
-                top  = r.top + (r.height - tb.height)/2;
+                top = r.top + (r.height - tb.height) / 2;
                 left = r.right + MARGIN;
                 break;
         }
-        // clamp to viewport
+
         left = Math.max(PADDING, Math.min(left, vw - tb.width - PADDING));
-        top  = Math.max(PADDING, Math.min(top, vh - tb.height - PADDING));
+        top = Math.max(PADDING, Math.min(top, vh - tb.height - PADDING));
 
         tipBox.style.top = `${top}px`;
         tipBox.style.left = `${left}px`;
         tipBox.style.opacity = '';
 
-        // live-update
         const updater = setInterval(() => {
             try {
                 tipBox.innerHTML = getTip(el);
@@ -119,6 +139,7 @@ export default function TooltipService(core) {
     function destroyTooltip(el) {
         const all = Array.from(document.body.querySelectorAll('.tooltip'))
             .filter(t => t.dataset.tip === el.dataset.tip);
+
         all.forEach(tip => {
             if (tip.isRemoving) return;
             tip.isRemoving = true;
@@ -128,84 +149,85 @@ export default function TooltipService(core) {
         });
     }
 
-    function observeTooltips() {
-        function attach(el) {
-            if (el._hastipBound) return;
-            el._hastipBound = true;
+    function addDismissHandlers(el, cb) {
+        pointerDismissHandlers.set(el, cb);
+        document.addEventListener('pointerdown', cb);
+        document.addEventListener('pointerup', cb);
+        window.addEventListener('scroll', cb, true);
+    }
 
-            el.addEventListener('mouseenter', () => showTooltip(el));
-            el.addEventListener('mouseleave', () => destroyTooltip(el));
+    function removeDismissHandlers(el) {
+        const cb = pointerDismissHandlers.get(el);
+        if (!cb) return;
+        document.removeEventListener('pointerdown', cb);
+        document.removeEventListener('pointerup', cb);
+        window.removeEventListener('scroll', cb, true);
+        pointerDismissHandlers.delete(el);
+    }
 
-            const dismissHandler = (e) => {
-                if (e.pointerType === 'mouse') return;
-                e.preventDefault();
-                showTooltip(el);
+    function attach(el) {
+        if (el._hastipBound) return;
+        el._hastipBound = true;
 
-                const dismiss = (ev) => {
-                    if (ev.target === el) return;
-                    destroyTooltip(el);
-                    document.removeEventListener('pointerdown', dismiss);
-                    document.removeEventListener('pointerup', dismiss);
-                    window.removeEventListener('scroll', dismiss, true);
-                    pointerDismissHandlers.delete(el);
-                };
+        el.addEventListener('mouseenter', onMouseEnter);
+        el.addEventListener('mouseleave', onMouseLeave);
+        el.addEventListener('pointerdown', onPointerDown);
+    }
 
-                pointerDismissHandlers.set(el, dismiss);
-                setTimeout(() => {
-                    document.addEventListener('pointerdown', dismiss);
-                    document.addEventListener('pointerup', dismiss);
-                    window.addEventListener('scroll', dismiss, true);
-                }, 0);
-            };
+    function detach(el) {
+        if (!el._hastipBound) return;
+        el._hastipBound = false;
 
-            el.addEventListener('pointerdown', dismissHandler);
-            el._pointerDownHandler = dismissHandler;
-        }
+        el.removeEventListener('mouseenter', onMouseEnter);
+        el.removeEventListener('mouseleave', onMouseLeave);
+        el.removeEventListener('pointerdown', onPointerDown);
 
-        function detach(el) {
-            if (!el._hastipBound) return;
-            el._hastipBound = false;
+        removeDismissHandlers(el);
+        destroyTooltip(el);
+    }
 
-            el.removeEventListener('mouseenter', () => showTooltip(el));
-            el.removeEventListener('mouseleave', () => destroyTooltip(el));
+    function onMouseEnter(e) {
+        showTooltip(e.currentTarget);
+    }
 
-            if (el._pointerDownHandler) {
-                el.removeEventListener('pointerdown', el._pointerDownHandler);
-                delete el._pointerDownHandler;
-            }
+    function onMouseLeave(e) {
+        destroyTooltip(e.currentTarget);
+    }
 
-            const dis = pointerDismissHandlers.get(el);
-            if (dis) {
-                document.removeEventListener('pointerdown', dis);
-                document.removeEventListener('pointerup', dis);
-                window.removeEventListener('scroll', dis, true);
-                pointerDismissHandlers.delete(el);
-            }
+    function onPointerDown(e) {
+        const el = e.currentTarget;
+        if (e.pointerType === 'mouse') return;
 
+        e.preventDefault();
+        showTooltip(el);
+
+        const dismiss = (ev) => {
+            if (ev.target === el) return;
             destroyTooltip(el);
-        }
+            removeDismissHandlers(el);
+        };
 
+        setTimeout(() => addDismissHandlers(el, dismiss), 0);
+    }
+
+    function observeTooltips() {
         observer = new MutationObserver(muts => {
             muts.forEach(m => {
                 if (m.type === 'childList') {
                     m.addedNodes.forEach(n => {
                         if (n.nodeType !== 1) return;
-                        const els = n.classList?.contains('hastip')
-                            ? [n]
-                            : Array.from(n.querySelectorAll('.hastip'));
+                        const els = n.classList?.contains('hastip') ? [n] : Array.from(n.querySelectorAll('.hastip'));
                         els.forEach(attach);
                     });
+
                     m.removedNodes.forEach(n => {
                         if (n.nodeType !== 1) return;
-                        const els = n.classList?.contains('hastip')
-                            ? [n]
-                            : Array.from(n.querySelectorAll('.hastip'));
+                        const els = n.classList?.contains('hastip') ? [n] : Array.from(n.querySelectorAll('.hastip'));
                         els.forEach(detach);
                     });
                 } else if (m.type === 'attributes' && m.attributeName === 'class') {
                     const tgt = m.target;
-                    if (tgt.classList.contains('hastip')) attach(tgt);
-                    else detach(tgt);
+                    if (tgt.classList.contains('hastip')) attach(tgt); else detach(tgt);
                 }
             });
         });
@@ -214,17 +236,17 @@ export default function TooltipService(core) {
             childList: true,
             subtree: true,
             attributes: true,
-            attributeFilter: ['class']
+            attributeFilter: ['class'],
         });
 
         document.querySelectorAll('.hastip').forEach(attach);
     }
 
     return {
-        initializeConstants,
-        observeTooltips,
+        initialize,
+        registerTip,
         showTooltip,
         destroyTooltip,
-        registerTip
+        observeTooltips,
     };
 }

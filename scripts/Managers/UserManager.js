@@ -1,19 +1,27 @@
+import { unlockPanel } from "../Utils.js";
+
 export default class UserManager {
+    firstName = "";
+    lastName = "";
+    gender = "";
+    savvy = 0;
+    valor = 0;
+    wisdom = 0;
+    morality = 0;
+
+    statusAccess = {
+        name: false,
+        date: false,
+    };
+
+    #subscriber = () => {};
+
     constructor(core) {
         this.core = core;
-        core.registerSaveableComponent('user', this);
+    }
 
-        this.firstName = "";
-        this.lastName = "";
-        this.gender = "";
-        this.savvy = 0;
-        this.valor = 0;
-        this.wisdom = 0;
-        this.morality = 0;
-
-        this.statusAccess = {
-            name: false, date: false
-        };
+    onUpdate(callback) {
+        this.#subscriber = callback;
     }
 
     unlockStatus(firstName, lastName) {
@@ -21,88 +29,45 @@ export default class UserManager {
         this.lastName = lastName;
         this.statusAccess.name = true;
         this.statusAccess.date = true;
-        this.core.ui.unlockPanel(this.core.ui.userstatus).then(() => {
-            this.renderStatus();
+        unlockPanel(this.core.ui.userstatus).then(() => {
+            this.#subscriber(this.getStatus());
         });
     }
 
-    renderStatus() {
-        // Create and setup the panel content
-        if (this.statusAccess.name) {
-            const nameElement = document.createElement('div');
-            nameElement.id = 'character-name';
-            nameElement.className = 'hastip';
-            nameElement.dataset.tip = 'mc-name';
-            this.core.ui.tooltips.registerTip('mc-name', () => {
-                const stats = [{name: "Savvy", value: this.savvy, class: "savvyWord"}, {
-                    name: "Valor", value: this.valor, class: "valorWord"
-                }, {name: "Wisdom", value: this.wisdom, class: "wisdomWord"}, {
-                    name: "Morality", value: this.morality, class: "moralWord"
-                },];
-
-                return this.core.ui.createStatsGrid(stats);
-            });
-
-            nameElement.textContent = `${this.firstName} ${this.lastName}`;
-            this.core.ui.userstatus.appendChild(nameElement);
-        }
-
-        if (this.statusAccess.date) {
-            const dateElement = document.createElement('div');
-            dateElement.id = 'game-date';
-            dateElement.className = 'hastip';
-            dateElement.dataset.tip = 'verbosedate';
-            this.core.ui.tooltips.registerTip('verbosedate', () => {
-                return this.core.clock.gameDate({format: "verbose"});
-            });
-
-            const updateDate = () => {
-                dateElement.textContent = this.core.clock.gameDate({format: "numeric"});
-                switch (this.core.clock.getSeason()) {
-                    case "Winter":
-                        dateElement.style.color = "hsl(200, 35%, 80%)";
-                        break;
-                    case "Spring":
-                        dateElement.style.color = "hsl(120, 35%, 80%)";
-                        break;
-                    case "Summer":
-                        dateElement.style.color = "hsl(0 35%, 80%)";
-                        break;
-                    case "Autumn":
-                        dateElement.style.color = "hsl(50, 35%, 80%)";
-                        break;
-                }
-            };
-
-            updateDate();
-            // Subscribe to time updates with a 1-second interval
-            this.core.clock.subscribeGameTime(() => {
-                updateDate();
-            }, {interval: 1});
-
-            this.core.ui.userstatus.appendChild(dateElement);
-
-        }
+    getStatus() {
+        return {
+            firstName: this.firstName,
+            lastName: this.lastName,
+            gender: this.gender,
+            savvy: this.savvy,
+            valor: this.valor,
+            wisdom: this.wisdom,
+            morality: this.morality,
+            statusAccess: { ...this.statusAccess },
+            gameDate: this.core.clock ? this.core.clock.gameDate({ format: "numeric" }) : null,
+            season: this.core.clock ? this.core.clock.getSeason() : null,
+        };
     }
-
 
     genderSwitch(male, female) {
         return this.gender === "M" ? male : female;
     }
 
     serialize() {
-        const {core, ...rest} = this;
+        const { core, ...rest } = this;
         return rest;
     }
 
     deserialize(data) {
         Object.assign(this, data);
+        this.#subscriber(this.getStatus());
     }
 
     updateAccess() {
-        if (Object.values(this.statusAccess).some(value => value)) {
-            this.core.ui.userstatus.querySelector(".lockedpanel").remove();
+        if (Object.values(this.statusAccess).some(Boolean)) {
+            let lock = this.core.ui.userstatus.querySelector(".lockedpanel");
+            if (lock) lock.remove();
         }
-        this.renderStatus();
+        this.#subscriber(this.getStatus());
     }
 }

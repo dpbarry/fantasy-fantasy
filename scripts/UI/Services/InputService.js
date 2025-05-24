@@ -11,10 +11,11 @@ export default class InputService {
      */
     static getInput(cb, type = "alpha", className = "") {
         const input = document.createElement("input");
+        input.name = "inp";
         input.className = className;
         input.autocomplete = "off";
         input.inputMode = "none";
-        input.whitespace = "nowrap";
+        input.whiteSpace = "nowrap";
         input.spellcheck = false;
         input.oninput = cb;
         input.onfocus = () => {
@@ -46,6 +47,7 @@ export default class InputService {
 
             // Clean up event listener when focus is lost
             input.onblur = (e) => {
+                    document.removeEventListener("keydown", keydownHandler);
                 if (!e.relatedTarget?.closest("input, dialog")) {
                     e.target.focus();
                 }
@@ -190,7 +192,9 @@ export default class InputService {
             if (cueCheck) {
                 cueCheck(e.target);
             } else {
-                e.target.closest("#story").querySelector(".cue").classList.add("visible");
+                let cue = e.target.closest("#story").querySelector(".cue");
+                if (!cue) return;
+                cue.classList.add("visible");
             }
 
         } else {

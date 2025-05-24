@@ -1,144 +1,111 @@
-import TypingService from "../Services/TypingService.js";
-import GeneralService from "../Services/GeneralService.js";
+// /src/managers/StoryManager.js
+import {delay} from "../Utils.js";
 import Tutorial from "../Episodes/Tutorial.js";
+import TypingService from "../UI/Services/TypingService.js";
 
 export default class StoryManager {
-    #episodes;
-    #storyRunning;
+    #episodes = {};
+    #running = false;
+    #subscriber = () => {};
 
     constructor(core) {
         this.core = core;
-        this.#episodes = {}; // namespace container
-        this.#storyRunning = false;
-
-        this.core.registerSaveableComponent('story', this);
-        this.core.onTick(() => this.runStory());
-
-        this.storyProg = {
-            Tutorial: 0
-        };
-        this.storyText = {
-            Tutorial: ""
-        }
+        // set up the Tutorial episode
+        this.#episodes.Tutorial = Tutorial(this);
+        
+        this.progress = {Tutorial: 0};
+        this.snapshots = {Tutorial: ""};
         this.currentEpisode = null;
 
-        this.initEpisodes();
-        this.setupAutoScroll();
-    }
-
-    set storyRunning(bool) {
-        this.#storyRunning = bool;
+        // on every tick, maybe start the story
+        core.onTick(() => this._maybeStart());
     }
 
     get episodes() {
         return this.#episodes;
     }
 
-    initEpisodes() {
-        this.#episodes.Tutorial = Tutorial(this);
+    // UI subscription: screen will call this to receive resets/appends
+    onContent(fn) {
+        this.#subscriber = fn;
     }
 
-    epCheckpoint(n) {
-        this.storyProg[this.currentEpisode] = n;
-        this.storyText[this.currentEpisode] = this.textSnapshot();
-        this.core.saves.record(this.currentEpisode, n, {overwrite: true});
-    }
-
-    setupAutoScroll() {
-        let scrollTimeout;
-        const autoScroll = () => {
-            clearTimeout(scrollTimeout);
-
-            scrollTimeout = setTimeout(() => {
-                const storyEl = this.core.ui.story;
-                const lastChild = storyEl.lastElementChild;
-                if (!lastChild) return;
-
-                const containerRect = storyEl.getBoundingClientRect();
-                const lastChildRect = lastChild.getBoundingClientRect();
-
-                if (lastChildRect.bottom > containerRect.bottom) {
-                    storyEl.scrollTo({
-                        top: storyEl.scrollHeight, behavior: 'smooth'
-                    });
-                }
-            }, 100);
-        }
-        this.observer = new MutationObserver(() => {
-            autoScroll();
-        });
-
-        window.addEventListener("resize", () => {
-            autoScroll();
-        })
-
-        this.observer.observe(this.core.ui.story, {
-            childList: true, subtree: true, characterData: true
-        });
-        this.core.ui.story._mutationObserver = this.observer;
-    }
-
-    async typePWithInputs(text, width, className, cb, type) {
-        return TypingService.typePWithInputs(text, this.core.ui.story, width, className, cb, type);
-    }
-
-    async typePWithSpans(text, spanIDs, spanTexts, spanClasses = [], spanTips = []) {
-        return TypingService.typePWithSpans(text, this.core.ui.story, spanIDs, spanTexts, spanClasses, spanTips);
-    }
-
-    typeP(text) {
-        TypingService.typeP(text, this.core.ui.story);
-    }
-
-    typePWithChoices(text, choices) {
-        return TypingService.typePWithChoices(text, this.core.ui.story, choices);
-    }
-
-
-    textSnapshot() {
-        return this.core.ui.story.innerHTML;
-    }
-
-    async runEpisodeAt(episode, phase) {
-        this.currentEpisode = episode;
-        this.core.ui.story.innerHTML = this.storyText[episode];
-        await GeneralService.delay(300);
+    // internal: start a specific episode at a phase
+    async _run(episode, phase) {
+        this.current = episode;
+        // tell UI to reset (with the last snapshot)
+        this.#subscriber({type: "reset", html: this.snapshots[episode]});
+        await delay(300);
+        // let the episode script take over
         await this.#episodes[episode].runFrom(phase);
     }
 
-
-    runStory() {
-        if (this.core.activePanel === this.core.ui.story) {
-            if (!this.#storyRunning) {
-                this.#storyRunning = true;
-
-                if (this.currentEpisode) {
-                    this.runEpisodeAt(this.currentEpisode, this.storyProg[this.currentEpisode]);
-                } else {
-                    if (this.storyProg.Tutorial !== -1)
-                        this.runEpisodeAt("Tutorial", this.storyProg.Tutorial);
-                    else {
-                        // screen to review past stories or start new one
-                    }
-                }
-            }
-        } else {
-            this.#storyRunning = false;
-        }
+    // called by episode whenever it has an HTML snippet to show
+    emit(html) {
+        this.#subscriber({type: "append", html});
     }
 
+    // checkpoint and persist
+    checkpoint(phase) {
+        this.progress[this.current] = phase;
+        this.snapshots[this.current] = this.core.ui.story.innerHTML || "";
+        this.core.managers.saves.record(this.current, phase, {overwrite: true});
+    }
+
+    // Public API for episodes to type text
+    async type(text, opts = {}) {
+        // opts can include inputs, spans, choices, etc.
+        // you can extend this to dispatch to different TypingService methods
+       return await TypingService.typeP(text, this.core.ui.screens.story.root, opts);
+
+    }
+
+    async typeWithInputs(text, ...args) {
+        return await TypingService.typePWithInputs(
+            text,
+            this.core.ui.screens.story.root,
+            ...args
+        );
+    }
+
+    async typeWithSpans(text, ...args) {
+        return await TypingService.typePWithSpans(
+            text,
+            this.core.ui.screens.story.root,
+            ...args
+        );
+    }
+
+    async typeWithChoices(text, ...args) {
+        return await TypingService.typePWithChoices(
+            text,
+            this.core.ui.screens.story.root,
+            ...args
+        );
+    }
+
+    // story loop starter
+    _maybeStart() {
+        const ui = this.core.managers.ui;
+        if (ui.activeScreen !== "story") {
+            this.#running = false;
+            return;
+        }
+        if (this.#running) return;
+        this.#running = true;
+
+        const phase = this.progress.Tutorial ?? 0;
+        this._run("Tutorial", phase);
+    }
 
     serialize() {
-        const {core, ...rest} = this;
+        const { core, ...rest } = this;
         return rest;
     }
 
     deserialize(data) {
         Object.assign(this, data);
     }
-
     updateAccess() {
     }
 }
-
-

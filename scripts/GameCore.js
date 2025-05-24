@@ -1,14 +1,13 @@
-// core/GameCore.js
-import GameClock from './GameClock.js';
+import ClockManager from './Managers/ClockManager.js';
 import GameStorage from './GameStorage.js';
-import GameUI from "./Managers/GameUI.js";
+import UIManager from "./Managers/UIManager.js";
 import StoryManager from "./Managers/StoryManager.js";
 import CityManager from "./Managers/CityManager.js";
 import HeroManager from "./Managers/HeroManager.js";
 import UserManager from "./Managers/UserManager.js";
 import NewsManager from "./Managers/NewsManager.js";
-import HackService from "./Services/HackService.js";
-import LoadingService from "./Services/LoadingService.js";
+import HackService from "./UI/Services/HackService.js";
+import LoadingService from "./UI/Services/LoadingService.js";
 import SaveManager from "./Managers/SaveManager.js";
 
 export default class GameCore {
@@ -20,10 +19,13 @@ export default class GameCore {
     #saveThrottleMS;
     #pendingSave;
     #saveableComponents;
-    #currentVersion = "0.0.3";
+    #currentVersion = "0.0.4";
+
 
     constructor() {
-        if (GameCore.#instance) return GameCore.#instance;
+        if (GameCore.#instance) {
+            throw new Error("Use GameCore.getInstance()");
+        }
         GameCore.#instance = this;
 
         this.#lastFrameTime = 0;
@@ -36,22 +38,46 @@ export default class GameCore {
 
         this.#saveableComponents = new Map();
         this.#tickListeners = new Set();
-        
+
+        this.storage = new GameStorage(this);
+        this.ui = new UIManager(this);
+        this.clock = new ClockManager(this);
+        this.managers = {
+            ui: this.ui,
+            clock: this.clock,
+            story: new StoryManager(this),
+            city: new CityManager(this),
+            heroes: new HeroManager(this),
+            mc: new UserManager(this),
+            news: new NewsManager(this),
+            saves: new SaveManager(this),
+        };
+        Object.entries(this.managers).forEach(([k, m]) => {
+            this[k] = m;
+            if (typeof m.serialize === "function" && typeof m.deserialize === "function" && typeof m.updateAccess === "function") {
+                this.#saveableComponents.set(k, m);
+            }
+        });
+
         this.#initializeGame();
     }
 
     get saveableComponents() {
         return this.#saveableComponents;
     }
+
     get currentVersion() {
         return this.#currentVersion;
     }
+
     get pendingSave() {
         return this.#pendingSave;
     }
+
     get isRunning() {
         return this.#isRunning;
     }
+
     static getInstance() {
         if (!GameCore.#instance) {
             GameCore.#instance = new GameCore();
@@ -60,27 +86,13 @@ export default class GameCore {
     }
 
     async #initializeGame() {
-        this.clock = new GameClock();
-        this.storage = new GameStorage();
-        this.registerSaveableComponent('clock', this.clock);
-
-        this.ui = new GameUI(this);
-        this.heroes = new HeroManager(this);
-        this.city = new CityManager(this);
-        this.story = new StoryManager(this);
-        this.mc = new UserManager(this);
-        this.news = new NewsManager(this);
-        this.saves = new SaveManager(this);
-
+        this.ui.readyScreens();
         HackService.initialize(this);
-        this.activePanel = this.ui.story;
-
-
         await LoadingService.initialize();
         await this.loadLastSave();
         LoadingService.hide();
-        
-        this.ui.activatePanel(this.activePanel); // Story is default
+
+        this.ui.show(this.ui.activeScreen); // Story is default
 
         this.#isRunning = true;
         this.#lastFrameTime = performance.now();
@@ -98,7 +110,7 @@ export default class GameCore {
         this.#lastFrameTime = currentTime;
 
         this.clock.advance(dt);
-        
+
         this.#tickListeners.forEach(listener => {
             listener();
         });
@@ -115,7 +127,7 @@ export default class GameCore {
 
         requestAnimationFrame((time) => this.gameLoop(time));
     }
-    
+
     onTick(cb) {
         this.#tickListeners.add(cb);
     }
@@ -125,14 +137,11 @@ export default class GameCore {
     }
 
     resume() {
-        this.#isRunning = true;
-    }
-
-    registerSaveableComponent(key, component) {
-        if (typeof component.serialize !== 'function' || typeof component.deserialize !== 'function' || typeof component.updateAccess !== 'function') {
-            throw new Error(`Component ${key} must implement proper methods.`);
+        if (!this.#isRunning) {
+            this.#isRunning = true;
+            this.#lastFrameTime = performance.now();
+            this.gameLoop(this.#lastFrameTime);
         }
-        this.#saveableComponents.set(key, component);
     }
 
     async save() {
@@ -160,7 +169,7 @@ export default class GameCore {
             if (!snapshot) return false;
 
             if (snapshot.version !== this.#currentVersion) {
-                console.warn('Incompatible save version. Resetting.');
+                console.warn(`Save version ${snapshot.version} not supported (want ${this.#currentVersion}). Resetting...`);
                 return false;
             }
 

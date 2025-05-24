@@ -1,40 +1,26 @@
-import GeneralService from "../Services/GeneralService.js";
-
 export default class NewsManager {
-    #logGrid;
+    logs = [];
+    #subscriber = () => {
+    };
+
     constructor(core) {
         this.core = core;
-        this.notifs = "";
-        this.logs = "";
-        this.#logGrid = this.core.ui.news.querySelector('#wrapupdates');
-        
-        this.#logGrid.addEventListener('scroll', () => {
-            GeneralService.verticalScroll(this.#logGrid, 2);
-        });
-        window.addEventListener("resize", () => {
-            GeneralService.verticalScroll( this.#logGrid, 2);
-        });
-        core.registerSaveableComponent('news', this);
     }
 
-    update(msg) {
-        const timeEl = document.createElement('div');
-        timeEl.className = 'timestamp';
-        timeEl.innerText = this.core.clock.gameTime({format: "short"});
-
-        const msgEl = document.createElement('div');
-        msgEl.className = 'message';
-        msgEl.innerText = msg;
-
-        // Add both elements to the grid
-        this.#logGrid.appendChild(timeEl);
-        this.#logGrid.appendChild(msgEl);
-
-        this.logs = this.#logGrid.innerHTML;
-
-        timeEl.ontransitionend = () => GeneralService.verticalScroll(this.#logGrid, 2);
+    onUpdate(callback) {
+        this.#subscriber = callback;
     }
-    
+
+    update(message) {
+        const timestamp = this.core.clock.gameTime({format: "short"});
+        this.logs.push({timestamp, message});
+        this.#subscriber(this.logs);
+    }
+
+    getLogs() {
+        return this.logs;
+    }
+
     serialize() {
         const {core, ...rest} = this;
         return rest;
@@ -45,8 +31,9 @@ export default class NewsManager {
     }
 
     updateAccess() {
-        if (!this.logs) return;
-        this.core.ui.news.querySelector(".lockedpanel").remove();
-        this.#logGrid.innerHTML = this.logs;
+        if (!this.logs.length) return;
+        let lock = this.core.ui.news.querySelector(".lockedpanel");
+        if (lock) lock.remove();
+        this.#subscriber(this.logs);
     }
 }
