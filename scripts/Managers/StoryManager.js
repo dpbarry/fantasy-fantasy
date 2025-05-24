@@ -32,7 +32,7 @@ export default class StoryManager {
 
     // internal: start a specific episode at a phase
     async _run(episode, phase) {
-        this.current = episode;
+        this.currentEpisode = episode;
         // tell UI to reset (with the last snapshot)
         this.#subscriber({type: "reset", html: this.snapshots[episode]});
         await delay(300);
@@ -47,9 +47,9 @@ export default class StoryManager {
 
     // checkpoint and persist
     checkpoint(phase) {
-        this.progress[this.current] = phase;
-        this.snapshots[this.current] = this.core.ui.story.innerHTML || "";
-        this.core.managers.saves.record(this.current, phase, {overwrite: true});
+        this.progress[this.currentEpisode] = phase;
+        this.snapshots[this.currentEpisode] = this.core.ui.story.innerHTML || "";
+        this.core.managers.saves.record(this.currentEpisode, phase, {overwrite: true});
     }
 
     // Public API for episodes to type text

@@ -1,5 +1,5 @@
 import createTooltipService from "../UI/Services/TooltipService.js";
-import setupKeyboard from "../UI/components/Keyboard.js";
+import setupKeyboard from "../UI/Components/Keyboard.js";
 import setupGlobalBehavior from "../UI/Services/GlobalBehavior.js";
 import {verticalScroll} from "../Utils.js";
 import StoryScreen from "../UI/Screens/StoryScreen.js";
