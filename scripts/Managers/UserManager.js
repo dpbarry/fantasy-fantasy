@@ -64,7 +64,7 @@ export default class UserManager {
     }
 
     updateAccess() {
-        if (Object.values(this.statusAccess).some(Boolean)) {
+        if (Object.values(this.statusAccess).some(x => x)) {
             let lock = this.core.ui.userstatus.querySelector(".lockedpanel");
             if (lock) lock.remove();
         }

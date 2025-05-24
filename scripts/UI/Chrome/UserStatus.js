@@ -29,8 +29,8 @@ export default class UserStatus {
     }
 
     render() {
+        if (this.core.ui.userstatus.querySelector(".lockedpanel")) {return;}
         this.root.innerHTML = "";
-
         if (this.#status.statusAccess.name) {
             const nameElement = document.createElement("div");
             nameElement.id = "character-name";
