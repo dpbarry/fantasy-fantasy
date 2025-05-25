@@ -39,6 +39,12 @@ export default function createTooltipService() {
       <p>Current boost: +${core.mc.wisdom}%</p>
     `);
 
+
+        registerTip('bond', () => `
+      <p><i>Quantifies closeness with someone.</i></p>
+      <p>Spans a spectrum where -100% <span class="bondWord term">Bond</span> denotes an arch-nemesis and 100% denotes a soulmate.</p>
+    `);
+
         registerTip('mc-name', () => {
             const stats = [{name: "Savvy", value: core.mc.savvy, class: "savvyWord"}, {
                 name: "Valor", value: core.mc.valor, class: "valorWord"

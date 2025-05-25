@@ -5,6 +5,7 @@ import {verticalScroll} from "../Utils.js";
 import StoryScreen from "../UI/Screens/StoryScreen.js";
 import NewsPanel from "../UI/Chrome/NewsPanel.js";
 import UserStatus from "../UI/Chrome/UserStatus.js";
+import CityInfo from "../UI/Chrome/CityInfo.js";
 
 export default class UIManager {
     constructor(core) {
@@ -12,6 +13,10 @@ export default class UIManager {
 
         this.tooltipService = createTooltipService(core);
         this.activeScreen = "story";
+        this.activePanels = {
+            "rightbar": null,
+            "leftbar": null,
+        }
 
         this.initialize();
     }
@@ -25,6 +30,7 @@ export default class UIManager {
         this.panels = {
             news: new NewsPanel(this.core),
             userstatus: new UserStatus(this.core),
+            cityinfo: new CityInfo(this.core),
         }
     }
 
@@ -32,6 +38,10 @@ export default class UIManager {
         this.story = document.getElementById("story");
         this.news = document.getElementById("updates");
         this.userstatus = document.getElementById("user-status");
+
+        this.rightbar = document.getElementById("right-wrap");
+        this.cityinfo = document.getElementById("cityinfo");
+        this.leftbar = document.getElementById("left-wrap");
     }
 
     initialize() {
@@ -68,15 +78,23 @@ export default class UIManager {
     show(screen) {
         this.activeScreen = screen;
         document.querySelectorAll("#navbar .chosen").forEach(el => el.classList.remove("chosen"));
-        document.querySelector(`#navbar button[data-panel='${screen}']`).classList.add("chosen");
+        let button = document.querySelector(`#navbar button[data-panel='${screen}']`);
+        if (button) {
+            button.classList.add("chosen");
+        }
+    }
+
+    showPanel(loc, panel) {
+        this.activePanels[loc] = panel;
     }
 
     serialize() {
-        return {activeScreen: this.activeScreen};
+        return {activeScreen: this.activeScreen, activePanels: this.activePanels};
     }
 
     deserialize(data) {
         this.activeScreen = data.activeScreen;
+        this.activePanels = data.activePanels;
     }
 
     updateAccess() {

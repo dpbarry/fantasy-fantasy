@@ -12,15 +12,9 @@ export default class NewsPanel {
             this.#logs = logs;
             this.render();
         });
-
-        // Initial render if logs already exist
-        this.#logs = this.core.managers.news.getLogs();
-        this.render();
     }
 
     render() {
-        if (this.core.ui.news.querySelector(".lockedpanel")) {return;}
-        this.root.innerHTML = "";
         // Render each log entry with timestamp and message
         let lastMsg;
         for (const { timestamp, message } of this.#logs) {

@@ -1,5 +1,6 @@
 import InputService from "./InputService.js";
-import { delay, waitForEvent } from "../../Utils.js";
+import * as Utils from "../../Utils.js";
+import {delay, waitForEvent} from "../../Utils.js";
 
 export default class TypingService {
     static TYPE_DELAY = 5;
@@ -18,7 +19,7 @@ export default class TypingService {
         return Promise.resolve(p);
     }
 
-    static async typeWithSpans(text, body, spanIDs, spanTexts, spanClasses = [], spanTips = []) {
+    static async typeWithSpans(text, body, spanTexts, spanClasses = [], spanTips = []) {
         const spans = [];
         let count = 0;
 
@@ -28,7 +29,6 @@ export default class TypingService {
             if (c === "@") {
                 if (spanClasses.length > count) span.className = spanClasses[count];
                 span.classList.add("deep", "hidespan");
-                span.id = spanIDs[count];
                 span.style.pointerEvents = "none";
                 span.style.cursor = "default";
 
@@ -42,10 +42,7 @@ export default class TypingService {
             } else {
                 span.innerText = c;
                 Object.assign(span.style, {
-                    color: "transparent",
-                    transition: "color 0.15s",
-                    pointerEvents: "none",
-                    userSelect: "none"
+                    color: "transparent", transition: "color 0.15s", pointerEvents: "none", userSelect: "none"
                 });
             }
 
@@ -58,10 +55,10 @@ export default class TypingService {
         return Promise.resolve([body, spans]);
     }
 
-    static async typePWithSpans(text, body, spanIDs, spanTexts, spanClasses = [], spanTips = []) {
+    static async typePWithSpans(text, body, spanTexts, spanClasses = [], spanTips = []) {
         const p = document.createElement("p");
         body.appendChild(p);
-        return this.typeWithSpans(text, p, spanIDs, spanTexts, spanClasses, spanTips);
+        return this.typeWithSpans(text, p, spanTexts, spanClasses, spanTips);
     }
 
     static async typeWithInputs(text, body, width, className = "", cb, type = "alpha") {
@@ -77,10 +74,7 @@ export default class TypingService {
             } else {
                 span.innerText = c;
                 Object.assign(span.style, {
-                    color: "transparent",
-                    transition: "color 0.15s",
-                    pointerEvents: "none",
-                    userSelect: "none"
+                    color: "transparent", transition: "color 0.15s", pointerEvents: "none", userSelect: "none"
                 });
             }
 
@@ -100,9 +94,7 @@ export default class TypingService {
                 await waitForEvent(input, "transitionend", 300);
             } else {
                 Object.assign(span.style, {
-                    color: "",
-                    pointerEvents: "",
-                    userSelect: ""
+                    color: "", pointerEvents: "", userSelect: ""
                 });
             }
         }
@@ -116,66 +108,89 @@ export default class TypingService {
     }
 
     static async typePWithChoices(text, body, choices) {
-        return this.typeP(text, body).then(p => {
-            this.collapseP(p);
+        // Insert text paragraph and collapse as before
+        const p = await this.typeP(text, body);
+        this.collapseP(p);
 
-            const choiceContainer = document.createElement("div");
-            choiceContainer.className = "choice-container";
-            p.after(choiceContainer);
+        // Create container for choices
+        const choiceContainer = document.createElement("div");
+        choiceContainer.className = "choice-container";
+        p.after(choiceContainer);
 
-            const choiceElements = choices.map((choice, index) => {
-                const choiceElement = document.createElement("div");
-                choiceElement.className = "choice";
-                choiceElement.innerText = choice;
-                choiceElement.style.animationDelay = `${index * 0.2}s`;
-                choiceElement.style.pointerEvents = "none";
-                choiceElement.classList.add("adding");
+        // Create choice elements
+        const choiceElements = choices.map((choice, index) => {
+            const el = document.createElement("div");
+            el.className = "choice adding";
+            el.innerText = choice;
+            el.style.animationDelay = `${index * 0.2}s`;
+            el.style.pointerEvents = "none";
 
-                choiceElement.onanimationend = () => {
-                    choiceElement.classList.remove("adding");
-                    choiceElement.classList.add("added");
-                    choiceElement.onanimationend = null;
-                    choiceElement.style.pointerEvents = "";
-                };
+            el.onanimationend = () => {
+                el.classList.remove("adding");
+                el.classList.add("added");
+                el.style.pointerEvents = "";
+                el.onanimationend = null;
+            };
 
-                choiceContainer.appendChild(choiceElement);
-                return choiceElement;
-            });
+            choiceContainer.appendChild(el);
+            return el;
+        });
 
-            return new Promise(resolve => {
-                choiceElements.forEach((choiceElement, index) => {
-                    choiceElement.onclick = () => {
-                        if (body._scrollObserver) body._scrollObserver.disconnect();
+        return new Promise(resolve => {
+            choiceElements.forEach((el, i) => {
+                el.onclick = async () => {
+                    if (body._scrollObserver) body._scrollObserver.disconnect();
+                    choiceElements.forEach(c => c.onclick = null);
+                    el.classList.add("selected");
 
-                        choiceElements.forEach(el => el.onclick = null);
-                        choiceElement.classList.add("selected");
+                    const unselected = choiceElements.filter(c => c !== el);
+                    const addedHeight = unselected.reduce((sum, c) => sum + c.getBoundingClientRect().height, 0);
 
-                        choiceElements.filter(el => el !== choiceElement).forEach(el => {
-                            el.classList.add("unselected");
-                            el.style.fontSize = "0";
+                    unselected.forEach(c => {
+                        c.classList.add("unselected");
+                        c.style.fontSize = "0";
+                    });
+
+                    if (i === 0) {
+                        await Utils.delay(250);
+                        const currentPad = parseFloat(getComputedStyle(document.querySelector('#story')).paddingBottom) || 0;
+                        document.querySelector('#story').style.paddingBottom = `${currentPad + addedHeight}px`;
+                        unselected.forEach(c => c.remove());
+                    } else {
+                        const clones = unselected.map(orig => {
+                            const clone = orig.cloneNode(true);
+                            clone.style.opacity = "1";
+                            choiceContainer.appendChild(clone);
+                            clone.style.fontSize = "";
+                            return clone;
                         });
 
-                        setTimeout(() => {
-                            if (body._scrollObserver) {
-                                body._scrollObserver.observe(body, {
-                                    childList: true,
-                                    subtree: true,
-                                    characterData: true
-                                });
-                            }
-                            resolve({ i: index, el: choiceElement });
-                        }, 550);
-                    };
-                });
+                        await Utils.delay(550);
+
+                        unselected.forEach(c => c.remove());
+                        const currentPad = parseFloat(getComputedStyle(document.querySelector('#story')).paddingBottom) || 0;
+                        document.querySelector('#story').style.paddingBottom = `${currentPad + addedHeight}px`;
+                        clones.forEach(c => c.remove());
+                    }
+
+                    if (body._scrollObserver) {
+                        body._scrollObserver.observe(body, {
+                            childList: true, subtree: true, characterData: true
+                        });
+                    }
+                    resolve({i, el});
+                };
             });
         });
     }
 
-    static async choiceNote(el, msg, spanIDs = [], spanTexts = [], spanClasses = [], spanTips = []) {
+
+    static async choiceNote(text, body, spanTexts = [], spanClasses = [], spanTips = []) {
+        if (!text) return;
         const note = document.createElement("p");
         note.className = "choice-note";
-        el.after(note);
-        return this.typeWithSpans(msg, note, spanIDs, spanTexts, spanClasses, spanTips).then(() => {
+        body.appendChild(note);
+        return this.typeWithSpans(text, note, spanTexts, spanClasses, spanTips).then(() => {
             this.collapseP(note);
             return note;
         });
@@ -192,9 +207,7 @@ export default class TypingService {
             } else {
                 await delay(this.TYPE_DELAY);
                 Object.assign(span.style, {
-                    color: "",
-                    pointerEvents: "",
-                    userSelect: ""
+                    color: "", pointerEvents: "", userSelect: ""
                 });
             }
         }
@@ -205,10 +218,7 @@ export default class TypingService {
             const span = document.createElement("span");
             span.innerText = c;
             Object.assign(span.style, {
-                color: "transparent",
-                transition: "color 0.15s",
-                pointerEvents: "none",
-                userSelect: "none"
+                color: "transparent", transition: "color 0.15s", pointerEvents: "none", userSelect: "none"
             });
             body.appendChild(span);
         });

@@ -32,7 +32,7 @@ export default class NewsManager {
 
     updateAccess() {
         if (!this.logs.length) return;
-        let lock = this.core.ui.news.querySelector(".lockedpanel");
+        let lock = this.core.ui.news.querySelector(".lock");
         if (lock) lock.remove();
         this.#subscriber(this.logs);
     }

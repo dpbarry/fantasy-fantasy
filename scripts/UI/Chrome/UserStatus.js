@@ -21,15 +21,10 @@ export default class UserStatus {
                 }
             }, {interval: 1});
         }
-
-
-        // Initial render with current status
-        this.#status = this.core.mc.getStatus();
-        this.render();
     }
 
     render() {
-        if (this.core.ui.userstatus.querySelector(".lockedpanel")) {return;}
+        if (this.core.ui.userstatus.querySelector(".lock")) {return;}
         this.root.innerHTML = "";
         if (this.#status.statusAccess.name) {
             const nameElement = document.createElement("div");
@@ -41,7 +36,6 @@ export default class UserStatus {
         }
 
         if (this.#status.statusAccess.date) {
-            // Create or update the date element
             let dateElement = this.root.querySelector("#game-date");
             if (!dateElement) {
                 dateElement = document.createElement("div");
@@ -60,7 +54,6 @@ export default class UserStatus {
 
         dateElement.textContent = this.#status.gameDate;
 
-        // Season-based coloring
         switch (this.#status.season) {
             case "Winter":
                 dateElement.style.color = "hsl(200, 35%, 80%)";

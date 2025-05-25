@@ -20,9 +20,9 @@ export default class InputService {
         input.oninput = cb;
         input.onfocus = () => {
             cb({data: "", target: input});
+            let keyboardOpen = document.body.classList.contains("alphaactive");
             document.body.classList.add(type + "active");
-            window.dispatchEvent(new Event("resize"));
-
+            if (!keyboardOpen && !window.matchMedia("(width > 950px)").matches) window.dispatchEvent(new Event("resize"));
             // Simulate key pushes
             const keydownHandler = (e) => {
                 if (document.activeElement.nodeName !== "INPUT") {
@@ -47,9 +47,9 @@ export default class InputService {
 
             // Clean up event listener when focus is lost
             input.onblur = (e) => {
-                    document.removeEventListener("keydown", keydownHandler);
+                document.removeEventListener("keydown", keydownHandler);
                 if (!e.relatedTarget?.closest("input, dialog")) {
-                    e.target.focus();
+                    e.target.focus({preventScroll: true});
                 }
             };
         };

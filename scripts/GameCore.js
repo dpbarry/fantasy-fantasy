@@ -40,8 +40,11 @@ export default class GameCore {
         this.#tickListeners = new Set();
 
         this.storage = new GameStorage(this);
-        this.ui = new UIManager(this);
+
+        // These managers are required in some constructors of the others
         this.clock = new ClockManager(this);
+        this.ui = new UIManager(this);
+
         this.managers = {
             ui: this.ui,
             clock: this.clock,

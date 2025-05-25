@@ -227,8 +227,8 @@ export default class HackService {
                     core.clock.totalSeconds = parseInt(args[0]);
                     break;
                 case 'savep':
-                    core.saves.record(core.story.currentEpisode, core.story.storyProg[core.story.currentEpisode], {overwrite: false});
-                    feedback.textContent = `Save recorded for ${core.story.currentEpisode} phase ${core.story.storyProg[core.story.currentEpisode]}`;
+                    core.saves.record(core.story.currentEpisode, core.story.progress[core.story.currentEpisode], {overwrite: false});
+                    feedback.textContent = `Save recorded for ${core.story.currentEpisode} phase ${core.story.progress[core.story.currentEpisode]}`;
                     break;
                 case 'save':
                     core.saves.record(core);
@@ -266,7 +266,7 @@ export default class HackService {
                 case 'slist':
                     const lines = core.saves.list.map((s, idx) => {
                         const timeAgo = HackService.#formatTimeAgo(s.timestamp);
-                        if (s.type === "story") return `[${idx}] [${s.episode} ${s.phase}] ${timeAgo}`; else return `[${idx}] ${timeAgo}`;
+                        if (s.typeP === "story") return `[${idx}] [${s.episode} ${s.phase}] ${timeAgo}`; else return `[${idx}] ${timeAgo}`;
                     });
                     feedback.innerHTML = lines.length ? lines.join('<br>') : "No saves found";
                     break;

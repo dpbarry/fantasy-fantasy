@@ -1,5 +1,5 @@
 export function unlockPanel(el) {
-    const locked = el.querySelector('.lockedpanel');
+    const locked = el.querySelector('.lock');
     if (!locked) return Promise.resolve();
 
     locked.classList.add('hide');

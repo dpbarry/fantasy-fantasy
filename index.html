@@ -68,6 +68,8 @@
             --wisdomFilter: brightness(0) saturate(100%) invert(32%) sepia(79%) saturate(1483%) hue-rotate(190deg) brightness(93%) contrast(92%);
             --moralColor: hsl(0, 0%, 45%);
             --moralFilter: invert(0.8);
+            --bondColor: hsl(33, 82.5%, 45%);
+            --bondFilter: brightness(0) saturate(100%) invert(66%) sepia(56%) saturate(3245%) hue-rotate(354deg) brightness(85%) contrast(90%);
         }
 
         *, *::before, *::after {
@@ -117,20 +119,20 @@
             margin: 0;
         }
 
-        *:has(> .lockedpanel) {
+        *:has(> .lock) {
             display: flex;
             justify-content: center;
             align-items: center;
         }
 
-        *:has(> .lockedpanel) *:not(.lockedpanel) {
+        *:has(> .lock) *:not(.lock) {
             position: absolute;
             opacity: 0;
             pointer-events: none;
         }
 
 
-        .lockedpanel {
+        .lock {
             transition: opacity 0.15s, bottom 0.2s;
             position: relative;
             font-size: 1rem;
@@ -138,7 +140,7 @@
             font-family: varsity, sans-serif;
         }
 
-        .lockedpanel.hide {
+        .lock.hide {
             opacity: 0;
             bottom: 5px;
         }
@@ -276,7 +278,7 @@
                 background: var(--darkBaseColor);
             }
 
-            #sonChoice, #daughterChoice {
+            .sonChoice, .daughterChoice {
                 font-family: Vinque, serif;
                 font-size: 0.9em;
                 white-space: nowrap;
@@ -346,7 +348,7 @@
                 }
             }
 
-            #sonChoice {
+            .sonChoice {
                 color: hsl(200, 70%, 80%);
 
                 &.visible::after {
@@ -355,7 +357,7 @@
                 }
 
 
-                &.selected ~ #daughterChoice, &:has(~ #daughterChoice.selected) {
+                &.selected ~ .daughterChoice, &:has(~ .daughterChoice.selected) {
                     font-size: 0.6em;
 
                     &::after {
@@ -366,7 +368,7 @@
 
             }
 
-            #daughterChoice {
+            .daughterChoice {
                 color: hsl(330, 70%, 80%);
 
                 &.visible::after {
@@ -375,13 +377,13 @@
                 }
             }
 
-            #sonChoice ~ span:has(~ #daughterChoice).hide {
+            .sonChoice ~ span:has(~ .daughterChoice).hide {
                 transition: font-size 0.2s;
                 font-size: 0;
             }
 
 
-            p:has(#sonChoice.selected) + .cue, p:has(#daughterChoice.selected) + .cue {
+            p:has(.sonChoice.selected) + .cue, p:has(.daughterChoice.selected) + .cue {
                 opacity: 0.8;
                 cursor: pointer;
                 pointer-events: all;
@@ -392,22 +394,24 @@
             .choice-container {
                 display: flex;
                 flex-direction: column;
-                margin-top: -0.5rem;
 
                 .choice {
                     color: var(--baseColor);
+                    display: flex;
+                    align-items: center;
                     cursor: pointer;
                     width: fit-content;
+                    padding-left: 0.1em;
+                    font-weight: 515;
+                    text-align: justify;
                     left: 0;
                     position: relative;
-                    padding-left: 1.25rem;
                     opacity: 0;
-                    transition: color 0.2s ease,
+                    transition: color 0.18s ease,
                     padding-left 0.2s ease,
                     opacity 0.2s ease,
                     font-weight 0.2s ease;
 
-                    text-decoration: 1.5px underline transparent;
 
                     &.adding {
                         animation: choiceIn 0.35s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
@@ -418,9 +422,10 @@
                     }
 
                     &::before {
-                        content: "→";
-                        position: absolute;
-                        left: 0;
+                        content: "⟶";
+                        display: block;
+                        position: relative;
+                        left: -0.7em;
                         opacity: 1;
                         color: var(--accent);
                         transition: left 0.2s ease,
@@ -430,11 +435,9 @@
                     @media (hover: hover) and (pointer: fine) {
                         &:hover {
                             color: var(--accent);
-                            padding-left: 1.5rem;
-                            font-weight: 650;
 
                             &::before {
-                                left: 0.35rem;
+                                left: -0.2em;
                             }
 
                         }
@@ -443,14 +446,12 @@
 
                     &.selected {
                         color: var(--accent);
-                        font-weight: 650;
                         padding-left: 0;
                         pointer-events: none;
-                        transition: color 0.2s ease,
+                        transition: color 0.18s ease,
                         padding-left 0.25s cubic-bezier(0.4, 0.0, 0.2, 1),
                         opacity 0.2s ease,
                         font-weight 0.2s ease, text-decoration 0.3s 0.2s ease;
-                        text-decoration-color: var(--darkAccent);
 
                         &::before {
                             animation: arrowPop 0.2s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
@@ -469,7 +470,6 @@
 
                         filter: opacity(0);
                         left: -2rem;
-                        font-size: 0;
 
 
                         &::before {
@@ -480,34 +480,25 @@
                         }
                     }
                 }
+            }
 
-                .choice-note {
-                    font-size: 0.95rem;
+            .choice-note {
+                font-size: 0.95rem;
 
-                    p {
-                        margin-bottom: 0;
-                    }
+                p {
+                    margin-bottom: 0;
                 }
             }
         }
 
 
         @keyframes arrowPop {
-            0% {
-                transform: scale(1);
+            from {
                 opacity: 1;
             }
-            50% {
-                transform: scale(1.3);
-                opacity: 0.6;
-            }
-            70% {
-                transform: scale(1);
-                opacity: 0.3;
-            }
-            100% {
-                transform: scale(0.6);
+            to {
                 opacity: 0;
+                font-size: 0;
             }
         }
 
@@ -641,7 +632,7 @@
         .term {
             white-space: nowrap;
             transition: color 0.15s;
-            font-weight: 400;
+            font-weight: 600;
 
             &::before {
                 display: inline-block;
@@ -650,7 +641,7 @@
                 vertical-align: baseline;
                 position: relative;
                 top: 1px;
-                margin-right: 0.03em;
+                margin-right: 0.12em;
                 background-size: contain;
                 background-repeat: no-repeat;
                 background-position: center;
@@ -675,7 +666,11 @@
             }
         }
 
-        #savvyWord, .savvyWord {
+        .name {
+            font-weight: 600;
+        }
+
+        .savvyWord {
             color: var(--savvyColor);
 
             &::before {
@@ -684,7 +679,7 @@
             }
         }
 
-        #valorWord, .valorWord {
+        .valorWord {
             color: var(--valorColor);
 
             &::before {
@@ -693,14 +688,14 @@
             }
         }
 
-        #wisdomWord, .wisdomWord {
+        .wisdomWord {
             color: var(--wisdomColor);
 
             &::before {
                 background-image: url("./assets/WISDOM.svg");
                 filter: var(--wisdomFilter);
+                margin-right: 0.05em;
                 top: 1.5px;
-                margin-right: 0.075em;
             }
         }
 
@@ -713,11 +708,20 @@
             }
         }
 
+        .bondWord {
+            color: var(--bondColor);
+
+            &::before {
+                background-image: url("./assets/BOND.svg");
+                filter: var(--bondFilter);
+            }
+        }
+
         .codexWord {
             &::before {
                 background-image: url("./assets/CODEX.svg");
                 filter: var(--baseFilter);
-                margin-right: 0.045em;
+                margin-right: 0.05em;
             }
         }
 
@@ -802,7 +806,7 @@
             grid-area: status;
         }
 
-        #user-status:not(:has(.lockedpanel)) {
+        #user-status:not(:has(.lock)) {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -970,7 +974,7 @@
             filter: drop-shadow(0 0 0.25rem var(--bgColor));
             border: 1.5px solid var(--baseColor);
             padding: 0.2rem 0.2rem;
-            width: max-content;
+            width: fit-content;
             max-width: 16.5rem;
             border-radius: 3px;
             color: var(--baseColor);
@@ -1068,9 +1072,28 @@
             }
         }
 
+        #cityinfo {
+            #city-header {
+                display: flex;
+                width: 100%;
+                justify-content: space-between;
+                align-items: center;
+
+                #city-name {
+                    font-family: Vinque, serif;
+                    font-size: 1.2em;
+                }
+
+                #time {
+                    font-family: Fraunces, monospace;
+                    font-size: 1.2em;
+                    font-weight: 200;
+                }
+            }
+        }
 
         /* DESKTOP VIEW */
-        @media (width > 850px) {
+        @media (width > 950px) {
             body {
                 grid-template-columns: var(--sidebarWidth) 1fr var(--sidebarWidth);
                 grid-template-rows: min-content auto 0.15fr 0.05fr 0.1fr;
@@ -1266,7 +1289,7 @@
 
 <div class="wrapper sidebar" id="left-wrap">
     <aside class="box" id="roster">
-        <h1 class="lockedpanel"> LOCKED </h1>
+        <h1 class="lock"> LOCKED </h1>
     </aside>
 </div>
 
@@ -1324,28 +1347,32 @@
 
 <div class="wrapper" id="status-wrap">
     <aside class="box" id="user-status">
-        <h1 class="lockedpanel"> LOCKED </h1>
+        <h1 class="lock"> LOCKED </h1>
     </aside>
 </div>
 
 <div class="wrapper" id="updates-wrap">
     <aside class="box" id="updates">
         <div data-masksize="20" id="wrapupdates"></div>
-        <button class="nudge navbutton hastip" data-tip="notifbutton" id="notifbutton"><img alt="Mail" src="assets/NOTIFS.svg"></button>
-        <h1 class="lockedpanel"> LOCKED </h1>
+        <button class="nudge navbutton hastip" data-tip="notifbutton" id="notifbutton"><img alt="Mail"
+                                                                                            src="assets/NOTIFS.svg">
+        </button>
+        <h1 class="lock"> LOCKED </h1>
     </aside>
 
 </div>
 
 <div class="wrapper sidebar" id="right-wrap">
-    <aside class="box" id="kingdom">
-        <h1 class="lockedpanel"> LOCKED </h1>
+    <aside class="box" id="cityinfo">
+        <div id="city-header"></div>
+        <div id="city-stats"></div>
+        <h1 class="lock"> LOCKED </h1>
     </aside>
 </div>
 
 <div class="wrapper" id="dash-wrap">
     <aside class="box" id="dash">
-        <h1 class="lockedpanel"> LOCKED </h1>
+        <h1 class="lock"> LOCKED </h1>
     </aside>
 </div>
 </body>

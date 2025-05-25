@@ -1,14 +1,14 @@
 import TypingService from "../Services/TypingService.js";
 import { waitForEvent} from "../../Utils.js";
 
-export default function createHintBox(el, msg, spanIDs = [], spanTexts = [], spanClasses = [], spanTips = []) {
+export default function createHintBox(el, msg, spanTexts = [], spanClasses = [], spanTips = []) {
     const box = document.createElement('div');
     const text = document.createElement('div');
     box.className = 'hintbox';
     box.appendChild(text);
     el.appendChild(box);
 
-    TypingService.typeWithSpans(msg, text, spanIDs, spanTexts, spanClasses, spanTips).then(([body]) => {
+    TypingService.typeWithSpans(msg, text, spanTexts, spanClasses, spanTips).then(([body]) => {
         TypingService.collapseP(body);
     });
 

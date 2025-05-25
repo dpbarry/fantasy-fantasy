@@ -1,4 +1,4 @@
-import { unlockPanel } from "../Utils.js";
+import {unlockPanel} from "../Utils.js";
 
 export default class UserManager {
     firstName = "";
@@ -10,14 +10,32 @@ export default class UserManager {
     morality = 0;
 
     statusAccess = {
-        name: false,
-        date: false,
+        name: false, date: false,
     };
 
-    #subscriber = () => {};
+    bonds = {
+        tercius: 0, daphna: 0,
+    };
+
+    #npcSubtitles = {
+        tercius: "The castle’s butler. He is duly mannered, but has a wry side.",
+        daphna: "The castle’s chef. She refuses to put up with any type of nonsense."
+    }
+
+    #subscriber = () => {
+    };
 
     constructor(core) {
         this.core = core;
+        this.npcTooltips();
+    }
+
+    npcTooltips() {
+        Object.keys(this.bonds).forEach((npc) => {
+            this.core.ui.tooltipService.registerTip(npc, () => {
+                return `<p><i>${this.#npcSubtitles[npc]}</i></p> <p><span class="bondWord term">Bond</span>: ${this.bonds[npc]}%</p>`
+            });
+        })
     }
 
     onUpdate(callback) {
@@ -35,18 +53,7 @@ export default class UserManager {
     }
 
     getStatus() {
-        return {
-            firstName: this.firstName,
-            lastName: this.lastName,
-            gender: this.gender,
-            savvy: this.savvy,
-            valor: this.valor,
-            wisdom: this.wisdom,
-            morality: this.morality,
-            statusAccess: { ...this.statusAccess },
-            gameDate: this.core.clock ? this.core.clock.gameDate({ format: "numeric" }) : null,
-            season: this.core.clock ? this.core.clock.getSeason() : null,
-        };
+        return {...this};
     }
 
     genderSwitch(male, female) {
@@ -54,18 +61,17 @@ export default class UserManager {
     }
 
     serialize() {
-        const { core, ...rest } = this;
+        const {core, ...rest} = this;
         return rest;
     }
 
     deserialize(data) {
         Object.assign(this, data);
-        this.#subscriber(this.getStatus());
     }
 
     updateAccess() {
         if (Object.values(this.statusAccess).some(x => x)) {
-            let lock = this.core.ui.userstatus.querySelector(".lockedpanel");
+            let lock = this.core.ui.userstatus.querySelector(".lock");
             if (lock) lock.remove();
         }
         this.#subscriber(this.getStatus());

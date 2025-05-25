@@ -3,41 +3,34 @@ export default class StoryScreen {
         this.core = core;
         this.root = document.getElementById("story");
         this.manager = core.story;
-
-        // subscribe to story events
-        this.manager.onContent(this._onStoryContent.bind(this));
+        this.manager.subscriber = this;
 
         // auto-scroll on new content
-        this._setupAutoScroll();
+        this.setupAutoScroll();
     }
 
     show() {
         this.root.classList.remove("hidden");
-        this.manager._maybeStart();  // ensure we start if not yet running
+        this.manager.runStory();  // ensure we start if not yet running
     }
 
     hide() {
         this.root.classList.add("hidden");
     }
 
-    _onStoryContent({ type, html }) {
-        if (type === "reset") {
-            this.root.innerHTML = html;
-        } else if (type === "append") {
-            const wrapper = document.createElement("div");
-            wrapper.innerHTML = html;
-            this.root.append(wrapper);
-        }
+    reset(html) {
+        this.root.innerHTML = html;
+        this.root.scrollBy({top: this.root.scrollHeight});
     }
 
-    _setupAutoScroll() {
+    setupAutoScroll() {
         const scrollNow = () => {
             const last = this.root.lastElementChild;
             if (!last) return;
             const rectC = this.root.getBoundingClientRect();
-            const rectL = last .getBoundingClientRect();
+            const rectL = last.getBoundingClientRect();
             if (rectL.bottom > rectC.bottom) {
-                this.root.scrollTo({ top: this.root.scrollHeight, behavior: "smooth" });
+                this.root.scrollTo({top: this.root.scrollHeight, behavior: "smooth"});
             }
         };
 
@@ -45,9 +38,10 @@ export default class StoryScreen {
         let scrollObserver = new MutationObserver(scrollNow);
         this.root._scrollObserver = scrollObserver;
         scrollObserver.observe(this.root, {
-            childList: true,
-            subtree:   true
+            childList: true, subtree: true
         });
-        window.addEventListener("resize", scrollNow);
+        window.addEventListener("resize", () => {
+            this.root.scrollTo({top: this.root.scrollHeight, behavior: "instant"});
+        });
     }
 }

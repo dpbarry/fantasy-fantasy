@@ -8,11 +8,7 @@ export default function Tutorial(ctx) {
         beginTutorial: async () => {
             ctx.checkpoint(0);
             ctx.core.clock.pause();
-            ctx.typeWithInputs(
-                'You jolt awake, your head spinning. What a wild dream that must have been. ' +
-                'You can hardly even remember your own name... But of course, it is @ @!',
-                "5.5em", "getname", InputService.firstlastNameValidate
-            ).then(ctx.episodes.Tutorial.getName);
+            ctx.typeWithInputs('You jolt awake, your head spinning. What a wild dream that must have been. ' + 'You can hardly even remember your own name... But of course, it is @ @!', "5.5em", "getname", InputService.firstlastNameValidate).then(ctx.episodes.Tutorial.getName);
         },
 
         getName: async (res) => {
@@ -46,24 +42,17 @@ export default function Tutorial(ctx) {
             inputFirst.addEventListener("keydown", (e) => {
                 if (e.key === " ") {
                     e.preventDefault();
-                    inputSecond.focus();
+                    inputSecond.focus({preventScroll: true});
                 }
             });
 
-            setTimeout(() => inputFirst.focus(), 0);
+            setTimeout(() => inputFirst.focus({preventScroll: true}), 0);
         },
 
         getGender: async () => {
             ctx.checkpoint(1);
 
-            ctx.typeWithSpans(
-                "You roll out of bed, " +
-                "hoping you haven’t missed the first bell. Your father said the meeting today had to be as " +
-                "early as possible. Maybe that explained the odd sleep—you had a suspicion that this might be " +
-                "“The Meeting,” the one long awaited by any firstborn @ / @ of a king.",
-                ["sonChoice", "daughterChoice"],
-                ["son", "daughter"]
-            ).then(([p, spans]) => {
+            ctx.typeWithSpans("You roll out of bed, " + "hoping you haven’t missed the first bell. Your father said the meeting today had to be as " + "early as possible. Maybe that explained the odd sleep—you had a suspicion that this might be " + "“The Meeting,” the one long awaited by any firstborn @ / @ of a king.", ["son", "daughter"], ["sonChoice", "daughterChoice"]).then(([p, spans]) => {
                 const [sonChoice, daughterChoice] = spans;
                 [sonChoice, daughterChoice].forEach(c => {
                     c.onclick = () => {
@@ -79,10 +68,10 @@ export default function Tutorial(ctx) {
                     hinge.classList.add("hide");
                     hinge.previousElementSibling.classList.add("hide");
                     hinge.nextElementSibling.classList.add("hide");
-                    p.querySelector("#sonChoice:not(.selected), #daughterChoice:not(.selected)")
+                    p.querySelector(".sonChoice:not(.selected), .daughterChoice:not(.selected)")
                         .classList.add("hide");
 
-                    const selected = p.querySelector("#sonChoice.selected, #daughterChoice.selected");
+                    const selected = p.querySelector(".sonChoice.selected, .daughterChoice.selected");
                     let color;
                     if (selected.innerText === "son") {
                         color = "hsl(200, 70%, 80%)";
@@ -92,15 +81,10 @@ export default function Tutorial(ctx) {
                         ctx.core.mc.gender = "F";
                     }
 
-                    InputService.clearInput(p, "#sonChoice, #daughterChoice").then(() => {
+                    InputService.clearInput(p, ".sonChoice, .daughterChoice").then(() => {
                         setTimeout(() => {
-                            TypingService.collapseP(
-                                p,
-                                i => i.classList.contains("selected")
-                                    ? `<span class='settled' style='font-size: 0.9em; display: inline-block; 
-                     font-family: Vinque, serif; color: ${color}'>${i.innerText}</span>`
-                                    : ""
-                            );
+                            TypingService.collapseP(p, i => i.classList.contains("selected") ? `<span class='settled' style='font-size: 0.9em; display: inline-block; 
+                     font-family: Vinque, serif; color: ${color}'>${i.innerText}</span>` : "");
                             ctx.episodes.Tutorial.getSpecialty();
                         }, 150);
                     });
@@ -112,58 +96,51 @@ export default function Tutorial(ctx) {
 
         getSpecialty: async () => {
             ctx.checkpoint(2);
+            let res = await ctx.typeWithChoices("After throwing on some clothes, you check your reflection in the mirror. Presentable enough. No point in overdressing for what might just be a run-of-the-mill meeting. Still, you find yourself wondering " + `whether you will make a good ${ctx.core.mc.genderSwitch("king", "queen")}. You do already know what your strong suit would be:`, ["leading the people to economic prosperity", "waging fierce military campaigns", "spearheading fortuitous new discoveries"]);
+            ctx.recordChoice(res.i);
 
-            ctx.typeWithChoices(
-                "After throwing on some clothes, you check your reflection in the mirror. Presentable enough. No point in overdressing for what might just be a run-of-the-mill meeting. Still, you find yourself wondering " +
-                `whether you will make a good ${ctx.core.mc.genderSwitch("king", "queen")}. You do already know what your strong suit would be:`,
-                ["leading the people to economic prosperity", "waging fierce military campaigns", "spearheading fortuitous new discoveries"]
-            ).then(async (res) => {
-                let choice;
-                await TypingService.choiceNote(res.el, ...(() => {
-                    switch (res.i) {
-                        case 0:
-                            choice = "Savvy";
-                            ctx.core.mc.savvy = 10;
-                            return ["+10 @", ["savvyWord"], ["Savvy"], ["term"], ["savvy"]];
-                        case 1:
-                            choice = "Valor";
-                            ctx.core.mc.valor = 10;
-                            return ["+10 @", ["valorWord"], ["Valor"], ["term"], ["valor"]];
-                        case 2:
-                            choice = "Wisdom";
-                            ctx.core.mc.wisdom = 10;
-                            return ["+10 @", ["wisdomWord"], ["Wisdom"], ["term"], ["wisdom"]];
-                    }
-                })());
-                ctx.checkpoint(3);
+            await ctx.episodes.Tutorial.specialtyHint();
+        },
 
-                const box = createHintBox(
-                    ctx.core.ui.screens.story.root,
-                    "Many things in the game can be hovered over or tapped to show a tooltip. Try it now on @! For more in-depth information, see the @.",
-                    [choice.toLowerCase() + "Word", ""],
-                    [choice, "Codex"],
-                    ["term", "codexWord term click"],
-                    [choice.toLowerCase()]
-                );
+        specialtyHint: async () => {
+            ctx.checkpoint(3);
+            let choice = ctx.getLastChoice();
+            let chosenSpecialty;
 
-                await delay(1000);
+            await ctx.choiceNote(...(() => {
+                switch (choice) {
+                    case 0:
+                        chosenSpecialty = "Savvy";
+                        ctx.core.mc.savvy = 10;
+                        return ["+10 @", ["Savvy"], ["savvyWord term"], ["savvy"]];
+                    case 1:
+                        chosenSpecialty = "Valor";
+                        ctx.core.mc.valor = 10;
+                        return ["+10 @", ["Valor"], ["valorWord term"], ["valor"]];
+                    case 2:
+                        chosenSpecialty = "Wisdom";
+                        ctx.core.mc.wisdom = 10;
+                        return ["+10 @", ["Wisdom"], ["wisdomWord term"], ["wisdom"]];
+                }
+            })());
 
-                ctx.core.ui.screens.story.root.append(InputService.getCue("Enter", () => {
-                    box.destroy().then(() => ctx.episodes.Tutorial.getCityName());
-                }, true));
-            });
+            const box = createHintBox(ctx.core.ui.screens.story.root, "Many things in the game can be hovered over or tapped to show a tooltip. Try it now on @! For more in-depth information, see the @.", [chosenSpecialty, "Codex"], ["term " + chosenSpecialty.toLowerCase() + "Word", "codexWord term click"], [chosenSpecialty.toLowerCase()]);
+
+            await delay(1000);
+
+            ctx.core.ui.screens.story.root.append(InputService.getCue("Enter", () => {
+                box.destroy().then(() => ctx.episodes.Tutorial.getCityName());
+            }, true));
         },
 
         getCityName: async () => {
+            ctx.checkpoint(4);
             let name;
-            ctx.typeWithInputs(
-                "You leave your bedroom and begin walking down the corridor. The walls are lined with grand paintings and statues of yesteryear’s kings and queens. Here and there, windows offer up sweeping views of your hometown from the castle’s hilltop vantage point. It is a small but proud city (named @), inhabited by honest farmers and artisans.",
-                "5.5em", "getname", InputService.nameValidate
-            ).then(res => {
+            ctx.typeWithInputs("You leave your bedroom and begin walking down the corridor. The walls are lined with grand paintings and statues of yesteryear’s kings and queens. Here and there, windows offer up sweeping views of your hometown from the castle’s hilltop vantage point. It is a small but proud city (named @), inhabited by honest farmers and artisans.", "5.5em", "getname", InputService.nameValidate).then(res => {
                 const [p, inputs] = res;
                 name = inputs[0];
                 ctx.core.ui.screens.story.root.append(InputService.getCue("Enter", () => finishGetCityName(p)));
-                setTimeout(() => name.focus(), 0);
+                setTimeout(() => name.focus({preventScroll: true}), 0);
             });
 
             const finishGetCityName = p => {
@@ -175,15 +152,52 @@ export default function Tutorial(ctx) {
                     settledName.style.width = InputService.getTrueWidthName(ctx.core.ui.story, settledName.innerText) + "px";
                     settledName.ontransitionend = () => (settledName.style.width = "min-content");
                     await delay(225);
-                    await ctx.episodes.Tutorial.goToMeeting();
+                    ctx.core.city.unlockCityHeader(name.value)
+                    await ctx.episodes.Tutorial.meetTercius();
                 });
             };
         },
 
 
-        goToMeeting: async () => {
-            ctx.checkpoint(4);
-            ctx.type("Soon enough, you arrive outside the royal study.");
+        meetTercius: async () => {
+            ctx.checkpoint(5);
+            await ctx.typeP("You turn a corner and nearly barrel into the butler, Tercius.");
+            let res = await ctx.typeWithChoices(`“Excuse me, ${ctx.core.mc.firstName}! I trust you’re heading to the meeting? Would like you like me to bring some refreshments there?”`, ["“Good morning Tercius. Some tea might be nice. How are you?”", "“Let’s make it a feast old boy! Quiche, scones, cakes, you get the picture. Oh, and don't forget some port.”", "“No. Out of my way.”"]);
+            ctx.recordChoice(res.i);
+            ctx.recordFact("meetingFood", res.i === 0 ? "tea" : res.i === 1 ? "feast" : "nothing")
+            switch (res.i) {
+                case 0:
+                    ctx.core.mc.bonds.tercius += 5;
+                    break;
+                case 1:
+                    ctx.core.mc.bonds.daphna -= 5;
+                    break;
+                case 2:
+                    ctx.core.mc.bonds.tercius -= 5;
+                    break;
+            }
+            await ctx.episodes.Tutorial.terciusResponse();
+        },
+
+        terciusResponse: async () => {
+            ctx.checkpoint(6);
+            let choice = ctx.getLastChoice();
+            switch (choice) {
+                case 0:
+                    await ctx.choiceNote("+5 @ with @", ["Bond", "Tercius"], ["bondWord term", "name"], ["bond", "tercius"]);
+                    await ctx.typeP("Tercius smiles. “I’m very well, thanks. I’ll get that tea going.” He whisks away, as fleet-footed as always.");
+                    break;
+                case 1:
+                    await ctx.choiceNote("-5 @ with @", ["Bond", "Daphna"], ["bondWord term", "name"], ["bond", "daphna"]);
+                    await ctx.typeP("Tercius chuckles. “I’ll see to it, but you know Daphna won’t be pleased at this hour!” He whisks away, as fleet-footed as always.")
+                    break;
+                case 2:
+                    await ctx.choiceNote("-5 @ with @", ["Bond", "Tercius"], ["bondWord term", "name"], ["bond", "tercius"]);
+                    await ctx.typeP("“By all means,” he says frostily. The impediment dealt with, you continue on your way. ")
+                    break;
+            }
+
+          //  await ctx.episodes.Tutorial.startMeeting();
         },
 
         runFrom: async (phase) => {
@@ -198,10 +212,16 @@ export default function Tutorial(ctx) {
                     await ctx.episodes.Tutorial.getSpecialty();
                     break;
                 case 3:
-                    await ctx.episodes.Tutorial.getCityName();
+                    await ctx.episodes.Tutorial.specialtyHint();
                     break;
                 case 4:
-                    await ctx.episodes.Tutorial.goToMeeting();
+                    await ctx.episodes.Tutorial.getCityName();
+                    break;
+                case 5:
+                    await ctx.episodes.Tutorial.meetTercius();
+                    break;
+                case 6:
+                    await ctx.episodes.Tutorial.terciusResponse();
                     break;
             }
         }
