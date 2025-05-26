@@ -170,6 +170,7 @@ export default class TypingService {
                         unselected.forEach(c => c.remove());
                         const currentPad = parseFloat(getComputedStyle(document.querySelector('#story')).paddingBottom) || 0;
                         document.querySelector('#story').style.paddingBottom = `${currentPad + addedHeight}px`;
+                        document.querySelector("#story")._excessPadding += addedHeight;
                         clones.forEach(c => c.remove());
                     }
 

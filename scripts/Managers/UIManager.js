@@ -12,11 +12,12 @@ export default class UIManager {
         this.core = core;
 
         this.tooltipService = createTooltipService(core);
-        this.activeScreen = "story";
         this.activePanels = {
             "rightbar": null,
+            "main": "story",
             "leftbar": null,
         }
+        this.visibleSection = "center";
 
         this.initialize();
     }
@@ -34,6 +35,11 @@ export default class UIManager {
         }
     }
 
+    boot() {
+        setupGlobalBehavior(this.core);
+        this.showPanels();
+    }
+
     initShortcuts() {
         this.story = document.getElementById("story");
         this.news = document.getElementById("updates");
@@ -46,7 +52,6 @@ export default class UIManager {
 
     initialize() {
         this.tooltipService.initialize(this.core);
-        setupGlobalBehavior(this.core);
         this.initNavbar();
         this.initShortcuts();
         this.initEventListeners();
@@ -75,26 +80,30 @@ export default class UIManager {
     }
 
 
-    show(screen) {
-        this.activeScreen = screen;
+    show(loc, panel) {
+        this.activePanels[loc] = panel;
         document.querySelectorAll("#navbar .chosen").forEach(el => el.classList.remove("chosen"));
-        let button = document.querySelector(`#navbar button[data-panel='${screen}']`);
+        let button = document.querySelector(`#navbar button[data-panel='${panel}']`);
         if (button) {
             button.classList.add("chosen");
         }
     }
 
-    showPanel(loc, panel) {
-        this.activePanels[loc] = panel;
+    showPanels() {
+        Object.entries(this.activePanels).forEach((a) => {
+            let [loc, panel] = a;
+            this.show(loc, panel);
+        });
     }
 
     serialize() {
-        return {activeScreen: this.activeScreen, activePanels: this.activePanels};
+        return {activeScreen: this.activeScreen, activePanels: this.activePanels, visibleSection: this.visibleSection};
     }
 
     deserialize(data) {
         this.activeScreen = data.activeScreen;
         this.activePanels = data.activePanels;
+        this.visibleSection = data.visibleSection;
     }
 
     updateAccess() {

@@ -152,7 +152,7 @@ export default function Tutorial(ctx) {
                     settledName.style.width = InputService.getTrueWidthName(ctx.core.ui.story, settledName.innerText) + "px";
                     settledName.ontransitionend = () => (settledName.style.width = "min-content");
                     await delay(225);
-                    ctx.core.city.unlockCityHeader(name.value)
+                    //  ctx.core.city.unlockCityHeader(name.value)
                     await ctx.episodes.Tutorial.meetTercius();
                 });
             };
@@ -176,6 +176,7 @@ export default function Tutorial(ctx) {
                     ctx.core.mc.bonds.tercius -= 5;
                     break;
             }
+            ctx.core.mc.unlockBonds();
             await ctx.episodes.Tutorial.terciusResponse();
         },
 

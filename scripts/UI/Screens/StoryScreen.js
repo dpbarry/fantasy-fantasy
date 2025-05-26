@@ -7,6 +7,7 @@ export default class StoryScreen {
 
         // auto-scroll on new content
         this.setupAutoScroll();
+        this.root._excessPadding = 0;
     }
 
     show() {
@@ -30,7 +31,9 @@ export default class StoryScreen {
             const rectC = this.root.getBoundingClientRect();
             const rectL = last.getBoundingClientRect();
             if (rectL.bottom > rectC.bottom) {
-                this.root.scrollTo({top: this.root.scrollHeight, behavior: "smooth"});
+                this.root.scrollTo({top: this.root.scrollHeight - this.root._excessPadding, behavior: "smooth"});
+                this.root.style.paddingBottom = "";
+                this.root._excessPadding = 0;
             }
         };
 
@@ -41,6 +44,8 @@ export default class StoryScreen {
             childList: true, subtree: true
         });
         window.addEventListener("resize", () => {
+            this.root._excessPadding = 0;
+            this.root.style.paddingBottom = "";
             this.root.scrollTo({top: this.root.scrollHeight, behavior: "instant"});
         });
     }

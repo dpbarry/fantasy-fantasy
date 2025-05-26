@@ -79,6 +79,51 @@
             -webkit-user-drag: none;
         }
 
+        .hidden {display: none;}
+
+        #left-section {
+            grid-area: left;
+        }
+
+        #center-section {
+            grid-area: center;
+        }
+
+        #right-section {
+            grid-area: right;
+        }
+
+        #left-section {
+            display: grid;
+            grid-template-rows: min-content auto;
+
+            grid-template-areas:
+             "herobar"
+             "leftwrap";
+            gap: var(--boxGap);
+        }
+
+        #center-section {
+            display: grid;
+            grid-template-rows: min-content 76.5% 5% auto;
+            grid-template-areas:
+             "navbar"
+             "mainwrap"
+             "status"
+             "updates";
+            gap: var(--boxGap);
+        }
+
+        #right-section {
+            display: grid;
+            grid-template-rows: min-content auto;
+            grid-template-areas:
+             "citybar"
+             "rightwrap";
+            gap: var(--boxGap);
+        }
+
+
         .box {
             background: transparent;
             border: 2px solid var(--boxColor);
@@ -105,14 +150,24 @@
             color: var(--baseColor);
             font-family: ysabeau, monospace;
             display: grid;
-            grid-template-rows: min-content 75% 5% auto;
+            grid-template-columns: 100% 100% 100%;
+            grid-template-rows: 100%;
             grid-template-areas:
-             "navbar navbar navbar"
-             "main main main"
-             "status status status"
-             "updates updates updates";
+             "left center right";
             gap: var(--boxGap);
             padding: var(--boxGap);
+
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+
+
+            & > section {
+                flex: 0 0 100%;
+                height: 100%;
+                scroll-snap-align: center;
+            }
         }
 
         p, h1, h2, h3 {
@@ -124,11 +179,12 @@
             justify-content: center;
             align-items: center;
         }
-
         *:has(> .lock) *:not(.lock) {
             position: absolute;
             opacity: 0;
             pointer-events: none;
+            height: 0;
+            width: 0;
         }
 
 
@@ -143,6 +199,13 @@
         .lock.hide {
             opacity: 0;
             bottom: 5px;
+        }
+
+        #left-wrap {
+            display: grid;
+            grid-template-rows: 70% auto;
+            grid-template-columns: 100%;
+            row-gap: var(--boxGap);
         }
 
         #navbar, #herobar, #citybar {
@@ -163,6 +226,7 @@
             color: var(--baseColor);
             height: 100%;
             font-weight: 600;
+            position: relative;
             border: 0;
 
             transition: filter 0.1s, scale 0.1s;
@@ -197,7 +261,7 @@
             font-size: clamp(0.75rem, 1.5vw + 1.5vh, 1.3rem);
             font-weight: 300;
             position: relative;
-            padding-bottom: 18vh;
+            padding-bottom: 18vh; /* USED IN JS */
             height: 100%;
             scroll-behavior: smooth;
 
@@ -426,6 +490,7 @@
                         display: block;
                         position: relative;
                         left: -0.7em;
+                        font-weight: 900;
                         opacity: 1;
                         color: var(--accent);
                         transition: left 0.2s ease,
@@ -756,11 +821,11 @@
         }
 
         #left-wrap {
-            grid-area: left;
+            grid-area: leftwrap;
         }
 
         #right-wrap {
-            grid-area: right;
+            grid-area: rightwrap;
         }
 
         #dash-wrap {
@@ -776,7 +841,7 @@
         }
 
         #main-wrap {
-            grid-area: main;
+            grid-area: mainwrap;
             display: grid;
             height: 100%;
             grid-template-areas: "story";
@@ -797,20 +862,15 @@
         }
 
 
-        #dash-wrap, #left-wrap, #right-wrap, #herobar-wrap, #citybar-wrap {
-            display: none;
-            opacity: 0;
-        }
-
         #status-wrap {
             grid-area: status;
         }
 
         #user-status:not(:has(.lock)) {
             display: flex;
-            justify-content: space-between;
             align-items: center;
             flex-direction: row;
+            column-gap: 0.45em;
             padding: calc(var(--boxGap) * 0.5) var(--boxGap);
 
             #character-name {
@@ -818,7 +878,13 @@
                 font-size: 1.12em;
             }
 
+            #bondnav {
+               img { height: 1em;}
+                top: 1px;
+            }
+
             #game-date {
+                margin-left: auto;
                 font-family: fraunces, monospace;
                 transition: color 0.5s;
             }
@@ -827,7 +893,7 @@
         #updates {
             position: relative;
 
-            #notifbutton {
+            #notifnav {
                 position: absolute;
                 height: min-content;
                 right: 0.7em;
@@ -878,7 +944,7 @@
             }
         }
 
-        @media (width <= 850px) and (height > 300px) {
+        @media (width <= 950px) and (height > 300px) {
             body.alphaactive {
                 #main-wrap {
                     grid-template-areas:
@@ -1072,12 +1138,19 @@
             }
         }
 
-        #cityinfo {
+        #cityinfo:not(:has(.lock)) {
             #city-header {
                 display: flex;
                 width: 100%;
-                justify-content: space-between;
                 align-items: center;
+
+                position: relative;
+
+                #city-level {
+                    font-family: Fraunces, monospace;
+                    font-weight: 200;
+                    font-size: 1.2em;
+                }
 
                 #city-name {
                     font-family: Vinque, serif;
@@ -1085,6 +1158,8 @@
                 }
 
                 #time {
+                    position: absolute;
+                    right: 0;
                     font-family: Fraunces, monospace;
                     font-size: 1.2em;
                     font-weight: 200;
@@ -1093,27 +1168,21 @@
         }
 
         /* DESKTOP VIEW */
+        /* QUERY USED IN JS */
         @media (width > 950px) {
             body {
                 grid-template-columns: var(--sidebarWidth) 1fr var(--sidebarWidth);
-                grid-template-rows: min-content auto 0.15fr 0.05fr 0.1fr;
-                grid-template-areas:
-            "herobar navbar citybar"
-            "left main right"
-            "dash main right"
-            "dash status right"
-            "dash updates right";
+                overflow: visible;
+                scroll-snap-type: none;
+
+                & > section {
+                    scroll-snap-align: none;
+                }
             }
 
             #story {
                 font-size: clamp(0.8rem, 1vw + 1vh, 1.25rem);
             }
-
-            #dash-wrap, #left-wrap, #right-wrap, #citybar-wrap, #herobar-wrap {
-                display: flex;
-                opacity: 1;
-            }
-
 
             .sidebar {
                 width: var(--sidebarWidth);
@@ -1212,169 +1281,195 @@
         <i class="ra ra-crossed-swords fill-icon"></i>
     </div>
 </div>
-
-<div class="wrapper" id="herobar-wrap">
-    <div class="box" id="herobar">
-        <button class="nudge navbutton locked hastip" data-panel="team" data-tip="teamnav" id="teamnav"><img alt="Team"
-                                                                                                             src="assets/TEAM.svg">
-        </button>
-        <button class="nudge navbutton locked hastip" data-panel="hero" data-tip="heronav" id="heronav"><img alt="Hero"
-                                                                                                             src="assets/HERO.svg">
-        </button>
-        <button class="nudge navbutton locked hastip" data-panel="equipment" data-tip="equipmentnav" id="equipmentnav">
-            <img alt="Equipment"
-                 src="assets/INVENTORY.svg">
-        </button>
-        <button class="nudge navbutton locked hastip" data-panel="augment" data-tip="augmentnav" id="augmentnav"><img
-                alt="Augment" src="assets/AUGMENT.svg">
-        </button>
-        <button class="nudge navbutton locked hastip" data-panel="upgrade" data-tip="upgradenav" id="upgradenav"><img
-                alt="Upgrade"
-                src="assets/TREE.svg"></button>
-    </div>
-</div>
-
-<div class="wrapper" id="navbar-wrap">
-    <div class="box" id="navbar">
-        <button class="nudge navbutton hastip" data-panel="story" data-tip="storynav" id="storynav"><img alt="Story"
-                                                                                                         src="assets/STORY.svg">
-        </button>
-        <button class="nudge locked navbutton hastip" data-panel="city" data-tip="citynav" id="citynav"><img alt="City"
-                                                                                                             src="assets/CITY.svg">
-        </button>
-        <button class="nudge locked navbutton hastip" data-panel="campaign" data-tip="campaignnav"
-                id="campaignnav"><img alt="Campaign"
-                                      src="assets/TRAIL.svg">
-        </button>
-        <button class="nudge locked navbutton hastip" data-panel="tournament" data-tip="tournamentnav"
-                id="tournamentnav">
-            <img alt="Tournament"
-                 src="assets/FAVICON.svg">
-        </button>
-        <button class="nudge locked navbutton hastip" data-panel="dungeon" data-tip="dungeonav" id="dungeonav"><img
-                alt="Dungeon" src="assets/DUNGEON.svg">
-        </button>
-        <button class="nudge locked navbutton hastip" data-panel="industry" data-tip="industrynav" id="industrynav"><img
-                alt="Industry" src="assets/FARM.svg">
-        </button>
-        <button class="nudge locked navbutton hastip" data-panel="army" data-tip="armynav" id="armynav"><img alt="Army"
-                                                                                                             src="assets/ARMY.svg">
-        </button>
+<section id="left-section">
+    <div class="wrapper" id="herobar-wrap">
+        <div class="box" id="herobar">
+            <button class="nudge navbutton locked hastip" data-panel="team" data-tip="teamnav" id="teamnav" data-loc="left"><img
+                    alt="Team"
+                    src="assets/TEAM.svg">
+            </button>
+            <button class="nudge navbutton locked hastip" data-panel="hero" data-tip="heronav" id="heronav" data-loc="left"><img
+                    alt="Hero"
+                    src="assets/HERO.svg">
+            </button>
+            <button class="nudge navbutton locked hastip" data-panel="equipment" data-tip="equipmentnav"
+                    id="equipmentnav" data-loc="left">
+                <img alt="Equipment"
+                     src="assets/INVENTORY.svg">
+            </button>
+            <button class="nudge navbutton locked hastip" data-panel="augment" data-tip="augmentnav"
+                    id="augmentnav" data-loc="left">
+                <img
+                        alt="Augment" src="assets/AUGMENT.svg">
+            </button>
+            <button class="nudge navbutton locked hastip" data-panel="upgrade" data-tip="upgradenav"
+                    id="upgradenav" data-loc="left">
+                <img
+                        alt="Upgrade"
+                        src="assets/TREE.svg">
+            </button>
+        </div>
 
     </div>
-</div>
+    <div class="wrapper sidebar" id="left-wrap">
+        <aside class="box" id="roster">
+            <h1 class="lock"> LOCKED </h1>
+        </aside>
 
-<div class="wrapper" id="citybar-wrap">
-    <div class="box" id="citybar">
-        <button class="nudge locked navbutton hastip" data-panel="cityinfo" data-tip="cityinfonav" id="cityinfonav"><img
-                alt="City Info"
-                src="assets/CASTLE.svg">
-        </button>
-        <button class="nudge locked navbutton hastip" data-panel="chart" data-tip="chartnav" id="chartnav"><img
-                alt="Charts"
-                src="assets/CHART.svg"></button>
-        <button class="nudge locked navbutton hastip" data-panel="achievements" data-tip="achievenav" id="achievenav">
-            <img alt="Achievements"
-                 src="assets/TROPHY.svg">
-        </button>
-        <button class="nudge navbutton hastip" data-panel="codex" data-tip="codexnav" id="codexnav"><img alt="Codex"
-                                                                                                         src="assets/CODEX.svg">
-        </button>
-        <button class="nudge navbutton hastip" data-panel="settings" data-tip="settingsnav" id="settingsnav"><img
-                alt="Settings" src="assets/COG.svg">
-        </button>
+        <aside class="box" id="dash">
+            <h1 class="lock"> LOCKED </h1>
+        </aside>
     </div>
-</div>
 
+</section>
+<section id="center-section">
+    <div class="wrapper" id="navbar-wrap">
+        <div class="box" id="navbar">
+            <button class="nudge navbutton hastip" data-panel="story" data-tip="storynav" id="storynav" data-loc="main"><img
+                    alt="Story"
+                    src="assets/STORY.svg">
+            </button>
+            <button class="nudge locked navbutton hastip" data-panel="city" data-tip="citynav" id="citynav" data-loc="main"><img
+                    alt="City"
+                    src="assets/CITY.svg">
+            </button>
+            <button class="nudge locked navbutton hastip" data-panel="campaign" data-tip="campaignnav"
+                    id="campaignnav" data-loc="main"><img alt="Campaign"
+                                                          src="assets/TRAIL.svg">
+            </button>
+            <button class="nudge locked navbutton hastip" data-panel="tournament" data-tip="tournamentnav"
+                    id="tournamentnav" data-loc="main">
+                <img alt="Tournament"
+                     src="assets/FAVICON.svg">
+            </button>
+            <button class="nudge locked navbutton hastip" data-panel="dungeon" data-tip="dungeonav" id="dungeonav" data-loc="main">
+                <img
+                        alt="Dungeon" src="assets/DUNGEON.svg">
+            </button>
+            <button class="nudge locked navbutton hastip" data-panel="industry" data-tip="industrynav"
+                    id="industrynav" data-loc="main">
+                <img
+                        alt="Industry" src="assets/FARM.svg">
+            </button>
+            <button class="nudge locked navbutton hastip" data-panel="army" data-tip="armynav" id="armynav" data-loc="main"><img
+                    alt="Army"
+                    src="assets/ARMY.svg">
+            </button>
+        </div>
 
-<div class="wrapper sidebar" id="left-wrap">
-    <aside class="box" id="roster">
-        <h1 class="lock"> LOCKED </h1>
-    </aside>
-</div>
-
-<div class="wrapper" id="main-wrap">
-    <div class="box" id="story-wrap">
-        <div data-masksize="28" id="story"></div>
     </div>
-    <aside class="keyboard" id="alphaboard">
-        <div class="key">A</div>
-        <div class="key">B</div>
-        <div class="key">C</div>
-        <div class="key">D</div>
-        <div class="key">E</div>
-        <div class="key">F</div>
-        <div class="key">G</div>
-        <div class="key">H</div>
-        <div class="key">I</div>
-        <div class="key">J</div>
-        <div class="key">K</div>
-        <div class="key">L</div>
-        <div class="key">M</div>
-        <div class="key">N</div>
-        <div class="key">O</div>
-        <div class="key">P</div>
-        <div class="key">Q</div>
-        <div class="key">R</div>
-        <div class="key">S</div>
-        <div class="key">T</div>
-        <div class="key">U</div>
-        <div class="key">V</div>
-        <div class="key">W</div>
-        <div class="key">X</div>
-        <div class="key">Y</div>
-        <div class="key">Z</div>
-        <div class="key action bkspc">⟵</div>
-        <div class="key action spc">SPC</div>
-        <div class="key action">⏎</div>
-    </aside>
-    <aside class="keyboard" id="numboard">
-        <div class="key">1</div>
-        <div class="key">2</div>
-        <div class="key">3</div>
-        <div class="key">4</div>
-        <div class="key">5</div>
-        <div class="key">6</div>
-        <div class="key">7</div>
-        <div class="key">8</div>
-        <div class="key">9</div>
-        <div class="key">0</div>
-        <div class="key">.</div>
-        <div class="key action bkspc">⟵</div>
-        <div class="key action">⏎</div>
-    </aside>
-</div>
 
-<div class="wrapper" id="status-wrap">
-    <aside class="box" id="user-status">
-        <h1 class="lock"> LOCKED </h1>
-    </aside>
-</div>
+    <div class="wrapper" id="main-wrap">
+        <div class="box" id="story-wrap">
+            <div data-masksize="28" id="story"></div>
+        </div>
+        <aside class="keyboard" id="alphaboard">
+            <div class="key">A</div>
+            <div class="key">B</div>
+            <div class="key">C</div>
+            <div class="key">D</div>
+            <div class="key">E</div>
+            <div class="key">F</div>
+            <div class="key">G</div>
+            <div class="key">H</div>
+            <div class="key">I</div>
+            <div class="key">J</div>
+            <div class="key">K</div>
+            <div class="key">L</div>
+            <div class="key">M</div>
+            <div class="key">N</div>
+            <div class="key">O</div>
+            <div class="key">P</div>
+            <div class="key">Q</div>
+            <div class="key">R</div>
+            <div class="key">S</div>
+            <div class="key">T</div>
+            <div class="key">U</div>
+            <div class="key">V</div>
+            <div class="key">W</div>
+            <div class="key">X</div>
+            <div class="key">Y</div>
+            <div class="key">Z</div>
+            <div class="key action bkspc">⟵</div>
+            <div class="key action spc">SPC</div>
+            <div class="key action">⏎</div>
+        </aside>
+        <aside class="keyboard" id="numboard">
+            <div class="key">1</div>
+            <div class="key">2</div>
+            <div class="key">3</div>
+            <div class="key">4</div>
+            <div class="key">5</div>
+            <div class="key">6</div>
+            <div class="key">7</div>
+            <div class="key">8</div>
+            <div class="key">9</div>
+            <div class="key">0</div>
+            <div class="key">.</div>
+            <div class="key action bkspc">⟵</div>
+            <div class="key action">⏎</div>
+        </aside>
+    </div>
 
-<div class="wrapper" id="updates-wrap">
-    <aside class="box" id="updates">
-        <div data-masksize="20" id="wrapupdates"></div>
-        <button class="nudge navbutton hastip" data-tip="notifbutton" id="notifbutton"><img alt="Mail"
-                                                                                            src="assets/NOTIFS.svg">
-        </button>
-        <h1 class="lock"> LOCKED </h1>
-    </aside>
+    <div class="wrapper" id="status-wrap">
+        <aside class="box" id="user-status">
+            <h1 class="lock"> LOCKED </h1>
+            <div id="character-name" class="hastip hidden" data-tip="mc-name"></div>
+            <button class="nudge navbutton hastip hidden" data-tip="bondnav" id="bondnav"><img alt="Bonds"
+                                                                                        src="assets/BOND.svg">
+            </button>
+            <div id="game-date" class="hastip hidden" data-tip="verbosedate"></div>
 
-</div>
+        </aside>
+    </div>
 
-<div class="wrapper sidebar" id="right-wrap">
-    <aside class="box" id="cityinfo">
-        <div id="city-header"></div>
-        <div id="city-stats"></div>
-        <h1 class="lock"> LOCKED </h1>
-    </aside>
-</div>
+    <div class="wrapper" id="updates-wrap">
+        <aside class="box" id="updates">
+            <div data-masksize="20" id="wrapupdates"></div>
+            <button class="nudge navbutton hastip" data-tip="notifnav" id="notifnav"><img alt="Mail"
+                                                                                             src="assets/NOTIFS.svg">
+            </button>
+            <h1 class="lock"> LOCKED </h1>
+        </aside>
 
-<div class="wrapper" id="dash-wrap">
-    <aside class="box" id="dash">
-        <h1 class="lock"> LOCKED </h1>
-    </aside>
-</div>
+    </div>
+</section>
+<section id="right-section">
+    <div class="wrapper" id="citybar-wrap">
+        <div class="box" id="citybar">
+            <button class="nudge locked navbutton hastip" data-panel="cityinfo" data-tip="cityinfonav"
+                    id="cityinfonav" data-loc="right">
+                <img
+                        alt="City Info"
+                        src="assets/CASTLE.svg">
+            </button>
+            <button class="nudge locked navbutton hastip" data-panel="chart" data-tip="chartnav" id="chartnav" data-loc="right"><img
+                    alt="Charts"
+                    src="assets/CHART.svg"></button>
+            <button class="nudge locked navbutton hastip" data-panel="achievements" data-tip="achievenav"
+                    id="achievenav" data-loc="right">
+                <img alt="Achievements"
+                     src="assets/TROPHY.svg">
+            </button>
+            <button class="nudge navbutton hastip" data-panel="codex" data-tip="codexnav" id="codexnav" data-loc="right"><img
+                    alt="Codex"
+                    src="assets/CODEX.svg">
+            </button>
+            <button class="nudge navbutton hastip" data-panel="settings" data-tip="settingsnav" id="settingsnav" data-loc="right">
+                <img
+                        alt="Settings" src="assets/COG.svg">
+            </button>
+        </div>
+    </div>
+    <div class="wrapper sidebar" id="right-wrap">
+        <aside class="box" id="cityinfo">
+            <div id="city-header"></div>
+            <div id="city-stats"></div>
+            <h1 class="lock"> LOCKED </h1>
+        </aside>
+    </div>
+
+</section>
 </body>
 
 

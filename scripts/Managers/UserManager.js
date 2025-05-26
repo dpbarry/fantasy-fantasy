@@ -10,8 +10,8 @@ export default class UserManager {
     morality = 0;
 
     statusAccess = {
-        name: false, date: false,
-    };
+        name: false, date: false, bonds: false
+    }; 
 
     bonds = {
         tercius: 0, daphna: 0,
@@ -50,6 +50,11 @@ export default class UserManager {
         unlockPanel(this.core.ui.userstatus).then(() => {
             this.#subscriber(this.getStatus());
         });
+    }
+
+    unlockBonds() {
+        this.statusAccess.bonds = true;
+        this.#subscriber(this.getStatus());
     }
 
     getStatus() {

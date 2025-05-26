@@ -10,51 +10,33 @@ export default class UserStatus {
             this.#status = status;
             this.render();
         });
-
-        // Subscribe to game time ticks to update date/season if unlocked
-        if (this.core.clock) {
-            this.core.clock.subscribeGameTime(() => {
-                if (this.#status.statusAccess.date) {
-                    this.#status.gameDate = this.core.clock.gameDate({format: "numeric"});
-                    this.#status.season = this.core.clock.getSeason();
-                    this.renderDate();
-                }
-            }, {interval: 1});
-        }
     }
 
     render() {
-        if (this.core.ui.userstatus.querySelector(".lock")) {return;}
-        this.root.innerHTML = "";
-        if (this.#status.statusAccess.name) {
-            const nameElement = document.createElement("div");
-            nameElement.id = "character-name";
-            nameElement.className = "hastip";
-            nameElement.dataset.tip = "mc-name";
-            nameElement.textContent = `${this.#status.firstName} ${this.#status.lastName}`;
-            this.root.appendChild(nameElement);
+        if (this.core.ui.userstatus.querySelector(".lock")) {
+            return;
         }
-
+        if (this.#status.statusAccess.name) {
+            const nameElement = this.root.querySelector("#character-name");
+            nameElement.classList.remove("hidden");
+            nameElement.textContent = `${this.#status.firstName} ${this.#status.lastName}`;
+        }
         if (this.#status.statusAccess.date) {
-            let dateElement = this.root.querySelector("#game-date");
-            if (!dateElement) {
-                dateElement = document.createElement("div");
-                dateElement.id = "game-date";
-                dateElement.className = "hastip";
-                dateElement.dataset.tip = "verbosedate";
-                this.root.appendChild(dateElement);
-            }
+            this.root.querySelector("#game-date").classList.remove("hidden");
             this.renderDate();
         }
-    }
+        if (this.#status.statusAccess.bonds) {
+            this.root.querySelector("#bondnav").classList.remove("hidden");
+        }
 
+    }
     renderDate() {
         const dateElement = this.root.querySelector("#game-date");
-        if (!dateElement || !this.#status.gameDate || !this.#status.season) return;
+        if (!dateElement) return;
 
-        dateElement.textContent = this.#status.gameDate;
+        dateElement.textContent = this.core.clock.gameDate({format: "numeric"});
 
-        switch (this.#status.season) {
+        switch (this.core.clock.getSeason()) {
             case "Winter":
                 dateElement.style.color = "hsl(200, 35%, 80%)";
                 break;

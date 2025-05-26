@@ -42,7 +42,7 @@ export default function createTooltipService() {
 
         registerTip('bond', () => `
       <p><i>Quantifies closeness with someone.</i></p>
-      <p>Spans a spectrum where -100% <span class="bondWord term">Bond</span> denotes an arch-nemesis and 100% denotes a soulmate.</p>
+      <p>Spans a spectrum where -100% <span class="bondWord term">Bond</span> denotes an arch-nemesis and 100% a soulmate.</p>
     `);
 
         registerTip('mc-name', () => {
@@ -56,15 +56,14 @@ export default function createTooltipService() {
         });
 
         registerTip('verbosedate', () => {
-            return core.clock.gameDate({format: "verbose"});
+            return `<p>${core.clock.gameDate({format: "verbose"})}</p><p>${core.clock.gameTime({format: "full"})}</p>`;
         });
 
         // NAVBAR
         const navButtons = document.querySelectorAll(".navbutton");
         navButtons.forEach(b => {
-            b.onpointerdown = () => core.activeScreen = b.dataset.panel;
             registerTip(b.dataset.tip, () => {
-                return b.classList.contains("locked") ? "<i>Locked&nbsp;</i>" : b.firstChild.alt;
+                return b.classList.contains("locked") ? "<i>Locked&nbsp;</i>" : b.firstElementChild.alt;
             });
         });
 

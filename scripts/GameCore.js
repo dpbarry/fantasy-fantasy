@@ -89,13 +89,12 @@ export default class GameCore {
     }
 
     async #initializeGame() {
-        this.ui.readyScreens();
         HackService.initialize(this);
+        this.ui.readyScreens();
         await LoadingService.initialize();
         await this.loadLastSave();
+        this.ui.boot();
         LoadingService.hide();
-
-        this.ui.show(this.ui.activeScreen); // Story is default
 
         this.#isRunning = true;
         this.#lastFrameTime = performance.now();

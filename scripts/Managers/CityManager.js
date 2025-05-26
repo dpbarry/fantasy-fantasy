@@ -6,12 +6,13 @@ export default class CityManager {
     #running = false;
 
     cityInfoAccess = {
-        name: false, date: false,
+      header: false
     };
 
     constructor(core) {
         this.core = core;
         this.name = "";
+        this.level = 1;
         core.onTick(() => this.runCityInfo());
     }
 
@@ -25,9 +26,7 @@ export default class CityManager {
 
     unlockCityHeader(pName) {
         this.name = pName;
-        this.cityInfoAccess.name = true;
-        this.cityInfoAccess.date = true;
-        this.time = this.core.clock.gameTime({format: "full"});
+        this.cityInfoAccess.header = true;
         unlockPanel(this.core.ui.rightbar.querySelector("#cityinfo")).then(() => {
             this.core.ui.showPanel("rightbar", "cityinfo")
             this.#subscriber(this.getStatus());
@@ -42,18 +41,6 @@ export default class CityManager {
         if (this.#running) return;
         this.#running = true;
         this.#subscriber(this.getStatus());
-        this.#subscriber(this.core.clock.gameTime({format: "full"}), "time");
-
-
-        const updateTime = () => {
-            if (!this.#running) {
-                this.core.clock.unsubscribe(updateTime);
-                return;
-            }
-            this.#subscriber(this.core.clock.gameTime({format: "full"}), "time");
-        };
-
-        this.core.clock.subscribeGameTime(updateTime, {interval: 1});
     }
 
     serialize() {

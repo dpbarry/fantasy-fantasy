@@ -97,7 +97,7 @@ export default class StoryManager {
     }
 
     runStory() {
-        if (this.core.ui.activeScreen !== "story") {
+        if (this.core.ui.activePanels["main"] !== "story") {
             this.#running = false;
             return;
         }
