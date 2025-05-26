@@ -1,4 +1,5 @@
 export default class InputService {
+    static #center = document.getElementById("center");
     static isAlphabetic(text) {
         return [...text].every(c => "abcdefghijklmnopqrstuvwxyz".includes(c.toLowerCase()))
     }
@@ -20,8 +21,8 @@ export default class InputService {
         input.oninput = cb;
         input.onfocus = () => {
             cb({data: "", target: input});
-            let keyboardOpen = document.body.classList.contains("alphaactive");
-            document.body.classList.add(type + "active");
+            let keyboardOpen = InputService.#center.classList.contains("alphaactive");
+            InputService.#center.classList.add(type + "active");
             if (!keyboardOpen && !window.matchMedia("(width > 950px)").matches) window.dispatchEvent(new Event("resize"));
             // Simulate key pushes
             const keydownHandler = (e) => {
@@ -106,9 +107,9 @@ export default class InputService {
             i.style.transitionDuration = "";
             if (i.closest(".inputwrap")) i.parentNode.style.transitionDuration = "";
         });
-        document.body.classList.remove("alphaactive");
-        document.body.classList.remove("numactive");
-        document.body.classList.remove("alphanumactive");
+        InputService.#center.classList.remove("alphaactive");
+        InputService.#center.classList.remove("numactive");
+        InputService.#center.classList.remove("alphanumactive");
 
         return new Promise(resolve => {
             const wrap = (e) => {

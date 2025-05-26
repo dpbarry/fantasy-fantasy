@@ -3,7 +3,7 @@ import * as Utils from "../../Utils.js";
 import {delay, waitForEvent} from "../../Utils.js";
 
 export default class TypingService {
-    static TYPE_DELAY = 5;
+    static TYPE_DELAY = 0;
 
     static async type(text, body) {
         await this.hideText(text, body);

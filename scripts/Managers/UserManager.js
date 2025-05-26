@@ -11,35 +11,46 @@ export default class UserManager {
 
     statusAccess = {
         name: false, date: false, bonds: false
-    }; 
+    };
 
     bonds = {
-        tercius: 0, daphna: 0,
+        Tercius: 0, Daphna: 0,
     };
 
-    #npcSubtitles = {
-        tercius: "The castle’s butler. He is duly mannered, but has a wry side.",
-        daphna: "The castle’s chef. She refuses to put up with any type of nonsense."
+    #npcPersonalities = {
+        Tercius: "The castle’s butler. He is duly mannered, but has a wry side.",
+        Daphna: "The castle’s chef. She refuses to put up with any type of nonsense."
     }
 
-    #subscriber = () => {
-    };
+    #subscribers = [];
+
+    #bondRunning = false;
+
+    get bondRunning() {return this.#bondRunning;}
+    set bondRunning(v) {this.#bondRunning = v;}
 
     constructor(core) {
         this.core = core;
         this.npcTooltips();
+        core.clock.subscribeRealTime(() => this.run(), {interval: 1});
     }
 
     npcTooltips() {
         Object.keys(this.bonds).forEach((npc) => {
             this.core.ui.tooltipService.registerTip(npc, () => {
-                return `<p><i>${this.#npcSubtitles[npc]}</i></p> <p><span class="bondWord term">Bond</span>: ${this.bonds[npc]}%</p>`
+                return `<p><i>${this.#npcPersonalities[npc]}</i></p> <p><span class="bondWord term">Bond</span>: ${this.bonds[npc]}%</p>`
             });
         })
     }
 
     onUpdate(callback) {
-        this.#subscriber = callback;
+        this.#subscribers.push(callback);
+    }
+
+    broadcast() {
+        this.#subscribers.forEach(cb => {
+            cb(this.getStatus());
+        });
     }
 
     unlockStatus(firstName, lastName) {
@@ -47,14 +58,13 @@ export default class UserManager {
         this.lastName = lastName;
         this.statusAccess.name = true;
         this.statusAccess.date = true;
-        unlockPanel(this.core.ui.userstatus).then(() => {
-            this.#subscriber(this.getStatus());
-        });
+        unlockPanel(this.core.ui.userstatus);
+        this.broadcast();
     }
 
     unlockBonds() {
         this.statusAccess.bonds = true;
-        this.#subscriber(this.getStatus());
+        this.broadcast();
     }
 
     getStatus() {
@@ -63,6 +73,10 @@ export default class UserManager {
 
     genderSwitch(male, female) {
         return this.gender === "M" ? male : female;
+    }
+
+    run() {
+        this.broadcast();
     }
 
     serialize() {
@@ -79,6 +93,6 @@ export default class UserManager {
             let lock = this.core.ui.userstatus.querySelector(".lock");
             if (lock) lock.remove();
         }
-        this.#subscriber(this.getStatus());
+        this.run();
     }
 }

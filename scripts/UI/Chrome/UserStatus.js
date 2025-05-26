@@ -6,9 +6,9 @@ export default class UserStatus {
         this.root = this.core.ui.userstatus;
 
         // Subscribe to UserManager updates
-        this.core.mc.onUpdate((status) => {
-            this.#status = status;
-            this.render();
+        this.core.mc.onUpdate((data) => {
+                this.#status = data;
+                this.render();
         });
     }
 
@@ -26,7 +26,7 @@ export default class UserStatus {
             this.renderDate();
         }
         if (this.#status.statusAccess.bonds) {
-            this.root.querySelector("#bondnav").classList.remove("nodisplay");
+            this.root.querySelector("#bondsnav").classList.remove("nodisplay");
         }
 
     }

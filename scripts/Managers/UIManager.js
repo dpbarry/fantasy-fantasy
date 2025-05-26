@@ -2,10 +2,11 @@ import createTooltipService from "../UI/Services/TooltipService.js";
 import setupKeyboard from "../UI/Components/Keyboard.js";
 import setupGlobalBehavior from "../UI/Services/GlobalBehavior.js";
 import {verticalScroll} from "../Utils.js";
-import StoryScreen from "../UI/Screens/StoryScreen.js";
-import NewsPanel from "../UI/Chrome/NewsPanel.js";
+import StoryPanel from "../UI/Panels/StoryPanel.js";
+import NewsPanel from "../UI/Panels/NewsPanel.js";
 import UserStatus from "../UI/Chrome/UserStatus.js";
-import CityInfo from "../UI/Chrome/CityInfo.js";
+import CityInfoPanel from "../UI/Panels/CityInfoPanel.js";
+import BondsPanel from "../UI/Panels/BondsPanel.js";
 
 export default class UIManager {
     constructor(core) {
@@ -13,9 +14,9 @@ export default class UIManager {
 
         this.tooltipService = createTooltipService(core);
         this.activePanels = {
-            "right": "cityinfo",
-            "main": "story",
             "left": "team",
+            "center": "story",
+            "right": "cityinfo",
         }
         this.visibleSection = "center";
 
@@ -23,15 +24,13 @@ export default class UIManager {
     }
 
     // after initialization so that the necessary managers are formed
-    readyScreens() {
-        this.screens = {
-            story: new StoryScreen(this.core),
-        };
-
+    readyPanels() {
         this.panels = {
+            story: new StoryPanel(this.core),
             news: new NewsPanel(this.core),
             userstatus: new UserStatus(this.core),
-            cityinfo: new CityInfo(this.core),
+            cityinfo: new CityInfoPanel(this.core),
+            bonds: new BondsPanel(this.core),
         }
     }
 
@@ -45,9 +44,12 @@ export default class UIManager {
         this.news = document.getElementById("updates");
         this.userstatus = document.getElementById("user-status");
 
-        this.rightbar = document.getElementById("right-wrap");
+        this.left = document.getElementById("left-wrap");
+        this.center = document.getElementById("center-wrap");
+        this.right = document.getElementById("right-wrap");
+
         this.cityinfo = document.getElementById("cityinfo");
-        this.leftbar = document.getElementById("left-wrap");
+        this.bonds = document.getElementById("bonds");
     }
 
     initialize() {
@@ -81,9 +83,10 @@ export default class UIManager {
 
 
     show(loc, panel) {
-        this.activePanels[loc] = panel;
-        document.querySelectorAll(`#navbar .chosen[data-loc='${loc}']`).forEach(el => el.classList.remove("chosen"));
-        let button = document.querySelector(`button[data-panel='${panel}'].navbutton:not(.locked)`);
+        if (this.activePanels[loc])
+            this.activePanels[loc] = panel;
+        document.querySelectorAll(`.navbutton.chosen[data-loc='${loc}']`).forEach(el => el.classList.remove("chosen"));
+        let button = document.querySelector(`.navbutton[data-panel='${panel}']`);
         if (button) {
             button.classList.add("chosen");
         }
@@ -97,11 +100,10 @@ export default class UIManager {
     }
 
     serialize() {
-        return {activeScreen: this.activeScreen, activePanels: this.activePanels, visibleSection: this.visibleSection};
+        return {activePanels: this.activePanels, visibleSection: this.visibleSection};
     }
 
     deserialize(data) {
-        this.activeScreen = data.activeScreen;
         this.activePanels = data.activePanels;
         this.visibleSection = data.visibleSection;
     }

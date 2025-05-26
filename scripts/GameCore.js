@@ -19,7 +19,7 @@ export default class GameCore {
     #saveThrottleMS;
     #pendingSave;
     #saveableComponents;
-    #currentVersion = "0.0.4";
+    #currentVersion = "0.0.5";
 
 
     constructor() {
@@ -90,7 +90,7 @@ export default class GameCore {
 
     async #initializeGame() {
         HackService.initialize(this);
-        this.ui.readyScreens();
+        this.ui.readyPanels();
         await LoadingService.initialize();
         await this.loadLastSave();
         this.ui.boot();
@@ -113,10 +113,6 @@ export default class GameCore {
 
         this.clock.advance(dt);
 
-        this.#tickListeners.forEach(listener => {
-            listener();
-        });
-
         // Handle throttled saving
         const now = Date.now();
         if (!this.#pendingSave && now - this.#lastSaveTime >= this.#saveThrottleMS) {
@@ -128,10 +124,6 @@ export default class GameCore {
         }
 
         requestAnimationFrame((time) => this.gameLoop(time));
-    }
-
-    onTick(cb) {
-        this.#tickListeners.add(cb);
     }
 
     pause() {

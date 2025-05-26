@@ -1,20 +1,25 @@
 export default class NewsManager {
     logs = [];
-    #subscriber = () => {
-    };
+    #subscribers = [];
 
     constructor(core) {
         this.core = core;
     }
 
     onUpdate(callback) {
-        this.#subscriber = callback;
+        this.#subscribers.push(callback);
     }
 
+    broadcast() {
+        this.#subscribers.forEach(cb => {
+            cb(this.getLogs());
+        });
+    }
+    
     update(message) {
         const timestamp = this.core.clock.gameTime({format: "short"});
         this.logs.push({timestamp, message});
-        this.#subscriber(this.logs);
+        this.broadcast();
     }
 
     getLogs() {
@@ -34,6 +39,6 @@ export default class NewsManager {
         if (!this.logs.length) return;
         let lock = this.core.ui.news.querySelector(".lock");
         if (lock) lock.remove();
-        this.#subscriber(this.logs);
+        this.broadcast();
     }
 }

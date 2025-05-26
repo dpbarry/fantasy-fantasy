@@ -1,23 +1,28 @@
 import {unlockPanel} from "../Utils.js";
 
 export default class CityManager {
-    #subscriber = () => {
-    };
+    #subscribers = [];
     #running = false;
 
     cityInfoAccess = {
-      header: false
+        header: false
     };
 
     constructor(core) {
         this.core = core;
         this.name = "";
         this.level = 1;
-        core.onTick(() => this.runCityInfo());
+        core.clock.subscribeRealTime(() => this.run(), {interval: 1});
     }
 
-    onUpdate(cb) {
-        this.#subscriber = cb;
+    onUpdate(callback) {
+        this.#subscribers.push(callback);
+    }
+
+    broadcast() {
+        this.#subscribers.forEach(cb => {
+            cb(this.getStatus());
+        });
     }
 
     getStatus() {
@@ -27,20 +32,20 @@ export default class CityManager {
     unlockCityHeader(pName) {
         this.name = pName;
         this.cityInfoAccess.header = true;
-        unlockPanel(this.core.ui.rightbar.querySelector("#cityinfo")).then(() => {
+        unlockPanel(this.core.ui.cityinfo.querySelector("#cityinfo")).then(() => {
             this.core.ui.show("right", "cityinfo")
-            this.#subscriber(this.getStatus());
         });
     }
 
-    runCityInfo() {
+    run() {
         if (this.core.ui.activePanels["right"] !== "cityinfo") {
             this.#running = false;
             return;
         }
         if (this.#running) return;
         this.#running = true;
-        this.#subscriber(this.getStatus());
+
+        this.broadcast();
     }
 
     serialize() {
@@ -50,6 +55,7 @@ export default class CityManager {
 
     deserialize(data) {
         Object.assign(this, data);
+        this.run();
     }
 
     updateAccess() {

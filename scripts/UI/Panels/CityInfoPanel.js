@@ -1,16 +1,14 @@
-export default class CityInfo {
+export default class CityInfoPanel {
     #status;
 
     constructor(core) {
         this.core = core;
-        this.root = core.ui.rightbar.querySelector("#cityinfo");
+        this.root = core.ui.cityinfo;
         this.header = this.root.querySelector("#city-header");
 
-        this.core.city.onUpdate((data, command = "render") => {
-            if (command === "render") {
-                this.#status = data;
-                this.render();
-            }
+        this.core.city.onUpdate((data) => {
+            this.#status = data;
+            this.render();
         });
     }
 
@@ -30,7 +28,7 @@ export default class CityInfo {
                 cityLevel.id = "city-level";
                 cityLevel.innerText = this.#status.level;
             }
-           // this.header.appendChild(cityLevel);
+            // this.header.appendChild(cityLevel);
         }
     }
 }

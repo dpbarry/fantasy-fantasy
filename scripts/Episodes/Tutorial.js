@@ -90,7 +90,7 @@ export default function Tutorial(ctx) {
                     });
                 };
 
-                ctx.core.ui.screens.story.root.append(InputService.getCue("Enter", () => finishGetGender()));
+                ctx.core.ui.story.append(InputService.getCue("Enter", () => finishGetGender()));
             });
         },
 
@@ -124,11 +124,11 @@ export default function Tutorial(ctx) {
                 }
             })());
 
-            const box = createHintBox(ctx.core.ui.screens.story.root, "Many things in the game can be hovered over or tapped to show a tooltip. Try it now on @! For more in-depth information, see the @.", [chosenSpecialty, "Codex"], ["term " + chosenSpecialty.toLowerCase() + "Word", "codexWord term click"], [chosenSpecialty.toLowerCase()]);
+            const box = createHintBox(ctx.core.ui.story, "Many things in the game can be hovered over or tapped to show a tooltip. Try it now on @! For more in-depth information, see the @.", [chosenSpecialty, "Codex"], ["term " + chosenSpecialty.toLowerCase() + "Word", "codexWord term click"], [chosenSpecialty.toLowerCase()]);
 
             await delay(1000);
 
-            ctx.core.ui.screens.story.root.append(InputService.getCue("Enter", () => {
+            ctx.core.ui.story.append(InputService.getCue("Enter", () => {
                 box.destroy().then(() => ctx.episodes.Tutorial.getCityName());
             }, true));
         },
@@ -139,7 +139,7 @@ export default function Tutorial(ctx) {
             ctx.typeWithInputs("You leave your bedroom and begin walking down the corridor. The walls are lined with grand paintings and statues of yesteryear’s kings and queens. Here and there, windows offer up sweeping views of your hometown from the castle’s hilltop vantage point. It is a small but proud city (named @), inhabited by honest farmers and artisans.", "5.5em", "getname", InputService.nameValidate).then(res => {
                 const [p, inputs] = res;
                 name = inputs[0];
-                ctx.core.ui.screens.story.root.append(InputService.getCue("Enter", () => finishGetCityName(p)));
+                ctx.core.ui.story.append(InputService.getCue("Enter", () => finishGetCityName(p)));
                 setTimeout(() => name.focus({preventScroll: true}), 0);
             });
 
@@ -167,13 +167,13 @@ export default function Tutorial(ctx) {
             ctx.recordFact("meetingFood", res.i === 0 ? "tea" : res.i === 1 ? "feast" : "nothing")
             switch (res.i) {
                 case 0:
-                    ctx.core.mc.bonds.tercius += 5;
+                    ctx.core.mc.bonds.Tercius += 5;
                     break;
                 case 1:
-                    ctx.core.mc.bonds.daphna -= 5;
+                    ctx.core.mc.bonds.Daphna -= 5;
                     break;
                 case 2:
-                    ctx.core.mc.bonds.tercius -= 5;
+                    ctx.core.mc.bonds.Tercius -= 5;
                     break;
             }
             ctx.core.mc.unlockBonds();
@@ -185,15 +185,15 @@ export default function Tutorial(ctx) {
             let choice = ctx.getLastChoice();
             switch (choice) {
                 case 0:
-                    await ctx.choiceNote("+5 @ with @", ["Bond", "Tercius"], ["bondWord term", "name"], ["bond", "tercius"]);
-                    await ctx.typeP("Tercius smiles. “I’m very well, thanks. I’ll get that tea going.” He whisks away, as fleet-footed as always.");
+                    await ctx.choiceNote("+5 @ with @", ["Bond", "Tercius"], ["bondWord term", "name"], ["bond", "Tercius"]);
+                    await ctx.typeP("Tercius smiles. “I’m very well, thanks. I’ll get that tea going.” He whisks away, as fleet-footed as always, and you continue on your way.");
                     break;
                 case 1:
-                    await ctx.choiceNote("-5 @ with @", ["Bond", "Daphna"], ["bondWord term", "name"], ["bond", "daphna"]);
-                    await ctx.typeP("Tercius chuckles. “I’ll see to it, but you know Daphna won’t be pleased at this hour!” He whisks away, as fleet-footed as always.")
+                    await ctx.choiceNote("-5 @ with @", ["Bond", "Daphna"], ["bondWord term", "name"], ["bond", "Daphna"]);
+                    await ctx.typeP("Tercius chuckles. “I’ll see to it, but you know Daphna won’t be pleased at this hour!” He whisks away, as fleet-footed as always, and you continue on your way.")
                     break;
                 case 2:
-                    await ctx.choiceNote("-5 @ with @", ["Bond", "Tercius"], ["bondWord term", "name"], ["bond", "tercius"]);
+                    await ctx.choiceNote("-5 @ with @", ["Bond", "Tercius"], ["bondWord term", "name"], ["bond", "Tercius"]);
                     await ctx.typeP("“By all means,” he says frostily. The impediment dealt with, you continue on your way. ")
                     break;
             }

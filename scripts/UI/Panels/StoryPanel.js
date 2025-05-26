@@ -1,4 +1,4 @@
-export default class StoryScreen {
+export default class StoryPanel {
     constructor(core) {
         this.core = core;
         this.root = document.getElementById("story");
@@ -8,15 +8,6 @@ export default class StoryScreen {
         // auto-scroll on new content
         this.setupAutoScroll();
         this.root._excessPadding = 0;
-    }
-
-    show() {
-        this.root.classList.remove("hidden");
-        this.manager.runStory();  // ensure we start if not yet running
-    }
-
-    hide() {
-        this.root.classList.add("hidden");
     }
 
     reset(html) {
@@ -30,7 +21,7 @@ export default class StoryScreen {
             if (!last) return;
             const rectC = this.root.getBoundingClientRect();
             const rectL = last.getBoundingClientRect();
-            if (rectL.bottom > rectC.bottom) {
+            if (rectL.bottom > rectC.bottom - 45) {
                 this.root.scrollTo({top: this.root.scrollHeight - this.root._excessPadding, behavior: "smooth"});
                 this.root.style.paddingBottom = "";
                 this.root._excessPadding = 0;
@@ -44,9 +35,7 @@ export default class StoryScreen {
             childList: true, subtree: true
         });
         window.addEventListener("resize", () => {
-            this.root._excessPadding = 0;
-            this.root.style.paddingBottom = "";
-            this.root.scrollTo({top: this.root.scrollHeight, behavior: "instant"});
+           scrollNow();
         });
     }
 }

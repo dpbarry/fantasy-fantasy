@@ -5,11 +5,10 @@ export default class NewsPanel {
 
     constructor(core) {
         this.core = core;
-        this.root = core.ui.news.querySelector("#wrapupdates");
+        this.root = core.ui.news.querySelector("#upate-logs");
 
-        // Subscribe to NewsManager updates
-        this.core.managers.news.onUpdate((logs) => {
-            this.#logs = logs;
+        this.core.managers.news.onUpdate((data) => {
+            this.#logs = data;
             this.render();
         });
     }
@@ -17,7 +16,7 @@ export default class NewsPanel {
     render() {
         // Render each log entry with timestamp and message
         let lastMsg;
-        for (const { timestamp, message } of this.#logs) {
+        for (const {timestamp, message} of this.#logs) {
             const timeEl = document.createElement('div');
             timeEl.className = 'timestamp';
             timeEl.textContent = timestamp;

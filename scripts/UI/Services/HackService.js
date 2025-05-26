@@ -215,6 +215,32 @@ export default class HackService {
                     localStorage.clear();
                     location.reload();
                     break;
+                case 'set':
+                    if (!args[0] || !args[1] || !args[2]) {
+                        feedback.textContent = `Usage: set <manager> <property> <value>`;
+                        break;
+                    }
+                    let setManager= core.managers[args[0]];
+                    if (!setManager) {
+                        feedback.textContent = `Invalid manager: ${args[0]}`;
+                        break;
+                    }
+                    setManager[args[1]] = args[2];
+                    feedback.textContent = `Set ${args[0]}.${args[1]} to ${args[2]}`;
+                    break;
+                case 'setn':
+                    if (!args[0] || !args[1] || !args[2] || !isNaN(args[2])) {
+                        feedback.textContent = `Usage: set <manager> <property> <num>`;
+                        break;
+                    }
+                    let setnManager = core.managers[args[0]];
+                    if (!setnManager) {
+                        feedback.textContent = `Invalid manager: ${args[0]}`;
+                        break;
+                    }
+                    setnManager[args[1]] = parseInt(args[2]);
+                    feedback.textContent = `Set ${args[0]}.${args[1]} to ${args[2]}`;
+                    break;
                 case 'settime':
                     if (!args[0]) {
                         feedback.textContent = `Usage: settime <seconds>`;
@@ -223,8 +249,8 @@ export default class HackService {
                         feedback.textContent = `Invalid number: ${args[0]}`;
                         break;
                     }
-                    feedback.textContent = `Set game time to ${core.clock.gameTime({format: 'full'})} ${core.clock.gameDate({format: 'full'})}`;
                     core.clock.totalSeconds = parseInt(args[0]);
+                    feedback.textContent = `Set game time to ${core.clock.gameTime({format: 'full'})} ${core.clock.gameDate({format: 'full'})}`;
                     break;
                 case 'savep':
                     core.saves.record(core.story.currentEpisode, core.story.progress[core.story.currentEpisode], {overwrite: false});

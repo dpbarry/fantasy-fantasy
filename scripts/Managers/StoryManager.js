@@ -18,7 +18,7 @@ export default class StoryManager {
         this.choices = {Tutorial: {}};
         this.currentEpisode = null;
 
-        core.onTick(() => this.runStory());
+        core.clock.subscribeRealTime(() => this.run(), {interval: 1});
     }
 
     set subscriber(sub) {
@@ -63,14 +63,14 @@ export default class StoryManager {
     }
 
     async typeP(text, opts = {}) {
-        return await TypingService.typeP(text, this.core.ui.screens.story.root, opts);
+        return await TypingService.typeP(text, this.core.ui.story, opts);
 
     }
 
     async typeWithInputs(text, ...args) {
         return await TypingService.typePWithInputs(
             text,
-            this.core.ui.screens.story.root,
+            this.core.ui.story,
             ...args
         );
     }
@@ -78,7 +78,7 @@ export default class StoryManager {
     async typeWithSpans(text, ...args) {
         return await TypingService.typePWithSpans(
             text,
-            this.core.ui.screens.story.root,
+            this.core.ui.story,
             ...args
         );
     }
@@ -86,18 +86,18 @@ export default class StoryManager {
     async typeWithChoices(text, ...args) {
         return await TypingService.typePWithChoices(
             text,
-            this.core.ui.screens.story.root,
+            this.core.ui.story,
             ...args
         );
     }
 
     async choiceNote(text, ...args) {
         // noinspection JSCheckFunctionSignatures
-        return await TypingService.choiceNote(text, this.core.ui.screens.story.root, ...args);
+        return await TypingService.choiceNote(text, this.core.ui.story, ...args);
     }
 
-    runStory() {
-        if (this.core.ui.activePanels["main"] !== "story") {
+    run() {
+        if (this.core.ui.activePanels["center"] !== "story") {
             this.#running = false;
             return;
         }
@@ -118,5 +118,6 @@ export default class StoryManager {
     }
 
     updateAccess() {
+        this.run();
     }
 }
