@@ -79,7 +79,7 @@
             -webkit-user-drag: none;
         }
 
-        .hidden {display: none;}
+        .nodisplay {display: none !important;}
 
         #left-section {
             grid-area: left;
@@ -1414,11 +1414,11 @@
     <div class="wrapper" id="status-wrap">
         <aside class="box" id="user-status">
             <h1 class="lock"> LOCKED </h1>
-            <div id="character-name" class="hastip hidden" data-tip="mc-name"></div>
-            <button class="nudge navbutton hastip hidden" data-tip="bondnav" id="bondnav"><img alt="Bonds"
+            <div id="character-name" class="hastip nodisplay" data-tip="mc-name"></div>
+            <button class="nudge navbutton hastip nodisplay" data-tip="bondnav" id="bondnav"><img alt="Bonds"
                                                                                         src="assets/BOND.svg">
             </button>
-            <div id="game-date" class="hastip hidden" data-tip="verbosedate"></div>
+            <div id="game-date" class="hastip nodisplay" data-tip="verbosedate"></div>
 
         </aside>
     </div>

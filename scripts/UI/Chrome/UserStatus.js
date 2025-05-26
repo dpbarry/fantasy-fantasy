@@ -18,15 +18,15 @@ export default class UserStatus {
         }
         if (this.#status.statusAccess.name) {
             const nameElement = this.root.querySelector("#character-name");
-            nameElement.classList.remove("hidden");
+            nameElement.classList.remove("nodisplay");
             nameElement.textContent = `${this.#status.firstName} ${this.#status.lastName}`;
         }
         if (this.#status.statusAccess.date) {
-            this.root.querySelector("#game-date").classList.remove("hidden");
+            this.root.querySelector("#game-date").classList.remove("nodisplay");
             this.renderDate();
         }
         if (this.#status.statusAccess.bonds) {
-            this.root.querySelector("#bondnav").classList.remove("hidden");
+            this.root.querySelector("#bondnav").classList.remove("nodisplay");
         }
 
     }
