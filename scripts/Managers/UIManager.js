@@ -13,9 +13,9 @@ export default class UIManager {
 
         this.tooltipService = createTooltipService(core);
         this.activePanels = {
-            "rightbar": null,
+            "right": "cityinfo",
             "main": "story",
-            "leftbar": null,
+            "left": "team",
         }
         this.visibleSection = "center";
 
@@ -82,8 +82,8 @@ export default class UIManager {
 
     show(loc, panel) {
         this.activePanels[loc] = panel;
-        document.querySelectorAll("#navbar .chosen").forEach(el => el.classList.remove("chosen"));
-        let button = document.querySelector(`#navbar button[data-panel='${panel}']`);
+        document.querySelectorAll(`#navbar .chosen[data-loc='${loc}']`).forEach(el => el.classList.remove("chosen"));
+        let button = document.querySelector(`button[data-panel='${panel}'].navbutton:not(.locked)`);
         if (button) {
             button.classList.add("chosen");
         }

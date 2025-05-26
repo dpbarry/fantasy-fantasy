@@ -28,13 +28,13 @@ export default class CityManager {
         this.name = pName;
         this.cityInfoAccess.header = true;
         unlockPanel(this.core.ui.rightbar.querySelector("#cityinfo")).then(() => {
-            this.core.ui.showPanel("rightbar", "cityinfo")
+            this.core.ui.show("right", "cityinfo")
             this.#subscriber(this.getStatus());
         });
     }
 
     runCityInfo() {
-        if (this.core.ui.activePanels["rightbar"] !== "cityinfo") {
+        if (this.core.ui.activePanels["right"] !== "cityinfo") {
             this.#running = false;
             return;
         }
