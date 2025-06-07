@@ -12,8 +12,9 @@ import SaveManager from "./Managers/SaveManager.js";
 
 export default class GameCore {
     static #instance = null;
-    #tickListeners;
     #lastFrameTime;
+    #accumulatedTime = 0;
+    #tickInterval = 0.1;
     #isRunning;
     #lastSaveTime;
     #saveThrottleMS;
@@ -37,7 +38,6 @@ export default class GameCore {
         this.#pendingSave = false;
 
         this.#saveableComponents = new Map();
-        this.#tickListeners = new Set();
 
         this.storage = new GameStorage(this);
 
@@ -108,12 +108,17 @@ export default class GameCore {
     gameLoop(currentTime) {
         if (!this.#isRunning) return;
 
-        const dt = (currentTime - this.#lastFrameTime) / 1000;
+        const frameTime = (currentTime - this.#lastFrameTime) / 1000;
         this.#lastFrameTime = currentTime;
+        this.#accumulatedTime += frameTime;
 
-        this.clock.advance(dt);
+        // Run as many ticks as needed (e.g. if frame dropped)
+        while (this.#accumulatedTime >= this.#tickInterval) {
+            this.clock.advance(this.#tickInterval);
+            this.#accumulatedTime -= this.#tickInterval;
+        }
 
-        // Handle throttled saving
+
         const now = Date.now();
         if (!this.#pendingSave && now - this.#lastSaveTime >= this.#saveThrottleMS) {
             this.#pendingSave = true;

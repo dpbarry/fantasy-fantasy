@@ -186,11 +186,11 @@ export default function Tutorial(ctx) {
             switch (choice) {
                 case 0:
                     await ctx.choiceNote("+5 @ with @", ["Bond", "Tercius"], ["bondWord term", "name"], ["bond", "Tercius"]);
-                    await ctx.typeP("Tercius smiles. “I’m very well, thanks. I’ll get that tea going.” He whisks away, as fleet-footed as always, and you continue on your way.");
+                    await ctx.typeP("Tercius smiles. “I’m very well, thanks. I’ll get that tea going.” He whisks off, as fleet-footed as always, and you continue on your way.");
                     break;
                 case 1:
                     await ctx.choiceNote("-5 @ with @", ["Bond", "Daphna"], ["bondWord term", "name"], ["bond", "Daphna"]);
-                    await ctx.typeP("Tercius chuckles. “I’ll see to it, but you know Daphna won’t be pleased at this hour!” He whisks away, as fleet-footed as always, and you continue on your way.")
+                    await ctx.typeP("Tercius chuckles. “I’ll see to it, but you know Daphna won’t be pleased at this hour!” He whisks off, as fleet-footed as always, and you continue on your way.")
                     break;
                 case 2:
                     await ctx.choiceNote("-5 @ with @", ["Bond", "Tercius"], ["bondWord term", "name"], ["bond", "Tercius"]);
