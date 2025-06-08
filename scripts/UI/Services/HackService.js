@@ -8,80 +8,21 @@ export default class HackService {
     static #consoleElement = null;
     static #isInitialized = false;
 
-
-    static {
-        const style = document.createElement('style');
-        style.textContent = `
-        .dev-console {
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: rgba(0, 0, 0, 0.95);
-                border: 1px solid var(--accent);
-                border-radius: 4px;
-                z-index: 9999;
-                box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-                padding: 5px;
-                margin: 0;
-                width: 30vw;
-                min-width: fit-content;
-        }
-            
-        .dev-console-input {
-                width: 300px;
-                padding: 4px 2px;
-                color: var(--accent);
-                font-family: vinque, serif;
-                font-size: 1.33rem;
-                outline: none;
-                background: transparent;
-                border: none;
-                caret-color: var(--accent);
-        }
-            
-        .dev-console.visible {
-                display: block;
-                animation: fadeInConsole 0.15s;
-        }
-            
-        .dev-console-feedback {
-                color: var(--baseColor);
-                font-size: 0.9rem;
-                height: fit-content;
-                opacity: 0;
-                transition: opacity 0.05s;
-        }
-        
-        .dev-console-feedback.visible {
-            opacity: 0.75;
-        }
-
-            
-        @keyframes fadeInConsole {
-                from { opacity: 0; transform: translate(-50%, -60%); }
-                to { opacity: 1; transform: translate(-50%, -50%); }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
     static initialize(core) {
         if (this.#isInitialized) return;
         this.#isInitialized = true;
 
         this.#consoleElement = document.createElement('dialog');
-        this.#consoleElement.className = 'dev-console';
+        this.#consoleElement.className = 'hackbar';
 
         const input = document.createElement('div');
         input.contentEditable = "true";
-        input.className = 'dev-console-input';
         input.setAttribute('spellcheck', 'false');
-
+        input.className = 'console-input';
         this.#consoleElement.appendChild(input);
 
         const feedback = document.createElement('div');
-        feedback.className = 'dev-console-feedback';
+        feedback.className = 'console-feedback';
 
         this.#consoleElement.appendChild(feedback);
 
@@ -123,7 +64,7 @@ export default class HackService {
         this.#consoleElement.classList.add('visible');
 
 
-        const input = this.#consoleElement.querySelector('.dev-console-input');
+        const input = this.#consoleElement.querySelector('.console-input');
         input.textContent = '';
         input.focus();
         input.onblur = () => input.focus();
@@ -136,7 +77,7 @@ export default class HackService {
         cueWrapper.appendChild(escCue);
         escCue.classList.add('visible');
 
-        const feedback = this.#consoleElement.querySelector('.dev-console-feedback');
+        const feedback = this.#consoleElement.querySelector('.console-feedback');
 
         feedback.textContent = "";
 
@@ -159,7 +100,7 @@ export default class HackService {
 
     static hide() {
         if (this.#consoleElement) {
-            const feedback = this.#consoleElement.querySelector('.dev-console-feedback');
+            const feedback = this.#consoleElement.querySelector('.console-feedback');
             const cueWrapper = this.#consoleElement.querySelector('div[style*="position: absolute"]');
             feedback.classList.remove('visible');
             if (cueWrapper) cueWrapper.remove();
@@ -172,7 +113,7 @@ export default class HackService {
 
     static async executeCommand(command, core) {
         try {
-            const feedback = this.#consoleElement.querySelector('.dev-console-feedback');
+            const feedback = this.#consoleElement.querySelector('.console-feedback');
             const [cmd, ...args] = command.split(' ');
 
             switch (cmd.toLowerCase()) {

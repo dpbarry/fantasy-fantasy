@@ -47,17 +47,19 @@
             --sidebarWidth: 24vw;
 
             --topFontSize: clamp(0.4rem, 1.5vw, 1.1rem);
-
-            --bgColor: #000;
-            --baseColor: #e0e0e0;
-            --baseFilter: invert(0.97);
-            --darkBaseColor: color-mix(in hsl, var(--bgColor) 94%, var(--baseColor));
-            --midBaseColor: color-mix(in hsl, var(--bgColor) 54%, var(--baseColor));
-            --lightBaseColor: color-mix(in hsl, var(--bgColor) 20%, var(--baseColor));
-            --boxColor: #e0e0e0;
-            /* --accent: hsl(120, 82.5%, 45%); */
+            --contrastColor: #000;
+            --bgColor: color-mix(in hsl, var(--contrastColor), var(--accent) 5%);
+            --baseColor: hsl(0, 0%, 90%);
+            --baseFilter: invert(0.9);
+            --darkBaseColor: color-mix(in hsl, var(--contrastColor) 93%, var(--baseColor));
+            --midBaseColor: color-mix(in hsl, var(--contrastColor) 54%, var(--baseColor));
+            --lightBaseColor: color-mix(in hsl, var(--contrastColor) 20%, var(--baseColor));
+            --boxColor: var(--baseColor);
             --accent: hsl(190, 82.5%, 45%);
-            --darkAccent: color-mix(in hsl, var(--accent) 70%, var(--bgColor));
+            /*  --accent: hsl(125, 82.5%, 45%); */
+
+            --darkerAccent: color-mix(in hsl, var(--accent) 45%, var(--contrastColor));
+            --darkAccent: color-mix(in hsl, var(--accent) 70%, var(--contrastColor));
             --accentFilter: invert(56%) sepia(98%) saturate(2737%) hue-rotate(153deg) brightness(101%) contrast(84%);
 
             --savvyColor: hsl(159, 82.5%, 45%);
@@ -77,6 +79,7 @@
             scrollbar-width: none;
             -webkit-tap-highlight-color: transparent;
             -webkit-user-drag: none;
+            &::selection {background: color-mix(in hsl, transparent 30%, var(--darkerAccent));}
         }
 
         .nodisplay {
@@ -277,9 +280,9 @@
             scroll-behavior: smooth;
 
             p, .hintbox {
-                line-height: 1.15;
                 text-align: justify;
                 margin-bottom: 0.6rem;
+                line-height: 1.2;
             }
 
             .inputwrap {
@@ -336,6 +339,7 @@
             input.settled, span.settled {
                 background: transparent !important;
                 border-color: transparent !important;
+                line-height: 1.55;
 
                 &::after {
                     opacity: 0 !important;
@@ -506,7 +510,7 @@
                             color: var(--accent);
 
                             &::before {
-                                left: -0.2em;
+                                left: -0.22em;
                             }
 
                         }
@@ -590,6 +594,7 @@
                 padding: 3px 8px;
                 bottom: 2px;
                 transition: scale 0.1s;
+                z-index: 3;
             }
 
             &.enter::before {
@@ -710,7 +715,7 @@
                 vertical-align: baseline;
                 position: relative;
                 top: 1px;
-                margin-right: 0.12em;
+                margin-right: 0.09em;
                 background-size: contain;
                 background-repeat: no-repeat;
                 background-position: center;
@@ -754,6 +759,7 @@
             &::before {
                 background-image: url("./assets/VALOR.svg");
                 filter: var(--valorFilter);
+                margin-right: 0.05em;
             }
         }
 
@@ -875,14 +881,17 @@
             }
 
             #bondsnav {
-                @starting-style {opacity: 0;}
+                @starting-style {
+                    opacity: 0;
+                }
                 transition: opacity 0.2s;
+
                 img {
                     height: 1em;
                 }
 
                 &.chosen {
-                 filter: var(--bondFilter) !important;
+                    filter: var(--bondFilter) !important;
                 }
 
                 top: 1px;
@@ -965,7 +974,6 @@
         .keyboard {
             width: 100%;
             height: 100%;
-            background: var(--bgColor);
             border-color: var(--accent);
             display: none;
             font-family: vinque, serif;
@@ -1030,7 +1038,7 @@
         }
 
         #bonds {
-          display: none;
+            display: none;
             height: 15em;
             transition: height 0.1s linear, opacity 0.15s;
             grid-auto-flow: column;
@@ -1042,9 +1050,11 @@
             .bondPerson {
                 font-family: vinque, serif;
             }
+
             .bondValue {
                 font-family: Fraunces, monospace;
             }
+
             &.hide {
                 height: 0;
                 opacity: 0;
@@ -1061,8 +1071,8 @@
 
         .tooltip {
             position: fixed;
-            background: var(--bgColor);
-            filter: drop-shadow(0 0 0.25rem var(--bgColor));
+            background: var(--contrastColor);
+            filter: drop-shadow(0 0 0.3em var(--contrastColor));
             border: 1.5px solid var(--baseColor);
             padding: 0.2rem 0.2rem;
             width: fit-content;
@@ -1294,6 +1304,63 @@
                 font-size: 4rem;
             }
         }
+
+        .hackbar {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--contrastColor);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            z-index: 9999;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            padding: 5px;
+            margin: 0;
+            width: 30vw;
+            min-width: fit-content;
+
+            .console-input {
+                width: 300px;
+                padding: 4px 2px;
+                color: var(--accent);
+                font-family: vinque, serif;
+                font-size: 1.33rem;
+                outline: none;
+                background: transparent;
+                border: none;
+                caret-color: var(--accent);
+            }
+
+            &.visible {
+                display: block;
+                animation: fadeInConsole 0.15s;
+            }
+
+            .console-feedback {
+                color: var(--baseColor);
+                font-size: 0.9rem;
+                height: fit-content;
+                opacity: 0;
+                transition: opacity 0.05s;
+
+                &.visible {
+                    opacity: 0.75;
+                }
+            }
+        }
+
+
+        @keyframes fadeInConsole {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -1449,8 +1516,9 @@
         <div class="box" id="user-status">
             <h1 class="lock"> LOCKED </h1>
             <div class="hastip nodisplay" data-tip="mc-name" id="character-name"></div>
-            <button class="nudge navbutton hastip nodisplay" data-tip="bondsnav" data-panel="bonds" id="bondsnav"><img alt="Bonds"
-                                                                                                    src="assets/BOND.svg">
+            <button class="nudge navbutton hastip nodisplay" data-panel="bonds" data-tip="bondsnav" id="bondsnav"><img
+                    alt="Bonds"
+                    src="assets/BOND.svg">
             </button>
             <div class="hastip nodisplay" data-tip="verbosedate" id="game-date"></div>
 
