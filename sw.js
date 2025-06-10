@@ -28,7 +28,7 @@ self.addEventListener('fetch', evt => {
 
             return fetch(evt.request)
                 .then(networkResp => {
-                    if (networkResp.ok && (evt.request.destination === 'image' || evt.request.destination === 'font')) {
+                    if (networkResp.ok) {
                         const copy = networkResp.clone();
                         caches.open(CACHE_NAME).then(cache => cache.put(evt.request, copy));
                     }
