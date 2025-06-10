@@ -60,7 +60,7 @@ export default class LoadingService {
 
 
     static async preloadAssets() {
-        const response = await fetch('/assets/manifest.json');
+        const response = await fetch('../../../assets/manifest.json');
         const manifest = await response.json();
         const urls = Object.values(manifest);
         const total = urls.length;
