@@ -4,17 +4,17 @@
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
     <title>Fantasy Fantasy</title>
-    <link href="assets/TOURNAMENT.svg" rel="icon" type="image/svg">
+    <link href="assets/TOURNAMENT.svg" rel="preload icon" type="image/svg">
 
-    <link rel="preload" href="assets/fonts/Ysabeau.woff2" as="font" type="font/ttf" crossorigin>
-    <link rel="preload" href="assets/fonts/YsabeauItalic.woff2" as="font" type="font/ttf" crossorigin>
+    <link rel="preload" href="assets/fonts/Ysabeau.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="assets/fonts/YsabeauItalic.woff2" as="font" type="font/woff2" crossorigin>
 
-    <link rel="preload" href="assets/fonts/VarsityTeam.woff2" as="font" type="font/otf" crossorigin>
-    <link rel="preload" href="assets/fonts/DevinneSwash.woff2" as="font" type="font/ttf" crossorigin>
-    <link rel="preload" href="assets/fonts/Vinque.woff2" as="font" type="font/otf" crossorigin>
+    <link rel="preload" href="assets/fonts/VarsityTeam.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="assets/fonts/DevinneSwash.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="assets/fonts/Vinque.woff2" as="font" type="font/woff2" crossorigin>
 
-    <link rel="preload" href="assets/fonts/Fraunces.woff2" as="font" type="font/ttf" crossorigin>
-    <link rel="preload" href="assets/fonts/FrauncesItalic.woff2" as="font" type="font/ttf" crossorigin>
+    <link rel="preload" href="assets/fonts/Fraunces.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="assets/fonts/FrauncesItalic.woff2" as="font" type="font/woff2" crossorigin>
 
     <style>
         @font-face {
@@ -1279,7 +1279,7 @@
 
             path {
                 stroke: var(--strokeColor);
-                stroke-width: 1px;
+                stroke-width: 1.5px;
                 vector-effect: non-scaling-stroke;
             }
         }
@@ -1293,7 +1293,7 @@
 
         .filling-icon {
             --prog: 0%;
-            --fillSpeed: 0.55s;
+            --fillSpeed: 0.39s;
             --baseColor: transparent;
             --fillColor: var(--accent);
             --strokeColor: var(--darkerAccent);
@@ -1323,7 +1323,7 @@
             justify-content: center;
             align-items: center;
             opacity: 1;
-            transition: opacity 0.5s ease-out;
+            transition: opacity 0.35s ease-out;
 
             &.hidden {
                 opacity: 0;

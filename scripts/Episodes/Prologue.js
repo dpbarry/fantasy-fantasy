@@ -163,7 +163,7 @@ export default function Prologue(ctx) {
         meetTercius: async () => {
             ctx.checkpoint(5);
             await ctx.typeP("You turn a corner and nearly barrel into the butler, Tercius.");
-            let res = await ctx.typeWithChoices(`“Excuse me, ${ctx.core.mc.firstName}! I trust you’re heading to the meeting? Would like you like me to bring some refreshments there?”`, ["“Good morning Tercius. Some tea might be nice. How are you?”", "“Let’s make it a feast old boy! Quiche, scones, cakes, you get the picture. Oh, and don't forget some port.”", "“No. Out of my way.”"]);
+            let res = await ctx.typeWithChoices(`“Excuse me, ${ctx.core.mc.firstName}! I trust you’re heading to the meeting? Would like you like me to bring some refreshments there?”`, ["“Good morning Tercius. Some tea might be nice. How are you?”", "“Let’s make it a feast old boy! Quiche, scones, cakes, you get the picture. Oh, and don’t forget some port.”", "“No. Out of my way.”"]);
             ctx.recordChoice(res.i);
             ctx.recordFact("meetingFood", res.i === 0 ? "tea" : res.i === 1 ? "feast" : "nothing")
             switch (res.i) {

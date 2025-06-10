@@ -207,7 +207,7 @@ export default class LoadingService {
                 this.#overlay.classList.add('hidden');
                 window.removeEventListener('resize', this.#resizeHandler);
                 resolve();
-            }, 550);
+            }, 430);
         });
     }
 }
