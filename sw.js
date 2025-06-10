@@ -10,8 +10,8 @@ self.addEventListener('activate', evt => {
                         return caches.delete(cacheName);
                     }
                 })
-            )
-        ).then(() => self.clients.claim())
+            ).then(() => self.clients.claim())
+        )
     );
 });
 
@@ -20,21 +20,23 @@ self.addEventListener('install', evt => {
 });
 
 self.addEventListener('fetch', evt => {
+    if (evt.request.method !== 'GET') return;
+
     evt.respondWith(
         caches.match(evt.request).then(cached => {
-            if (cached) {
-                return cached;
-            }
-            return fetch(evt.request).then(networkResp => {
-                if (
-                    evt.request.method === 'GET' &&
-                    (evt.request.destination === 'image' || evt.request.destination === 'font')
-                ) {
-                    const copy = networkResp.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(evt.request, copy));
-                }
-                return networkResp;
-            });
+            if (cached) return cached;
+
+            return fetch(evt.request)
+                .then(networkResp => {
+                    if (networkResp.ok && (evt.request.destination === 'image' || evt.request.destination === 'font')) {
+                        const copy = networkResp.clone();
+                        caches.open(CACHE_NAME).then(cache => cache.put(evt.request, copy));
+                    }
+                    return networkResp;
+                })
+                .catch(err => {
+                    console.warn("Fetch failed:", evt.request.url, err);
+                });
         })
     );
 });

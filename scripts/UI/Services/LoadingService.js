@@ -73,12 +73,24 @@ export default class LoadingService {
         const total = urls.length;
         this._loadedCount = 0;
 
+        const preloadContainer = document.createElement('div');
+        preloadContainer.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;opacity:0;';
+        document.body.appendChild(preloadContainer);
+
         const promises = urls.map(url => {
-            // Prepend BASE if url is relative (does not start with http)
             const fullUrl = url.startsWith('http') ? url : this.BASE + url;
 
-            if (fullUrl.endsWith('.svg') || fullUrl.endsWith('.png') || fullUrl.endsWith('.jpg')) {
-                return this.#preloadImage(fullUrl).finally(() => this.#updateProgress(total));
+            if (fullUrl.endsWith('.svg') || fullUrl.endsWith('.png') || fullUrl.endsWith('.jpg') || fullUrl.endsWith('.jpeg') || fullUrl.endsWith('.webp')) {
+                return new Promise(resolve => {
+                    const img = new Image();
+                    img.onload = img.onerror = () => {
+                        img.remove(); // Cleanup after load/error
+                        resolve();
+                    };
+                    img.src = fullUrl;
+                    preloadContainer.appendChild(img);
+                }).finally(() => this.#updateProgress(total));
+
             } else if (fullUrl.endsWith('.woff') || fullUrl.endsWith('.woff2') || fullUrl.endsWith('.ttf') || fullUrl.endsWith('.otf')) {
                 const family = fullUrl.split('/').pop().split('.')[0];
                 return new FontFace(family, `url('${fullUrl}')`)
@@ -86,6 +98,7 @@ export default class LoadingService {
                     .then(ff => document.fonts.add(ff))
                     .catch(err => console.warn(`Font load failed: ${family}`, err))
                     .finally(() => this.#updateProgress(total));
+
             } else {
                 this.#updateProgress(total);
                 return Promise.resolve();
@@ -93,15 +106,9 @@ export default class LoadingService {
         });
 
         await Promise.all(promises);
+        preloadContainer.remove();
     }
 
-    static #preloadImage(url) {
-        return new Promise(resolve => {
-            const img = new Image();
-            img.onload = img.onerror = resolve;
-            img.src = url;
-        });
-    }
 
     static #updateProgress(total) {
         this._loadedCount++;
