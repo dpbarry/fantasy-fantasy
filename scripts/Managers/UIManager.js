@@ -44,9 +44,9 @@ export default class UIManager {
         this.news = document.getElementById("updates");
         this.userstatus = document.getElementById("user-status");
 
-        this.left = document.getElementById("left-wrap");
-        this.center = document.getElementById("center-wrap");
-        this.right = document.getElementById("right-wrap");
+        this.left = document.getElementById("left");
+        this.center = document.getElementById("center");
+        this.right = document.getElementById("right");
 
         this.cityinfo = document.getElementById("cityinfo");
         this.bonds = document.getElementById("bonds");

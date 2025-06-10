@@ -1,182 +1,108 @@
-// services/LoadingService.js
 export default class LoadingService {
     static #overlay = null;
     static #canvas = null;
     static #particles = [];
     static #animationFrame = null;
-    static #baseIcon = null;
     static #fillIcon = null;
+    static _loadedCount = 0;
 
-    static #resizeHandler = () => {};
+    static #resizeHandler = () => {
+    };
+
+    static #warningTimeout;
+    static #warningNote;
 
     static async initialize() {
+        if ('serviceWorker' in navigator) {
+            try {
+                await navigator.serviceWorker.register('sw.js');
+                await navigator.serviceWorker.ready;
+            } catch (err) {
+                console.warn('SW registration/activation failed:', err);
+            }
+        }
         this.#overlay = document.getElementById('loading-overlay');
-        const iconWrapper = this.#overlay.querySelector('.icon-wrapper');
-        this.#baseIcon = iconWrapper.querySelector('.base-icon');
-        this.#fillIcon = iconWrapper.querySelector('.fill-icon');
-
+        this.#fillIcon = this.#overlay.querySelector('.filling-icon');
         this.show();
         this.#initParticleSystem();
+
+        this.#setupLoadingWarning();
         await this.preloadAssets();
+        this.#clearLoadingWarning();
         return true;
     }
 
-    static async discoverAssets() {
-        const assets = {
-            fonts: new Set(),
-            svgs: new Set()
-        };
-
-        // Parse font-face declarations from all style sheets
-        for (const sheet of document.styleSheets) {
-            try {
-                const rules = sheet.cssRules || sheet.rules;
-                for (const rule of rules) {
-                    if (rule instanceof CSSFontFaceRule) {
-                        const src = rule.style.getPropertyValue('src');
-                        const urlMatch = src.match(/url\(['"](.*?)['"]\)/);
-                        if (urlMatch) {
-                            const fontPath = urlMatch[1];
-                            const fontFamily = rule.style.getPropertyValue('font-family').replace(/['"]/g, '');
-                            assets.fonts.add({
-                                path: fontPath,
-                                family: fontFamily.trim()
-                            });
-                        }
-                    }
-                }
-            } catch (e) {
-                console.warn('Could not read stylesheet rules:', e);
+    static #setupLoadingWarning() {
+        this.#warningTimeout = setTimeout(() => {
+            if (!this.#warningNote) {
+                this.#warningNote = document.createElement('p');
+                this.#warningNote.innerText = "Loading longer than expected, check network or refresh...";
+                Object.assign(this.#warningNote.style, {
+                    position: 'absolute',
+                    bottom: '-20px',
+                    whiteSpace: 'nowrap',
+                    color: 'var(--lightBaseColor)',
+                    fontSize: '0.9rem',
+                    textAlign: 'center',
+                });
+                this.#fillIcon.append(this.#warningNote);
             }
-        }
-
-        // Find all SVG images in HTML
-        const svgImages = document.querySelectorAll('img[src$=".svg"]');
-        svgImages.forEach(img => assets.svgs.add(img.src));
-
-        // Find SVG references in CSS background-image properties
-        const backgroundImages = Array.from(document.styleSheets)
-            .flatMap(sheet => {
-                try {
-                    return Array.from(sheet.cssRules);
-                } catch (e) {
-                    return [];
-                }
-            })
-            .filter(rule => rule.style && rule.style.backgroundImage)
-            .map(rule => {
-                const match = rule.style.backgroundImage.match(/url\(['"](.*\.svg)['"]\)/);
-                return match ? match[1] : null;
-            })
-            .filter(Boolean);
-
-        backgroundImages.forEach(svg => assets.svgs.add(svg));
-
-        return assets;
+        }, 12000);
     }
 
+    static #clearLoadingWarning() {
+        clearTimeout(this.#warningTimeout);
+        if (this.#warningNote) {
+            this.#warningNote.remove();
+            this.#warningNote = null;
+        }
+    }
+
+
     static async preloadAssets() {
-        const assets = await this.discoverAssets();
-        const loadingPromises = [];
+        const response = await fetch('/assets/manifest.json');
+        const manifest = await response.json();
+        const urls = Object.values(manifest);
+        const total = urls.length;
+        this._loadedCount = 0;
 
-        for (const font of assets.fonts) {
-            const fontSource = font.path;
-            const loadPromise = new Promise((resolve) => {
-                const fontFace = new FontFace(font.family, `url('${fontSource}')`, {
-                    display: 'block'
-                });
-
-                fontFace.load().then(() => {
-                    document.fonts.add(fontFace);
-                    resolve(fontFace);
-                }).catch(err => {
-                    console.warn(`Failed to load font ${font.family}:`, err);
-                    resolve(); // Resolve anyway to continue loading
-                });
-            });
-
-            loadingPromises.push(loadPromise);
-        }
-
-
-        // Preload SVGs
-        for (const svg of assets.svgs) {
-            const promise = fetch(svg)
-                .then(response => {
-                    if (!response.ok) throw new Error(`Failed to load ${svg}`);
-                    return response.blob();
-                })
-                .catch(error => {
-                    console.error(`Failed to load SVG ${svg}:`, error);
-                });
-            loadingPromises.push(promise);
-        }
-
-        // Special check for RPGAwesome font
-        const rpgAwesomeCheck = new Promise((resolve) => {
-            const testIcon = document.createElement('i');
-            testIcon.style.position = 'absolute';
-            testIcon.style.opacity = '0';
-            testIcon.style.pointerEvents = 'none';
-            testIcon.className = 'ra ra-crossed-swords';
-            document.body.appendChild(testIcon);
-
-            const checkFont = () => {
-                const isLoaded = getComputedStyle(testIcon).fontFamily.includes('RPGAwesome');
-                if (isLoaded) {
-                    document.body.removeChild(testIcon);
-                    resolve();
-                } else {
-                    setTimeout(checkFont, 100);
-                }
-            };
-            checkFont();
+        const promises = urls.map(url => {
+            if (url.endsWith('.svg') || url.endsWith('.png') || url.endsWith('.jpg')) {
+                return this.#preloadImage(url).finally(() => this.#updateProgress(total));
+            } else if (url.endsWith('.woff') || url.endsWith('.woff2') || url.endsWith('.ttf') || url.endsWith('.otf')) {
+                const family = url.split('/').pop().split('.')[0];
+                return new FontFace(family, `url('${url}')`)
+                    .load()
+                    .then(ff => document.fonts.add(ff))
+                    .catch(err => console.warn(`Font load failed: ${family}`, err))
+                    .finally(() => this.#updateProgress(total));
+            } else {
+                this.#updateProgress(total);
+                return Promise.resolve();
+            }
         });
 
-        loadingPromises.push(rpgAwesomeCheck);
+        await Promise.all(promises);
+    }
 
-        let loaded = 0;
-        const total = loadingPromises.length;
+    static #preloadImage(url) {
+        return new Promise(resolve => {
+            const img = new Image();
+            img.onload = img.onerror = resolve;
+            img.src = url;
+        });
+    }
 
-        // Update loading progress
-        const updateProgress = () => {
-            loaded++;
-            const progress = (loaded / total) * 100;
-            if (this.#fillIcon) {
-                const fillAmount = 100 - progress;
-                this.#fillIcon.style.clipPath = `inset(${fillAmount}% 0 0 0)`;
-            }
-        };
 
-        // Wait for all assets to load with progress tracking
-        await Promise.all(
-            loadingPromises.map(promise =>
-                promise.then(() => updateProgress())
-                    .catch(() => updateProgress())
-            )
-        );
+    static #updateProgress(total) {
+        this._loadedCount++;
+        const pct = (this._loadedCount / total) * 100;
+        if (this.#fillIcon) {
+            this.#fillIcon.style.setProperty('--prog', `${pct}%`);
+        }
     }
 
     static #initParticleSystem() {
-        this.#canvas = document.createElement('canvas');
-        this.#canvas.style.position = 'absolute';
-        this.#canvas.style.top = '0';
-        this.#canvas.style.left = '0';
-        this.#canvas.style.width = '100%';
-        this.#canvas.style.height = '100%';
-        this.#canvas.style.pointerEvents = 'none';
-        this.#overlay.insertBefore(this.#canvas, this.#overlay.firstChild);
-
-        this.#resizeHandler = () => {
-            this.#canvas.width = window.innerWidth;
-            this.#canvas.height = window.innerHeight;
-        };
-
-        this.#resizeHandler();
-        window.addEventListener('resize', this.#resizeHandler);
-
-        const ctx = this.#canvas.getContext('2d');
-
         class Particle {
             constructor() {
                 this.reset();
@@ -188,71 +114,82 @@ export default class LoadingService {
                 this.speed = 0.5 + Math.random();
                 this.angle = Math.random() * Math.PI * 2;
                 this.size = 1 + Math.random() * 2;
-                this.life = 0.7 + Math.random() * 0.3;
-                this.maxLife = this.life;
+                this.life = this.maxLife = 0.7 + Math.random() * 0.3;
                 const hue = 15 + Math.random() * 35;
-                const saturation = 80 + Math.random() * 20;
-                const lightness = 50 + Math.random() * 20;
-                this.color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                this.color = `hsl(${hue},${80 + Math.random() * 20}%,${50 + Math.random() * 20}%)`;
             }
 
             update() {
-                this.x += Math.cos(this.angle) * this.speed;
-                this.y += Math.sin(this.angle) * this.speed;
-                this.life -= 0.003;
-
-                if (this.x < 0) this.x = LoadingService.#canvas.width;
-                if (this.x > LoadingService.#canvas.width) this.x = 0;
-                if (this.y < 0) this.y = LoadingService.#canvas.height;
-                if (this.y > LoadingService.#canvas.height) this.y = 0;
-
-                if (this.life <= 0) this.reset();
+                this.x = (this.x + Math.cos(this.angle) * this.speed + LoadingService.#canvas.width) % LoadingService.#canvas.width;
+                this.y = (this.y + Math.sin(this.angle) * this.speed + LoadingService.#canvas.height) % LoadingService.#canvas.height;
+                if ((this.life -= 0.003) <= 0) this.reset();
             }
 
-            draw(ctx) {
-                ctx.globalAlpha = (this.life / this.maxLife) * 0.6;
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
+            draw(c) {
+                const fade = (this.life / this.maxLife);
+                c.globalAlpha = Math.pow(fade, 0.5) * 0.6;
+                c.fillStyle = this.color;
+                c.beginPath();
+                c.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                c.fill();
             }
         }
 
-        const particleCount = Math.floor((this.#canvas.width * this.#canvas.height) / 10000);
-        this.#particles = Array.from({ length: particleCount }, () => new Particle());
+        this.#canvas = document.createElement('canvas');
+        this.#canvas.width = window.innerWidth;
+        this.#canvas.height = window.innerHeight;
+
+        Object.assign(this.#canvas.style, {
+            position: 'absolute', top: '0', left: '0', width: '100%', height: '100%', pointerEvents: 'none',
+        });
+        this.#overlay.insertBefore(this.#canvas, this.#overlay.firstChild);
+
+        const ctx = this.#canvas.getContext('2d');
+        this.#particles = Array.from({length: Math.min(Math.floor((this.#canvas.width * this.#canvas.height) / 15000), 1000)}, () => new Particle());
+
+        this.#resizeHandler = () => {
+            this.#canvas.width = window.innerWidth;
+            this.#canvas.height = window.innerHeight;
+            const targetCount = Math.min(Math.floor((this.#canvas.width * this.#canvas.height) / 15000), 1000);
+
+            const currentCount = this.#particles.length;
+            if (currentCount < targetCount) {
+                for (let i = 0; i < targetCount - currentCount; i++) {
+                    this.#particles.push(new Particle());
+                }
+            } else if (currentCount > targetCount) {
+                this.#particles.splice(targetCount);
+            }
+        };
+
+        window.addEventListener('resize', this.#resizeHandler);
+
 
         const animate = () => {
             if (this.#overlay.classList.contains('hidden')) {
-                cancelAnimationFrame(this.#animationFrame);
-                return;
+                return cancelAnimationFrame(this.#animationFrame);
             }
-
             ctx.clearRect(0, 0, this.#canvas.width, this.#canvas.height);
-            this.#particles.forEach(particle => {
-                particle.update();
-                particle.draw(ctx);
+            this.#particles.forEach(p => {
+                p.update();
+                p.draw(ctx);
             });
-
             this.#animationFrame = requestAnimationFrame(animate);
         };
-
         animate();
     }
 
     static show() {
-        if (this.#fillIcon) {
-            this.#fillIcon.style.clipPath = 'inset(100% 0 0 0)';
-        }
         this.#overlay.classList.remove('hidden');
     }
 
     static hide() {
-        window.removeEventListener('resize', this.#resizeHandler);
         if (this.#fillIcon) {
-            this.#fillIcon.style.clipPath = 'inset(0 0 0 0)';
+            this.#fillIcon.style.setProperty("--prog", "100%");
         }
         setTimeout(() => {
             this.#overlay.classList.add('hidden');
-        }, 300); // Give time for the fill animation to complete
+            window.removeEventListener('resize', this.#resizeHandler);
+        }, 550); // Give time for the fill animation to complete
     }
 }

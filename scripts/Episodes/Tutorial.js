@@ -14,6 +14,7 @@ export default function Tutorial(ctx) {
         getName: async (res) => {
             const [p, inputs] = res;
             const [inputFirst, inputSecond] = inputs;
+            ctx.core.ui.center.classList.add("alphaactive");
 
             const finishGetName = async () => {
                 unlockPanel(ctx.core.ui.news).then(async () => {
@@ -198,7 +199,7 @@ export default function Tutorial(ctx) {
                     break;
             }
 
-          //  await ctx.episodes.Tutorial.startMeeting();
+            //  await ctx.episodes.Tutorial.startMeeting();
         },
 
         runFrom: async (phase) => {

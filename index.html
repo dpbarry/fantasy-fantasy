@@ -4,43 +4,49 @@
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
     <title>Fantasy Fantasy</title>
-    <link href="./assets/FAVICON.svg" rel="icon" type="image/svg">
-
-    <link href="./assets/rpg-awesome.min.css" rel="stylesheet"/>
+    <link href="assets/TOURNAMENT.svg" rel="icon" type="image/svg">
 
     <style>
         @font-face {
-            font-family: RPGAwesome;
-            src: url("fonts/rpgawesome-webfont.woff?v=0.1.0") format("woff");
+            font-family: ysabeau;
+            src: url("assets/fonts/Ysabeau.ttf") format("truetype-variations");
+            font-weight: 100 900;
         }
-
         @font-face {
             font-family: ysabeau;
-            src: url("fonts/YsabeauOffice-VariableFont_wght.ttf") format("truetype-variations");
-            font-weight: 100 900; /* Specify the weight range */
-
+            src: url("assets/fonts/YsabeauItalic.ttf") format("truetype-variations");
+            font-weight: 100 900;
+            font-style: italic;
         }
 
         @font-face {
             font-family: varsity;
-            src: url("fonts/VarsityTeamBold.otf") format("opentype");
+            src: url("assets/fonts/VarsityTeam.otf") format("opentype");
         }
 
         @font-face {
             font-family: devinneswash;
-            src: url("fonts/DevinneSwash.ttf") format("truetype");
+            src: url("assets/fonts/DevinneSwash.ttf") format("truetype");
         }
 
         @font-face {
             font-family: vinque;
-            src: url("fonts/Vinque Rg.otf") format("opentype");
+            src: url("assets/fonts/Vinque.otf") format("opentype");
         }
 
         @font-face {
             font-family: fraunces;
-            src: url("fonts/Fraunces.ttf") format("truetype-variations");
+            src: url("assets/fonts/Fraunces.ttf") format("truetype-variations");
             font-weight: 100 900;
         }
+
+        @font-face {
+            font-family: fraunces;
+            src: url("assets/fonts/FrauncesItalic.ttf") format("truetype-variations");
+            font-weight: 100 900;
+            font-style: italic;
+        }
+
 
         :root {
             --boxGap: 0.5rem;
@@ -299,7 +305,6 @@
                 padding-bottom: 1.5px;
 
                 transition: width 0.25s linear;
-
                 max-width: 8em;
             }
 
@@ -346,7 +351,6 @@
             input.settled, span.settled {
                 background: transparent !important;
                 border-color: transparent !important;
-                line-height: 1.55;
 
                 &::after {
                     opacity: 0 !important;
@@ -692,18 +696,6 @@
             }
             100% {
                 border-color: var(--accent);
-            }
-        }
-
-        @keyframes gradientFlow {
-            0% {
-                background-position: 0 0;
-            }
-            50% {
-                background-position: 100% 0;
-            }
-            100% {
-                background-position: 0 0;
             }
         }
 
@@ -1263,6 +1255,42 @@
             opacity: 0 !important;
         }
 
+        .icon-base {
+            color: var(--baseColor);
+
+            path {
+                stroke: var(--strokeColor);
+                stroke-width: 1px;
+                vector-effect: non-scaling-stroke;
+            }
+        }
+
+        .icon-fill {
+            position: absolute;
+            color: var(--fillColor);
+            clip-path: inset(calc(100% - var(--prog)) 0 0 0);
+            transition: clip-path var(--fillSpeed) ease-in-out;
+        }
+
+        .filling-icon {
+            --prog: 0%;
+            --fillSpeed: 0.55s;
+            --baseColor: transparent;
+            --fillColor: var(--accent);
+            --strokeColor: var(--darkerAccent);
+
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            &.is-filled {
+                .icon-fill {
+                    clip-path: inset(0 0 0 0);
+                }
+            }
+        }
+
         #loading-overlay {
             position: fixed;
             top: 0;
@@ -1272,6 +1300,7 @@
             background-color: var(--bgColor);
             z-index: 1000;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             opacity: 1;
@@ -1282,30 +1311,15 @@
                 pointer-events: none;
             }
 
-            .icon-wrapper {
-                position: relative;
+            .filling-icon {
                 width: 4rem;
                 height: 4rem;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            }
 
-            .base-icon {
-                font-size: 4rem;
-                color: var(--darkBaseColor);
-            }
-
-            .fill-icon {
-                position: absolute;
-                font-size: 4rem;
-                color: var(--accent);
-                clip-path: inset(100% 0 0 0);
-                transition: clip-path 0.3s ease-in-out;
-            }
-
-            .ra-crossed-swords {
-                font-size: 4rem;
+                p {
+                    transition: opacity 0.3s;
+                    opacity: 0.8;
+                    @starting-style {opacity: 0; }
+                }
             }
         }
 
@@ -1326,7 +1340,7 @@
 
             .console-input {
                 width: 300px;
-                padding: 4px 2px;
+                padding: 4px 2px 2px;
                 color: var(--accent);
                 font-family: vinque, serif;
                 font-size: 1.33rem;
@@ -1344,9 +1358,11 @@
             .console-feedback {
                 color: var(--baseColor);
                 font-size: 0.9rem;
+                padding: 0 2px 2px;
                 height: fit-content;
                 opacity: 0;
                 transition: opacity 0.05s;
+
 
                 &.visible {
                     opacity: 0.75;
@@ -1372,10 +1388,36 @@
 <body>
 <div id="dialog-overlay"></div>
 <div id="loading-overlay">
-    <div class="icon-wrapper">
-        <i class="ra ra-crossed-swords base-icon"></i>
-        <i class="ra ra-crossed-swords fill-icon"></i>
+    <div class="filling-icon">
+        <svg
+                class="icon-base"
+                role="img"
+                viewBox="41.84208679199219 92.34098815917969 943.2019805908203 936.6300811767578"
+                xmlns="http://www.w3.org/2000/svg"
+        >
+            <g transform="rotate(180, 512, 512)">
+                <path
+                        d="M769.936 259.056l137.563 137.563-56.945 56.943c-22.192-43.638-48.741-83.863-78.808-120.959-46.035 45.981-91.367 90.987-136.678 134.831 133.417 141.84 254.131 289.344 346.59 463.725-177.222-98.768-327.164-216.224-471.102-346.742-143.936 130.517-293.878 247.973-471.1 346.742 92.459-174.379 213.171-321.883 346.59-463.725-45.31-43.843-90.642-88.847-136.676-134.829-30.065 37.096-56.616 77.321-78.808 120.959l-56.945-56.945 137.565-137.565c-52.495-87.21-126.819-152.596-211.627-207.494l56.031-56.031c55.518 84.185 123.299 156.119 207.822 211.3l137.241-137.241 56.945 56.945c-41.857 24.183-82.004 50.951-119.653 80.527 44.67 44.585 89.031 88.453 132.617 132.245 43.586-43.791 87.949-87.66 132.619-132.245-37.649-29.577-77.797-56.343-119.653-80.527l56.945-56.945 137.243 137.243c84.523-55.181 152.302-127.113 207.82-211.298l56.031 56.031c-84.807 54.897-159.131 120.282-211.627 207.493z"
+                        fill="currentColor"
+                />
+            </g>
+        </svg>
+
+        <svg
+                class="icon-fill"
+                role="img"
+                viewBox="41.84208679199219 92.34098815917969 943.2019805908203 936.6300811767578"
+                xmlns="http://www.w3.org/2000/svg"
+        >
+            <g transform="rotate(180, 512, 512)">
+                <path
+                        d="M769.936 259.056l137.563 137.563-56.945 56.943c-22.192-43.638-48.741-83.863-78.808-120.959-46.035 45.981-91.367 90.987-136.678 134.831 133.417 141.84 254.131 289.344 346.59 463.725-177.222-98.768-327.164-216.224-471.102-346.742-143.936 130.517-293.878 247.973-471.1 346.742 92.459-174.379 213.171-321.883 346.59-463.725-45.31-43.843-90.642-88.847-136.676-134.829-30.065 37.096-56.616 77.321-78.808 120.959l-56.945-56.945 137.565-137.565c-52.495-87.21-126.819-152.596-211.627-207.494l56.031-56.031c55.518 84.185 123.299 156.119 207.822 211.3l137.241-137.241 56.945 56.945c-41.857 24.183-82.004 50.951-119.653 80.527 44.67 44.585 89.031 88.453 132.617 132.245 43.586-43.791 87.949-87.66 132.619-132.245-37.649-29.577-77.797-56.343-119.653-80.527l56.945-56.945 137.243 137.243c84.523-55.181 152.302-127.113 207.82-211.298l56.031 56.031c-84.807 54.897-159.131 120.282-211.627 207.493z"
+                        fill="currentColor"
+                />
+            </g>
+        </svg>
     </div>
+
 </div>
 <section id="left-section">
     <div class="wrapper" id="herobar-wrap">
@@ -1440,7 +1482,7 @@
             <button class="nudge locked navbutton hastip" data-loc="center" data-panel="tournament"
                     data-tip="tournamentnav" id="tournamentnav">
                 <img alt="Tournament"
-                     src="assets/FAVICON.svg">
+                     src="assets/TOURNAMENT.svg">
             </button>
             <button class="nudge locked navbutton hastip" data-loc="center" data-panel="dungeon" data-tip="dungeonav"
                     id="dungeonav">
