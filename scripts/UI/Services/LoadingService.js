@@ -12,6 +12,13 @@ export default class LoadingService {
     static #warningTimeout;
     static #warningNote;
 
+    static BASE = (() => {
+        const path = window.location.pathname;
+        return path.endsWith('/')
+            ? path
+            : path.substring(0, path.lastIndexOf('/') + 1);
+    })();
+
     static async initialize() {
         this.#overlay = document.getElementById('loading-overlay');
         this.#fillIcon = this.#overlay.querySelector('.filling-icon');
@@ -20,13 +27,12 @@ export default class LoadingService {
 
         if ('serviceWorker' in navigator) {
             try {
-                await navigator.serviceWorker.register('sw.js');
+                await navigator.serviceWorker.register(this.BASE + 'sw.js');
                 await navigator.serviceWorker.ready;
             } catch (err) {
                 console.warn('SW registration/activation failed:', err);
             }
         }
-
 
         this.#setupLoadingWarning();
         await this.preloadAssets();
@@ -60,20 +66,22 @@ export default class LoadingService {
         }
     }
 
-
     static async preloadAssets() {
-        const response = await fetch('manifest.json');
+        const response = await fetch(this.BASE + 'manifest.json');
         const manifest = await response.json();
         const urls = Object.values(manifest);
         const total = urls.length;
         this._loadedCount = 0;
 
         const promises = urls.map(url => {
-            if (url.endsWith('.svg') || url.endsWith('.png') || url.endsWith('.jpg')) {
-                return this.#preloadImage(url).finally(() => this.#updateProgress(total));
-            } else if (url.endsWith('.woff') || url.endsWith('.woff2') || url.endsWith('.ttf') || url.endsWith('.otf')) {
-                const family = url.split('/').pop().split('.')[0];
-                return new FontFace(family, `url('${url}')`)
+            // Prepend BASE if url is relative (does not start with http)
+            const fullUrl = url.startsWith('http') ? url : this.BASE + url;
+
+            if (fullUrl.endsWith('.svg') || fullUrl.endsWith('.png') || fullUrl.endsWith('.jpg')) {
+                return this.#preloadImage(fullUrl).finally(() => this.#updateProgress(total));
+            } else if (fullUrl.endsWith('.woff') || fullUrl.endsWith('.woff2') || fullUrl.endsWith('.ttf') || fullUrl.endsWith('.otf')) {
+                const family = fullUrl.split('/').pop().split('.')[0];
+                return new FontFace(family, `url('${fullUrl}')`)
                     .load()
                     .then(ff => document.fonts.add(ff))
                     .catch(err => console.warn(`Font load failed: ${family}`, err))
@@ -94,7 +102,6 @@ export default class LoadingService {
             img.src = url;
         });
     }
-
 
     static #updateProgress(total) {
         this._loadedCount++;
@@ -165,7 +172,6 @@ export default class LoadingService {
         };
 
         window.addEventListener('resize', this.#resizeHandler);
-
 
         const animate = () => {
             if (this.#overlay.classList.contains('hidden')) {
