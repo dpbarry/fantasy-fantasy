@@ -3,12 +3,12 @@ import TypingService from "../UI/Services/TypingService.js";
 import {delay, unlockPanel} from "../Utils.js";
 import createHintBox from "../UI/Components/HintBox.js";
 
-export default function Tutorial(ctx) {
+export default function Prologue(ctx) {
     return {
-        beginTutorial: async () => {
+        beginPrologue: async () => {
             ctx.checkpoint(0);
             ctx.core.clock.pause();
-            ctx.typeWithInputs('You jolt awake, your head spinning. What a wild dream that must have been. ' + 'You can hardly even remember your own name... But of course, it is @ @!', "5.5em", "getname", InputService.firstlastNameValidate).then(ctx.episodes.Tutorial.getName);
+            ctx.typeWithInputs('You jolt awake, your head spinning. What a wild dream that must have been. ' + 'You can hardly even remember your own name... But of course, it is @ @!', "5.5em", "getname", InputService.firstlastNameValidate).then(ctx.episodes.Prologue.getName);
         },
 
         getName: async (res) => {
@@ -17,10 +17,10 @@ export default function Tutorial(ctx) {
             ctx.core.ui.center.classList.add("alphaactive");
 
             const finishGetName = async () => {
+                ctx.core.mc.unlockStatus(inputFirst.value, inputSecond.value);
                 unlockPanel(ctx.core.ui.news).then(async () => {
                     ctx.core.clock.resume();
                     ctx.core.news.update("You woke up from a strange dream.");
-                    ctx.core.mc.unlockStatus(inputFirst.value, inputSecond.value);
                     let n = 0;
 
                     await InputService.clearInput(p);
@@ -34,7 +34,7 @@ export default function Tutorial(ctx) {
                     });
 
                     await delay(200);
-                    await ctx.episodes.Tutorial.getGender();
+                    await ctx.episodes.Prologue.getGender();
                 });
             };
 
@@ -86,7 +86,7 @@ export default function Tutorial(ctx) {
                         setTimeout(() => {
                             TypingService.collapseP(p, i => i.classList.contains("selected") ? `<span class='settled' style='font-size: 0.9em; display: inline-block; 
                      font-family: Vinque, serif; color: ${color}'>${i.innerText}</span>` : "");
-                            ctx.episodes.Tutorial.getSpecialty();
+                            ctx.episodes.Prologue.getSpecialty();
                         }, 150);
                     });
                 };
@@ -100,7 +100,7 @@ export default function Tutorial(ctx) {
             let res = await ctx.typeWithChoices("After throwing on some clothes, you check your reflection in the mirror. Presentable enough. No point in overdressing for what might just be a run-of-the-mill meeting. Still, you find yourself wondering " + `whether you will make a good ${ctx.core.mc.genderSwitch("king", "queen")}. You do already know what your strong suit would be:`, ["leading the people to economic prosperity", "waging fierce military campaigns", "spearheading fortuitous new discoveries"]);
             ctx.recordChoice(res.i);
 
-            await ctx.episodes.Tutorial.specialtyHint();
+            await ctx.episodes.Prologue.specialtyHint();
         },
 
         specialtyHint: async () => {
@@ -130,7 +130,7 @@ export default function Tutorial(ctx) {
             await delay(1000);
 
             ctx.core.ui.story.append(InputService.getCue("Enter", () => {
-                box.destroy().then(() => ctx.episodes.Tutorial.getCityName());
+                box.destroy().then(() => ctx.episodes.Prologue.getCityName());
             }, true));
         },
 
@@ -154,7 +154,7 @@ export default function Tutorial(ctx) {
                     settledName.ontransitionend = () => (settledName.style.width = "min-content");
                     await delay(225);
                     //  ctx.core.city.unlockCityHeader(name.value)
-                    await ctx.episodes.Tutorial.meetTercius();
+                    await ctx.episodes.Prologue.meetTercius();
                 });
             };
         },
@@ -178,7 +178,7 @@ export default function Tutorial(ctx) {
                     break;
             }
             ctx.core.mc.unlockBonds();
-            await ctx.episodes.Tutorial.terciusResponse();
+            await ctx.episodes.Prologue.terciusResponse();
         },
 
         terciusResponse: async () => {
@@ -199,31 +199,31 @@ export default function Tutorial(ctx) {
                     break;
             }
 
-            //  await ctx.episodes.Tutorial.startMeeting();
+            //  await ctx.episodes.Prologue.startMeeting();
         },
 
         runFrom: async (phase) => {
             switch (phase) {
                 case 0:
-                    await ctx.episodes.Tutorial.beginTutorial();
+                    await ctx.episodes.Prologue.beginPrologue();
                     break;
                 case 1:
-                    await ctx.episodes.Tutorial.getGender();
+                    await ctx.episodes.Prologue.getGender();
                     break;
                 case 2:
-                    await ctx.episodes.Tutorial.getSpecialty();
+                    await ctx.episodes.Prologue.getSpecialty();
                     break;
                 case 3:
-                    await ctx.episodes.Tutorial.specialtyHint();
+                    await ctx.episodes.Prologue.specialtyHint();
                     break;
                 case 4:
-                    await ctx.episodes.Tutorial.getCityName();
+                    await ctx.episodes.Prologue.getCityName();
                     break;
                 case 5:
-                    await ctx.episodes.Tutorial.meetTercius();
+                    await ctx.episodes.Prologue.meetTercius();
                     break;
                 case 6:
-                    await ctx.episodes.Tutorial.terciusResponse();
+                    await ctx.episodes.Prologue.terciusResponse();
                     break;
             }
         }

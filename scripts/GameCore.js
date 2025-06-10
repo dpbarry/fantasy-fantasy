@@ -20,7 +20,7 @@ export default class GameCore {
     #saveThrottleMS;
     #pendingSave;
     #saveableComponents;
-    #currentVersion = "0.0.5";
+    #currentVersion = "0.0.6";
 
 
     constructor() {
@@ -93,8 +93,8 @@ export default class GameCore {
         this.ui.readyPanels();
         await LoadingService.initialize();
         await this.loadLastSave();
+        await LoadingService.hide();
         this.ui.boot();
-        LoadingService.hide();
 
         this.#isRunning = true;
         this.#lastFrameTime = performance.now();

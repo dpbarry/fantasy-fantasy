@@ -1,6 +1,5 @@
 // /src/managers/StoryManager.js
-import {delay} from "../Utils.js";
-import Tutorial from "../Episodes/Tutorial.js";
+import Prologue from "../Episodes/Prologue.js";
 import TypingService from "../UI/Services/TypingService.js";
 
 export default class StoryManager {
@@ -10,12 +9,12 @@ export default class StoryManager {
 
     constructor(core) {
         this.core = core;
-        // set up the Tutorial episode
-        this.#episodes.Tutorial = Tutorial(this);
+        // set up the Prologue episode
+        this.#episodes.Prologue = Prologue(this);
 
-        this.progress = {Tutorial: 0};
-        this.snapshots = {Tutorial: ""};
-        this.choices = {Tutorial: {}};
+        this.progress = {Prologue: 0};
+        this.snapshots = {Prologue: ""};
+        this.choices = {Prologue: {}};
         this.currentEpisode = null;
 
         core.clock.subscribeRealTime(() => this.run(), {interval: 1});
@@ -33,7 +32,6 @@ export default class StoryManager {
     async runAt(episode, phase) {
         this.currentEpisode = episode;
         this.#subscriber.reset(this.snapshots[episode]);
-        await delay(300);
         // let the episode script take over
         await this.#episodes[episode].runFrom(phase);
     }
@@ -104,8 +102,8 @@ export default class StoryManager {
         if (this.#running) return;
         this.#running = true;
 
-        const phase = this.progress.Tutorial ?? 0;
-        this.runAt("Tutorial", phase);
+        const phase = this.progress.Prologue ?? 0;
+        this.runAt("Prologue", phase);
     }
 
     serialize() {
