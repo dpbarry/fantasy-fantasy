@@ -93,8 +93,8 @@ export default class GameCore {
         this.ui.readyPanels();
         await LoadingService.initialize();
         await this.loadLastSave();
+        await LoadingService.hide();
         this.ui.boot();
-        LoadingService.hide();
 
         this.#isRunning = true;
         this.#lastFrameTime = performance.now();

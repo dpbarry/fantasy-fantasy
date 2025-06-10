@@ -12,7 +12,6 @@ function walkDir(dir, base = '') {
         if (entry.isDirectory()) {
             walkDir(fullPath, relPath);
         } else {
-            if (entry.name.startsWith('manifest')) continue;
             output[relPath.replace(/\\/g, '/')] = `/assets/${relPath.replace(/\\/g, '/')}`;
         }
     }
@@ -20,5 +19,5 @@ function walkDir(dir, base = '') {
 
 walkDir(assetDir);
 
-fs.writeFileSync(path.join(assetDir, 'manifest.json'), JSON.stringify(output, null, 2));
+fs.writeFileSync('C:\\Users\\Dean\\Documents\\Coding\\FantasyFantasy\\manifest.json', JSON.stringify(output, null, 2));
 console.log('manifest.json generated.');

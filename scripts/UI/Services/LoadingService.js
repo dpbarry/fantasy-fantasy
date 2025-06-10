@@ -13,6 +13,11 @@ export default class LoadingService {
     static #warningNote;
 
     static async initialize() {
+        this.#overlay = document.getElementById('loading-overlay');
+        this.#fillIcon = this.#overlay.querySelector('.filling-icon');
+        this.show();
+        this.#initParticleSystem();
+
         if ('serviceWorker' in navigator) {
             try {
                 await navigator.serviceWorker.register('sw.js');
@@ -21,10 +26,7 @@ export default class LoadingService {
                 console.warn('SW registration/activation failed:', err);
             }
         }
-        this.#overlay = document.getElementById('loading-overlay');
-        this.#fillIcon = this.#overlay.querySelector('.filling-icon');
-        this.show();
-        this.#initParticleSystem();
+
 
         this.#setupLoadingWarning();
         await this.preloadAssets();
@@ -60,7 +62,7 @@ export default class LoadingService {
 
 
     static async preloadAssets() {
-        const response = await fetch('../../../assets/manifest.json');
+        const response = await fetch('manifest.json');
         const manifest = await response.json();
         const urls = Object.values(manifest);
         const total = urls.length;
@@ -184,12 +186,15 @@ export default class LoadingService {
     }
 
     static hide() {
-        if (this.#fillIcon) {
-            this.#fillIcon.style.setProperty("--prog", "100%");
-        }
-        setTimeout(() => {
-            this.#overlay.classList.add('hidden');
-            window.removeEventListener('resize', this.#resizeHandler);
-        }, 550); // Give time for the fill animation to complete
+        return new Promise((resolve) => {
+            if (this.#fillIcon) {
+                this.#fillIcon.style.setProperty("--prog", "100%");
+            }
+            setTimeout(() => {
+                this.#overlay.classList.add('hidden');
+                window.removeEventListener('resize', this.#resizeHandler);
+                resolve();
+            }, 550);
+        });
     }
 }
