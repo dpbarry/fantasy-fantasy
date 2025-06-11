@@ -106,7 +106,7 @@
 
         #center-section {
             display: grid;
-            grid-template-rows: min-content 76.5% 5% auto;
+            grid-template-rows: min-content 75% 5% auto;
             grid-template-areas:
              "navbar"
              "center"
@@ -231,8 +231,8 @@
             font-weight: 600;
             position: relative;
             border: 0;
-
-            transition: filter 0.1s, scale 0.1s;
+            font-family: SourceSerif;
+            transition: filter 0.1s, scale 0.1s, opacity 0.2s;
             white-space: nowrap;
             cursor: pointer;
 
@@ -240,6 +240,8 @@
                 height: 2.2em;
                 filter: var(--baseFilter);
                 user-select: none;
+                transition: scale 0.1s;
+                transform-origin: center;
             }
 
             &.chosen {
@@ -254,7 +256,7 @@
         }
 
         @media (pointer: fine) and (hover: hover) {
-            .navbutton:not(.locked, .nudged):hover {
+            .navbutton:not(.locked, .nudged):hover img {
                 scale: 1.06;
             }
         }
@@ -616,7 +618,7 @@
             }
 
             &.done, &.done::before, &.done::after {
-                transition: opacity 0.2s, scale 0.3s !important;
+                transition: opacity 0.22s, scale 0.5s !important;
                 opacity: 0;
                 scale: 0;
             }
@@ -832,36 +834,40 @@
             display: flex;
             align-items: center;
             flex-direction: row;
-            column-gap: 0.45em;
+            column-gap: 0.65em;
             padding: calc(var(--boxGap) * 0.5) var(--boxGap);
 
             #character-name {
                 font-family: vinque, serif;
-                font-size: 1.12em;
+                font-size: 1.1em;
             }
 
             #bondsnav {
                 @starting-style {
                     opacity: 0;
                 }
-                transition: opacity 0.2s;
 
                 img {
-                    height: 1em;
+                    height: 1.15em;
                 }
 
                 &.chosen {
                     filter: var(--bondFilter) !important;
                 }
 
-                top: 1px;
+                top: 1.5px;
+            }
+
+            #questsnav {
+                margin-left: auto;
+                 img {height: 1.25em; }
             }
         }
 
         #updates {
             position: relative;
 
-            #notifnav {
+            #mailnav {
                 position: absolute;
                 height: min-content;
                 right: 0.7em;
@@ -881,7 +887,7 @@
                 display: grid;
                 overflow-y: scroll;
                 width: 100%;
-                font-size: 0.8em;
+                font-size: 0.9em;
                 font-weight: 370;
                 max-height: 3.6rem;
                 margin: 0 auto;
@@ -1523,14 +1529,17 @@
                     alt="Bonds"
                     src="assets/BOND.svg">
             </button>
+
+            <button class="nudge navbutton hastip" data-panel="quests" data-tip="questsnav" id="questsnav">
+            </button>
         </div>
     </div>
 
     <div class="wrapper" id="updates-wrap">
         <div class="box" id="updates">
             <div data-masksize="20" id="upate-logs"></div>
-            <button class="nudge navbutton hastip" data-tip="notifnav" id="notifnav"><img alt="Mail"
-                                                                                          src="assets/NOTIFS.svg">
+            <button class="nudge navbutton hastip" data-tip="mailnav" id="mailnav"><img alt="Mail"
+                                                                                          src="assets/MAIL.svg">
             </button>
             <h1 class="lock"> LOCKED </h1>
         </div>

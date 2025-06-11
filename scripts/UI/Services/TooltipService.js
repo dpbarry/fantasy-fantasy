@@ -42,7 +42,7 @@ export default function createTooltipService() {
 
         registerTip('bond', () => `
       <p><i>Quantifies closeness with someone.</i></p>
-      <p>Spans a spectrum where -100% <span class="bondWord term">Bond</span> denotes an arch-nemesis and 100% a soulmate.</p>
+      <p>A greater <span class="bondWord term">Bond</span> correspond to a closer relationship. Seek positive values to curry favor, or negative values to stir competition. </p>
     `);
 
         registerTip('mc-name', () => {
