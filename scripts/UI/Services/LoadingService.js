@@ -78,13 +78,13 @@ export default class LoadingService {
         document.body.appendChild(preloadContainer);
 
         const promises = urls.map(url => {
-            const fullUrl = url.startsWith('http') ? url : this.BASE + url;
+            const fullUrl = url.startsWith('http') ? url : this.BASE + url.substring(1);
 
             if (fullUrl.endsWith('.svg') || fullUrl.endsWith('.png') || fullUrl.endsWith('.jpg') || fullUrl.endsWith('.jpeg') || fullUrl.endsWith('.webp')) {
                 return new Promise(resolve => {
                     const img = new Image();
                     img.onload = img.onerror = () => {
-                        img.remove(); // Cleanup after load/error
+                        img.remove();
                         resolve();
                     };
                     img.src = fullUrl;

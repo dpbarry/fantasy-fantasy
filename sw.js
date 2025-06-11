@@ -1,4 +1,4 @@
-const CACHE_NAME = 'game-v1';
+const CACHE_NAME = 'game-v0.1';
 const ALLOWED_CACHES = [CACHE_NAME];
 
 self.addEventListener('activate', evt => {
@@ -22,21 +22,40 @@ self.addEventListener('install', evt => {
 self.addEventListener('fetch', evt => {
     if (evt.request.method !== 'GET') return;
 
-    evt.respondWith(
-        caches.match(evt.request).then(cached => {
-            if (cached) return cached;
+    const url = evt.request.url;
 
-            return fetch(evt.request)
-                .then(networkResp => {
-                    if (networkResp.ok) {
-                        const copy = networkResp.clone();
-                        caches.open(CACHE_NAME).then(cache => cache.put(evt.request, copy));
-                    }
-                    return networkResp;
-                })
-                .catch(err => {
-                    console.warn("Fetch failed:", evt.request.url, err);
-                });
-        })
+    // If it's an image or font, use cache-first
+    if (/\.(svg|png|jpg|jpeg|webp|woff2?|ttf|otf)$/i.test(url)) {
+        evt.respondWith(
+            caches.match(evt.request).then(cached => {
+                if (cached) return cached;
+
+                return fetch(evt.request)
+                    .then(networkResp => {
+                        if (networkResp.ok) {
+                            const copy = networkResp.clone();
+                            caches.open(CACHE_NAME).then(cache => cache.put(evt.request, copy));
+                        }
+                        return networkResp;
+                    })
+                    .catch(err => {
+                        console.warn("Image/font fetch failed:", url, err);
+                    });
+            })
+        );
+        return;
+    }
+
+    // Everything else: network-first, fallback to cache if offline
+    evt.respondWith(
+        fetch(evt.request)
+            .then(networkResp => {
+                if (networkResp.ok) {
+                    const copy = networkResp.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(evt.request, copy));
+                }
+                return networkResp;
+            })
+            .catch(() => caches.match(evt.request))
     );
 });
