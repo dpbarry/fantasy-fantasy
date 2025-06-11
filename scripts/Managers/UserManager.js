@@ -38,7 +38,7 @@ export default class UserManager {
     npcTooltips() {
         Object.keys(this.bonds).forEach((npc) => {
             this.core.ui.tooltipService.registerTip(npc, () => {
-                return `<p><i>${this.#npcPersonalities[npc]}</i></p> <p><span class="bondWord term">Bond</span> ${this.bonds[npc]}</p>`
+                return `<p><i>${this.#npcPersonalities[npc]}</i></p> <p><span class="bondWord term">Bond</span>: ${this.bonds[npc]}%</p>`
             });
         })
     }
