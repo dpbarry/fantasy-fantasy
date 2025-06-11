@@ -7,41 +7,24 @@
     <link href="assets/TOURNAMENT.svg" rel="preload" as="image" type="image/svg+xml">
     <link href="assets/TOURNAMENT.svg" rel="icon" type="image/svg+xml">
 
-    <link rel="preload" href="assets/fonts/Ysabeau.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="assets/fonts/YsabeauItalic.woff2" as="font" type="font/woff2" crossorigin>
 
-    <link rel="preload" href="assets/fonts/VarsityTeam.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="assets/fonts/DevinneSwash.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="assets/fonts/Vinque.woff2" as="font" type="font/woff2" crossorigin>
 
-    <link rel="preload" href="assets/fonts/Fraunces.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="assets/fonts/FrauncesItalic.woff2" as="font" type="font/woff2" crossorigin>
+
 
     <style>
         @font-face {
-            font-family: ysabeau;
-            src: url("assets/fonts/Ysabeau.woff2") format("woff2");
+            font-family: SourceSerif;
+            src: url("assets/fonts/SourceSerif.ttf") format("truetype");
             font-weight: 100 900;
             font-display: block;
         }
 
         @font-face {
-            font-family: ysabeau;
-            src: url("assets/fonts/YsabeauItalic.woff2") format("woff2");
+            font-family: SourceSerif;
+            src: url("assets/fonts/SourceSerifItalic.ttf") format("truetype");
             font-weight: 100 900;
             font-style: italic;
-            font-display: block;
-        }
-
-        @font-face {
-            font-family: varsity;
-            src: url("assets/fonts/VarsityTeam.woff2") format("woff2");
-            font-display: block;
-        }
-
-        @font-face {
-            font-family: devinneswash;
-            src: url("assets/fonts/DevinneSwash.woff2") format("woff2");
             font-display: block;
         }
 
@@ -50,22 +33,6 @@
             src: url("assets/fonts/Vinque.woff2") format("woff2");
             font-display: block;
         }
-
-        @font-face {
-            font-family: fraunces;
-            src: url("assets/fonts/Fraunces.woff2") format("woff2");
-            font-weight: 100 900;
-            font-display: block;
-        }
-
-        @font-face {
-            font-family: fraunces;
-            src: url("assets/fonts/FrauncesItalic.woff2") format("woff2");
-            font-weight: 100 900;
-            font-style: italic;
-            font-display: block;
-        }
-
 
 
         :root {
@@ -183,7 +150,7 @@
         body {
             background: var(--bgColor);
             color: var(--baseColor);
-            font-family: ysabeau, monospace;
+            font-family: SourceSerif, monospace;
             display: grid;
             grid-template-columns: 100% 100% 100%;
             grid-template-rows: 100%;
@@ -229,7 +196,7 @@
             position: relative;
             font-size: 1rem;
             opacity: 1;
-            font-family: varsity, sans-serif;
+            font-family: Vinque;
         }
 
         .lock.hide {
@@ -302,27 +269,21 @@
             overflow-y: auto;
             height: 100%;
             margin: 0;
-            font-size: clamp(0.75rem, 1.5vw + 1.5vh, 1.3rem);
-            font-weight: 300;
+            font-family: SourceSerif;
+            font-size: clamp(0.75rem, 1.2vw + 1.2vh, 1.15rem);
+            font-weight: 350;
             position: relative;
             padding-bottom: 18vh; /* USED IN JS */
             scroll-behavior: smooth;
 
-            p, .hintbox {
+            p, .hintbox, .choice-note {
                 text-align: justify;
-                margin-bottom: 0.5em;
-                line-height: 1.2;
-            }
-
-            .choice-container {
-                line-height: 1.2;
+                margin-bottom: 0.5rem;
             }
 
             .inputwrap {
                 display: inline-block;
                 position: relative;
-                font-size: 0.9em;
-                padding-bottom: 1.5px;
 
                 transition: width 0.25s linear;
                 max-width: 8em;
@@ -344,11 +305,10 @@
                 background: var(--darkBaseColor);
                 border: 0;
                 font-size: 1em;
-                padding: 0 0 1.5px;
-                border-bottom: 0.05em solid var(--baseColor);
+                border-bottom: 0.06em solid var(--baseColor);
                 caret-color: var(--baseColor);
                 color: var(--baseColor);
-                border-radius: 2px;
+                border-radius: 2.5px 2.5px 1px 1px;
                 outline: none;
                 text-align: center;
                 transition: width 0.25s linear, border-color 0.15s, background 0.15s;
@@ -379,9 +339,10 @@
 
 
             .getname {
-                font-family: vinque, serif;
+                font-family: SourceSerif;
                 width: 5.5em;
                 max-width: 8em;
+                font-weight: 600;
                 color: var(--accent);
                 border-color: var(--accent);
                 caret-color: var(--darkAccent);
@@ -389,21 +350,23 @@
             }
 
             .sonChoice, .daughterChoice {
-                font-family: Vinque, serif;
-                font-size: 0.9em;
+                font-family: SourceSerif;
                 white-space: nowrap;
                 cursor: pointer;
+                font-weight: 600;
                 border-radius: 4px;
-                padding-left: 0.2em;
-                padding-right: 0.2em;
+                padding-left: 0.22em;
+                padding-right: 0.22em;
                 position: relative;
-                transition: bottom 0.1s, font-size 0.1s, font-size 0.2s, opacity 0.2s;
+                transition: bottom 0.1s, font-size 0.1s, font-size 0.2s, opacity 0.1s;
+
+                color: var(--accent);
 
                 &::after {
                     content: "";
                     position: absolute;
                     left: 0;
-                    top: 2px;
+                    top: 0;
                     width: 100%;
                     height: 100%;
                     border: 0.5px solid transparent;
@@ -412,6 +375,12 @@
                     animation: cueing 0.7s linear infinite alternate;
                     transition: scale 0.1s, border 0.1s, opacity 0.05s, filter 0.1s;
                     filter: opacity(0.5);
+                }
+
+
+                &.visible::after {
+                    border: 0.5px solid var(--accent);
+                    border-bottom-width: 1.75px;
                 }
 
                 @media (pointer: fine) and (hover: hover) {
@@ -452,39 +421,15 @@
             }
 
             .sonChoice {
-                color: hsl(200, 70%, 80%);
-
-                &.visible::after {
-                    border: 0.5px solid hsl(200, 40%, 80%);
-                    border-bottom-width: 1.75px;
-                }
-
-
                 &.selected ~ .daughterChoice, &:has(~ .daughterChoice.selected) {
-                    font-size: 0.55em;
-
-                    &::after {
-                        animation: none;
-                        opacity: 0;
-                    }
+                    opacity: 0.8;
                 }
 
-            }
-
-            .daughterChoice {
-                color: hsl(330, 70%, 80%);
-
-                &.visible::after {
-                    border: 0.5px solid hsl(330, 40%, 80%);
-                    border-bottom-width: 1.75px;
+                & ~ span:has(~ .daughterChoice).hide {
+                    transition: font-size 0.2s;
+                    font-size: 0;
                 }
             }
-
-            .sonChoice ~ span:has(~ .daughterChoice).hide {
-                transition: font-size 0.2s;
-                font-size: 0;
-            }
-
 
             p:has(.sonChoice.selected) + .cue, p:has(.daughterChoice.selected) + .cue {
                 opacity: 0.8;
@@ -505,12 +450,13 @@
                     cursor: pointer;
                     width: fit-content;
                     padding-left: 0.1em;
-                    font-weight: 515;
+                    font-weight: 600;
+                    margin-bottom: 0.2rem;
                     text-align: justify;
                     left: 0;
                     position: relative;
                     opacity: 0;
-                    transition: color 0.18s ease,
+                    transition: color 0.12s ease,
                     padding-left 0.2s ease,
                     opacity 0.2s ease,
                     font-weight 0.2s ease;
@@ -525,7 +471,7 @@
                     }
 
                     &::before {
-                        content: "⟶";
+                        content: none;
                         display: block;
                         position: relative;
                         left: -0.7em;
@@ -552,7 +498,7 @@
                         color: var(--accent);
                         padding-left: 0;
                         pointer-events: none;
-                        transition: color 0.18s ease,
+                        transition: color 0.12s ease,
                         padding-left 0.25s cubic-bezier(0.4, 0.0, 0.2, 1),
                         opacity 0.2s ease,
                         font-weight 0.2s ease, text-decoration 0.3s 0.2s ease;
@@ -587,8 +533,8 @@
             }
 
             .choice-note {
-                font-size: 0.95rem;
-                margin-top: 0.1em;
+                font-size: 0.8em;
+                margin-top: -0.4em;
             }
         }
 
@@ -614,12 +560,12 @@
             pointer-events: none;
             z-index: 2;
             position: relative;
-            padding: 0 0.3em;
+            padding: 0 0.4em;
 
             &::before {
                 position: relative;
                 display: inline-block;
-                bottom: 2px;
+                bottom: 1px;
                 transition: scale 0.1s;
                 z-index: 3;
             }
@@ -720,7 +666,7 @@
         .term {
             white-space: nowrap;
             transition: color 0.15s;
-            font-weight: 600;
+            font-weight: 550;
 
             &::before {
                 display: inline-block;
@@ -755,7 +701,7 @@
         }
 
         .name {
-            font-weight: 600;
+            font-weight: 550;
         }
 
         .savvyWord {
@@ -910,12 +856,6 @@
 
                 top: 1px;
             }
-
-            #game-date {
-                margin-left: auto;
-                font-family: fraunces, monospace;
-                transition: color 0.5s;
-            }
         }
 
         #updates {
@@ -941,12 +881,14 @@
                 display: grid;
                 overflow-y: scroll;
                 width: 100%;
+                font-size: 0.8em;
+                font-weight: 370;
                 max-height: 3.6rem;
                 margin: 0 auto;
                 grid-template-columns: auto 1fr;
                 grid-template-rows: min-content;
-
-                column-gap: 0.5rem;
+                font-family: SourceSerif;
+                column-gap: 0.4em;
 
 
                 .timestamp, .message {
@@ -962,12 +904,12 @@
 
                 .timestamp {
                     color: var(--midBaseColor);
-                    text-align: center;
+                    text-align: left;
                 }
 
                 .message {
-                    border-left: 1px solid var(--baseColor);
-                    padding-left: 0.5em;
+                    border-left: 1px solid var(--lightBaseColor);
+                    padding-left: 0.4em;
                 }
             }
         }
@@ -990,7 +932,7 @@
             height: 100%;
             border-color: var(--accent);
             display: none;
-            font-family: vinque, serif;
+            font-family: SourceSerif, serif;
             min-height: fit-content;
 
             transition: opacity 0.1s;
@@ -1006,8 +948,9 @@
                 color: var(--accent);
                 font-weight: 750;
                 font-size: 3vh;
-                padding-bottom: 2px;
                 display: flex;
+                padding-top: 2px;
+                padding-bottom: 2px;
                 align-items: center;
                 justify-content: center;
                 cursor: pointer;
@@ -1033,7 +976,7 @@
             }
 
             .key.spc {
-                font-size: 0.9em;
+                font-size: 0.95em;
 
             }
 
@@ -1067,7 +1010,7 @@
             }
 
             .bondValue {
-                font-family: Fraunces, monospace;
+                font-family: SourceSerif, monospace;
             }
 
             &.hide {
@@ -1099,7 +1042,7 @@
             @starting-style {
                 opacity: 0;
             }
-            font-family: Fraunces, serif;
+            font-family: SourceSerif, serif;
             transition: opacity 0.1s;
             z-index: 1000;
 
@@ -1163,9 +1106,8 @@
             border-radius: 3px;
             opacity: 1;
             text-align: justify;
-            font-family: Fraunces, serif;
-            font-size: 0.8em;
-            font-weight: 325;
+            font-size: 0.9em;
+            font-family: SourceSerif, serif;
             transition: opacity 0.4s, translate 0.4s;
 
             @starting-style {
@@ -1197,7 +1139,7 @@
                 position: relative;
 
                 #city-level {
-                    font-family: Fraunces, monospace;
+                    font-family: SourceSerif, monospace;
                     font-weight: 200;
                     font-size: 1.2em;
                 }
@@ -1210,7 +1152,7 @@
                 #time {
                     position: absolute;
                     right: 0;
-                    font-family: Fraunces, monospace;
+                    font-family: SourceSerif, monospace;
                     font-size: 1.2em;
                     font-weight: 200;
                 }
@@ -1228,10 +1170,6 @@
                 & > section {
                     scroll-snap-align: none;
                 }
-            }
-
-            #story {
-                font-size: clamp(0.8rem, 1vw + 1vh, 1.25rem);
             }
 
             .sidebar {
@@ -1361,7 +1299,7 @@
                 width: 300px;
                 padding: 4px 2px 2px;
                 color: var(--accent);
-                font-family: vinque, serif;
+                font-family: Vinque;
                 font-size: 1.33rem;
                 outline: none;
                 background: transparent;
@@ -1585,8 +1523,6 @@
                     alt="Bonds"
                     src="assets/BOND.svg">
             </button>
-            <div class="hastip nodisplay" data-tip="verbosedate" id="game-date"></div>
-
         </div>
     </div>
 

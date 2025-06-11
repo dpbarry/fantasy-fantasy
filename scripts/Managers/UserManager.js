@@ -10,7 +10,7 @@ export default class UserManager {
     morality = 0;
 
     statusAccess = {
-        name: false, date: false, bonds: false
+        name: false, bonds: false
     };
 
     bonds = {
@@ -57,7 +57,6 @@ export default class UserManager {
         this.firstName = firstName;
         this.lastName = lastName;
         this.statusAccess.name = true;
-        this.statusAccess.date = true;
         unlockPanel(this.core.ui.userstatus);
         this.broadcast();
     }

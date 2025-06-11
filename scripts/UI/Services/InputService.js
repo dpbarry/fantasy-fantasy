@@ -1,5 +1,13 @@
 export default class InputService {
     static #center = document.getElementById("center");
+
+    static #resizeHandlers = [];
+
+    static {
+        window.addEventListener("resize", () => {
+            this.#resizeHandlers.forEach(cb => cb());
+        })
+    }
     static isAlphabetic(text) {
         return [...text].every(c => "abcdefghijklmnopqrstuvwxyz".includes(c.toLowerCase()))
     }
@@ -19,6 +27,10 @@ export default class InputService {
         input.whiteSpace = "nowrap";
         input.spellcheck = false;
         input.oninput = cb;
+
+        input._resizeHandle = () => cb({data: "", target: input});
+        this.#resizeHandlers.push(input._resizeHandle);
+
         input.onfocus = () => {
             cb({data: "", target: input});
             let keyboardOpen = InputService.#center.classList.contains("alphaactive");
@@ -103,7 +115,7 @@ export default class InputService {
         };
 
         document.addEventListener("keydown", wrapKeydown);
-        cue.addEventListener("pointerdown", cueReceived);
+        cue.addEventListener("click", cueReceived);
         if (immediatelyVisible) cue.classList.add("fadeincue");
         return cue;
     };
@@ -119,11 +131,13 @@ export default class InputService {
             i.classList.add("settled");
             i.style.transitionDuration = "";
             if (i.closest(".inputwrap")) i.parentNode.style.transitionDuration = "";
+            console.log(this.#resizeHandlers, i._resizeHandle);
+            this.#resizeHandlers.filter(h => h !== i._resizeHandle);
+
         });
         InputService.#center.classList.remove("alphaactive");
         InputService.#center.classList.remove("numactive");
         InputService.#center.classList.remove("alphanumactive");
-
         return new Promise(resolve => {
             const wrap = (e) => {
                 e.target.removeEventListener("transitionend", wrap);
@@ -135,12 +149,16 @@ export default class InputService {
 
     static firstlastNameValidate(e) {
         return InputService.nameValidate(e, () => {
-            if (e.target.parentNode.nextElementSibling.nextElementSibling?.firstChild?.value?.length || e.target.parentNode.previousSibling.previousSibling.firstChild?.value?.length) {
+            let firstInputLength = e.target.parentNode.nextElementSibling.nextElementSibling?.firstChild?.value?.length;
+            let secondInputLength = e.target.parentNode.previousSibling.previousSibling.firstChild?.value?.length;
+            if (firstInputLength && firstInputLength < 15 && e.target.value.length < 15) {
+                e.target.closest("#story").querySelector(".cue").classList.add("visible");
+            } else if (secondInputLength && secondInputLength < 15 && e.target.value.length < 15) {
                 e.target.closest("#story").querySelector(".cue").classList.add("visible");
             } else {
                 e.target.closest("#story").querySelector(".cue").classList.remove("visible");
             }
-        })
+        });
     }
 
     /**
@@ -194,7 +212,7 @@ export default class InputService {
 
             e.target.selectionStart = store;
             e.target.selectionEnd = store;
-            let width = InputService.getTrueWidthName(e.target.closest("#story"), e.target.value) / 15 + "em";
+            let width = InputService.getTrueWidthName(e.target.closest("#story"), e.target.value) + 4 + "px";
             e.target.style.width = width;
             e.target.parentNode.style.width = width;
 
@@ -208,7 +226,7 @@ export default class InputService {
             } else {
                 let cue = e.target.closest("#story").querySelector(".cue");
                 if (!cue) return;
-                cue.classList.add("visible");
+                if (e.target.value.length < 15) cue.classList.add("visible"); else cue.classList.remove("visible");
             }
 
         } else {
@@ -229,7 +247,6 @@ export default class InputService {
         p.style.color = "transparent";
         p.style.pointerEvents = "none";
         p.style.userSelect = "none";
-        p.style.fontSize = "0.9em";
 
         pStory.append(p);
         p.innerText = text;

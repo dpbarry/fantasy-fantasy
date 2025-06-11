@@ -24,7 +24,7 @@ export default function Prologue(ctx) {
                     let n = 0;
 
                     await InputService.clearInput(p);
-                    TypingService.collapseP(p, i => `<span class='getname settled' style='font-size: 0.9em; display: inline-block; text-align: center; 
+                    TypingService.collapseP(p, i => `<span class='getname settled' style='display: inline-block; text-align: center; 
                width: ${p.querySelectorAll("input")[n++].getBoundingClientRect().width}px; 
                transition: width 0.2s;'>${i.firstChild.value}</span>`);
 
@@ -73,19 +73,13 @@ export default function Prologue(ctx) {
                         .classList.add("hide");
 
                     const selected = p.querySelector(".sonChoice.selected, .daughterChoice.selected");
-                    let color;
-                    if (selected.innerText === "son") {
-                        color = "hsl(200, 70%, 80%)";
-                        ctx.core.mc.gender = "M";
-                    } else {
-                        color = "hsl(330, 70%, 80%)";
-                        ctx.core.mc.gender = "F";
-                    }
+                    ctx.core.mc.gender = selected.innerText === "son" ? "M" : "F";
+
 
                     InputService.clearInput(p, ".sonChoice, .daughterChoice").then(() => {
                         setTimeout(() => {
-                            TypingService.collapseP(p, i => i.classList.contains("selected") ? `<span class='settled' style='font-size: 0.9em; display: inline-block; 
-                     font-family: Vinque, serif; color: ${color}'>${i.innerText}</span>` : "");
+                            TypingService.collapseP(p, i => i.classList.contains("selected") ? `<span class='settled' style='font-weight: 515; display: inline-block; 
+                    color: var(--accent)'>${i.innerText}</span>` : "");
                             ctx.episodes.Prologue.getSpecialty();
                         }, 150);
                     });
@@ -137,7 +131,7 @@ export default function Prologue(ctx) {
         getCityName: async () => {
             ctx.checkpoint(4);
             let name;
-            ctx.typeWithInputs("You leave your bedroom and begin walking down the corridor. The walls are lined with grand paintings and statues of yesteryear’s kings and queens. Here and there, windows offer up sweeping views of your hometown from the castle’s hilltop vantage point. It is a small but proud city (named @), inhabited by honest farmers and artisans.", "5.5em", "getname", InputService.nameValidate).then(res => {
+            ctx.typeWithInputs("You leave your bedroom and begin walking down the corridor. The walls are lined with grand paintings and statues of yesteryear’s kings and queens. Here and there, windows offer up sweeping views of your hometown from the castle’s hilltop vantage point. It is a small but proud city (by the name of @), inhabited by honest farmers and artisans.", "5.5em", "getname", InputService.nameValidate).then(res => {
                 const [p, inputs] = res;
                 name = inputs[0];
                 ctx.core.ui.center.classList.add("alphaactive");
@@ -147,7 +141,7 @@ export default function Prologue(ctx) {
 
             const finishGetCityName = p => {
                 InputService.clearInput(p).then(async () => {
-                    TypingService.collapseP(p, i => `<span class='getname settled' style='font-size: 0.9em; display: inline-block; text-align: center; 
+                    TypingService.collapseP(p, i => `<span class='getname settled' style='display: inline-block; text-align: center; 
                width: ${p.querySelector(".getname").getBoundingClientRect().width}px; 
                transition: width 0.2s;'>${i.firstChild.value}</span>`);
                     let settledName = p.querySelector(".getname");
