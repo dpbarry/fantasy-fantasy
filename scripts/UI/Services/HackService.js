@@ -70,7 +70,7 @@ export default class HackService {
         input.onblur = () => input.focus();
 
         const cueWrapper = document.createElement('div');
-        cueWrapper.style.cssText = 'position: absolute; right: 0; bottom: -2.75rem;';
+        cueWrapper.style.cssText = 'position: absolute; right: 0; bottom: -2rem;';
         this.#consoleElement.appendChild(cueWrapper);
 
         const escCue = InputService.getCue('Escape', () => this.hide());

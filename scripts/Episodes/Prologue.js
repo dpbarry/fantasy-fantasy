@@ -140,6 +140,7 @@ export default function Prologue(ctx) {
             ctx.typeWithInputs("You leave your bedroom and begin walking down the corridor. The walls are lined with grand paintings and statues of yesteryear’s kings and queens. Here and there, windows offer up sweeping views of your hometown from the castle’s hilltop vantage point. It is a small but proud city (named @), inhabited by honest farmers and artisans.", "5.5em", "getname", InputService.nameValidate).then(res => {
                 const [p, inputs] = res;
                 name = inputs[0];
+                ctx.core.ui.center.classList.add("alphaactive");
                 ctx.core.ui.story.append(InputService.getCue("Enter", () => finishGetCityName(p)));
                 setTimeout(() => name.focus({preventScroll: true}), 0);
             });

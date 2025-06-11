@@ -1,5 +1,5 @@
 import TypingService from "../Services/TypingService.js";
-import { waitForEvent} from "../../Utils.js";
+import {waitForEvent} from "../../Utils.js";
 
 export default function createHintBox(el, msg, spanTexts = [], spanClasses = [], spanTips = []) {
     const box = document.createElement('div');
@@ -18,6 +18,20 @@ export default function createHintBox(el, msg, spanTexts = [], spanClasses = [],
             box.style.opacity = '0';
             box.style.translate = '0 0.5em';
             return waitForEvent(box, "transitionend", 200).then(() => {
+                let parent = box.parentElement;
+                if (parent._scrollObserver) {
+                    parent._scrollObserver.disconnect();
+                    const addedHeight = box.getBoundingClientRect().height;
+                    const currentPad = parseFloat(getComputedStyle(parent).paddingBottom) || 0;
+                    parent.style.paddingBottom = `${currentPad + addedHeight}px`;
+                    parent._excessPadding += addedHeight;
+                    box.remove();
+                    parent._scrollObserver.observe(parent, {
+                        childList: true, subtree: true, characterData: true
+                    });
+                    return Promise.resolve();
+                }
+
                 box.remove();
                 return Promise.resolve();
             })

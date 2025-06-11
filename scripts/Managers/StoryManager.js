@@ -53,7 +53,6 @@ export default class StoryManager {
     }
 
 
-    // checkpoint and persist
     checkpoint(phase) {
         this.progress[this.currentEpisode] = phase;
         this.snapshots[this.currentEpisode] = this.core.ui.story.innerHTML || "";

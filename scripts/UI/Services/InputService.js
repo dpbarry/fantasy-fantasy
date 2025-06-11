@@ -78,7 +78,20 @@ export default class InputService {
             cue.classList.add("done");
 
             setTimeout(() => {
-                cue.remove();
+                let parent = cue.parentElement;
+                if (parent._scrollObserver) {
+                    parent._scrollObserver.disconnect();
+                    const addedHeight = cue.getBoundingClientRect().height;
+                    const currentPad = parseFloat(getComputedStyle(parent).paddingBottom) || 0;
+                    parent.style.paddingBottom = `${currentPad + addedHeight}px`;
+                    parent._excessPadding += addedHeight;
+                    cue.remove();
+                    parent._scrollObserver.observe(parent, {
+                        childList: true, subtree: true, characterData: true
+                    });
+                } else {
+                    cue.remove();
+                }
                 cb();
             }, 200);
         }
