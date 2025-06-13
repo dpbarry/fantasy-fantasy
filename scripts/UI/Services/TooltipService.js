@@ -29,7 +29,7 @@ export default function createTooltipService() {
 
         registerTip('valor', () => `
       <p><i>Measures military expertise.</i></p>
-      <p>Each point of <span class="valorWord term">Valor</span> grants a +1% boost to all Hero/Army damage.</p>
+      <p>Each point of <span class="valorWord term">Valor</span> grants a +1% boost to all damage dealt by Heroes and the Army.</p>
       <p>Current boost: +${core.mc.valor}%</p>
     `);
 

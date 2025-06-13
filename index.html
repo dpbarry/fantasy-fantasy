@@ -156,6 +156,7 @@
             scroll-snap-type: x mandatory;
             scrollbar-width: none;
 
+            font-size: clamp(0.75rem, 1.5vw + 1.3vh, 1.25rem);
 
             & > section {
                 flex: 0 0 100%;
@@ -186,7 +187,7 @@
         .lock {
             transition: opacity 0.15s, bottom 0.2s;
             position: relative;
-            font-size: 1rem;
+            font-size: 0.9em;
             opacity: 1;
             font-family: SourceSerif;
         }
@@ -269,8 +270,8 @@
             overflow-y: auto;
             height: 100%;
             margin: 0;
+            font-size: 1.1em;
             font-family: SourceSerif;
-            font-size: clamp(0.75rem, 1.2vw + 1.2vh, 1.15rem);
             font-weight: 350;
             position: relative;
             padding-bottom: 18vh; /* USED IN JS */
@@ -761,21 +762,24 @@
             display: flex;
             flex-direction: column;
             h2 {
-                font-size: 1.4rem;
-                margin-bottom: 0.3rem;
+                font-size: 1.22em;
+                margin-bottom: 0.3em;
                 border-bottom: 1.5px solid var(--midBaseColor);
             }
 
+            .setting {
+                margin-bottom: 0.5em;
+            }
             .setting:has(+ h2) {
-                margin-bottom: 1rem;
+                margin-bottom: 1em;
             }
 
             label {
-                font-size: 1.3rem;
+                font-size: 1.1em;
                 align-items: center;
                 display: flex;
                 flex-direction: row;
-                column-gap: 0.5rem;
+                column-gap: 0.5em;
                 white-space: nowrap;
             }
 
@@ -785,6 +789,7 @@
             #about {
                 text-align: justify;
                 font-style: italic;
+                font-size: 0.9em;
             }
 
             a {
@@ -799,7 +804,6 @@
             }
 
             /*noinspection CssInvalidPseudoSelector*/
-
             select,
             ::picker(select) {
                 appearance: base-select;
@@ -810,8 +814,8 @@
                 outline: none;
                 border: none;
                 background: var(--darkBaseColor);
-                font-size: 1rem;
-                max-width: 9rem;
+                font-size: 0.85em;
+                max-width: 9em;
                 color: var(--accent);
                 font-weight: 800;
             }
@@ -826,8 +830,8 @@
                 margin-right: auto;
                 margin-top: 5px;
                 display: block;
+                filter: var(--baseFilter);
                 text-align: center;
-                filter: var(--accentFilter);
             }
 
             .theme {
@@ -835,8 +839,8 @@
                     display: inline-block;
                     margin: 0;
                     appearance: none;
-                    height: 1.3rem;
-                    width: 1.5rem;
+                    height: 1.3em;
+                    width: 1.9em;
                     background-color: #C0C0C0;
                     position: relative;
                     border-radius: 1px;
@@ -915,7 +919,7 @@
                 width: 100%;
                 font-size: 0.8em;
                 font-weight: 370;
-                max-height: 3.6rem;
+                max-height: 3.6em;
                 margin: 0 auto;
                 grid-template-columns: auto 1fr;
                 grid-template-rows: min-content;
@@ -1045,7 +1049,6 @@
             font-family: SourceSerif, serif;
             transition: opacity 0.1s;
             z-index: 1000;
-
             p + p {
                 margin-top: 0.35em;
             }
@@ -1166,6 +1169,7 @@
                 grid-template-columns: var(--sidebarWidth) 1fr var(--sidebarWidth);
                 overflow: visible;
                 scroll-snap-type: none;
+                font-size: clamp(0.75rem, 0.8vw + 0.8vh, 1.25rem);
 
                 & > section {
                     scroll-snap-align: none;
