@@ -17,7 +17,12 @@ export default class NewsManager {
     }
     
     update(message) {
-        const timestamp = this.core.clock.gameTime({format: "short"});
+        const timestamp = (() => {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            return `${hours}:${minutes}`
+        })();
         this.logs.push({timestamp, message});
         this.broadcast();
     }

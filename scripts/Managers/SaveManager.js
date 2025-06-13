@@ -5,7 +5,7 @@ export default class SaveManager {
         this.list = JSON.parse(localStorage.getItem('saveList')) || [];
     }
 
-    record(episodeName = null, phase = null, opts = {overwrite: true}) {
+    record() {
         const data = {};
         for (const [key, comp] of this.core.saveableComponents) {
             data[key] = comp.serialize();
@@ -16,27 +16,12 @@ export default class SaveManager {
             version: this.core.currentVersion, timestamp, data
         };
 
-        const id = opts.overwrite ? `save:${episodeName}:${phase}` : `save:${episodeName}:${phase}:${timestamp}`;
+        const id = `save:${timestamp}`;
 
         localStorage.setItem(id, JSON.stringify(save));
 
-        const type = episodeName ? "story" : "normal";
-        const entry = {id, type, timestamp};
-        if (type === "story") {
-            entry.episode = episodeName;
-            entry.phase = phase;
-        }
-
-        if (opts.overwrite && type === "story") {
-            const idx = this.list.findIndex(e => e.episode === episodeName && e.phase === phase);
-            if (idx >= 0) {
-                this.list[idx] = entry;
-            } else {
-                this.list.push(entry);
-            }
-        } else {
-            this.list.push(entry);
-        }
+        const entry = {id, timestamp};
+        this.list.push(entry);
 
         this.list.sort((a, b) => b.timestamp - a.timestamp);
         localStorage.setItem('saveList', JSON.stringify(this.list));
@@ -44,15 +29,19 @@ export default class SaveManager {
 
 
     async jump(i) {
-        console.log(this.list)
         const key = this.list[i].id;
         await this.load(localStorage.getItem(key));
     }
 
-    async jumpToEp(episodeName, phase) {
-        const key = `save:${episodeName}:${phase}`;
-        const save = localStorage.getItem(key);
-        await this.load(save);
+    delete(index) {
+        const entry = this.list[index];
+        if (!entry) return;
+
+        localStorage.removeItem(entry.id);
+
+        this.list.splice(index, 1);
+
+        localStorage.setItem('saveList', JSON.stringify(this.list));
     }
 
     async load(save) {
@@ -79,18 +68,4 @@ export default class SaveManager {
 
         location.reload();
     }
-
-
-    delete(index) {
-        const entry = this.list[index];
-        if (!entry) return;
-
-        localStorage.removeItem(entry.id);
-
-        this.list.splice(index, 1);
-
-        localStorage.setItem('saveList', JSON.stringify(this.list));
-    }
-
-
 }

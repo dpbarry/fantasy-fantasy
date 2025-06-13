@@ -23,34 +23,26 @@ export default function createTooltipService() {
     function initialize(core) {
         registerTip('savvy', () => `
       <p><i>Measures economic know-how.</i></p>
-      <p>Each point of <span class="savvyWord term">Savvy</span> grants a +1% boost to all stats related to the economy.</p>
+      <p>Each point of <span class="savvyWord term">Savvy</span> grants a +1% boost to all Production profits.</p>
       <p>Current boost: +${core.mc.savvy}%</p>
     `);
 
         registerTip('valor', () => `
       <p><i>Measures military expertise.</i></p>
-      <p>Each point of <span class="valorWord term">Valor</span> grants a +1% boost to all stats related to the army.</p>
+      <p>Each point of <span class="valorWord term">Valor</span> grants a +1% boost to all Hero/Army damage.</p>
       <p>Current boost: +${core.mc.valor}%</p>
     `);
 
         registerTip('wisdom', () => `
       <p><i>Measures scholastic prowess.</i></p>
-      <p>Each point of <span class="wisdomWord term">Wisdom</span> grants a +1% boost to all stats related to research.</p>
+      <p>Each point of <span class="wisdomWord term">Wisdom</span> grants a +1% boost to all Research bonuses.</p>
       <p>Current boost: +${core.mc.wisdom}%</p>
-    `);
-
-
-        registerTip('bond', () => `
-      <p><i>Quantifies closeness with someone.</i></p>
-      <p>Spans a spectrum where -100% <span class="bondWord term">Bond</span> denotes an arch-nemesis and 100% a soulmate.</p>
     `);
 
         registerTip('mc-name', () => {
             const stats = [{name: "Savvy", value: core.mc.savvy, class: "savvyWord"}, {
                 name: "Valor", value: core.mc.valor, class: "valorWord"
-            }, {name: "Wisdom", value: core.mc.wisdom, class: "wisdomWord"}, {
-                name: "Morality", value: core.mc.morality, class: "moralWord"
-            },];
+            }, {name: "Wisdom", value: core.mc.wisdom, class: "wisdomWord"}, {},];
 
             return createStatsGrid(stats);
         });
@@ -63,7 +55,7 @@ export default function createTooltipService() {
         const navButtons = document.querySelectorAll(".navbutton");
         navButtons.forEach(b => {
             registerTip(b.dataset.tip, () => {
-                return b.classList.contains("locked") ? "<i>Locked&nbsp;</i>" : b.firstElementChild.alt;
+                return b.classList.contains("locked") ? "<i>Locked</i>" : b.firstElementChild.alt;
             });
         });
 
@@ -238,20 +230,13 @@ export default function createTooltipService() {
         });
 
         observer.observe(document.body, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['class'],
+            childList: true, subtree: true, attributes: true, attributeFilter: ['class'],
         });
 
         document.querySelectorAll('.hastip').forEach(attach);
     }
 
     return {
-        initialize,
-        registerTip,
-        showTooltip,
-        destroyTooltip,
-        observeTooltips,
+        initialize, registerTip, showTooltip, destroyTooltip, observeTooltips,
     };
 }

@@ -15,7 +15,10 @@ export default function setupGlobalBehavior(core) {
 
     const navbuttons = document.querySelectorAll(".navbutton");
     navbuttons.forEach(b => {
-        b.onpointerdown = () => core.ui.show(b.dataset.loc, b.dataset.panel);
+        b.onpointerdown = () => {
+            if (b.classList.contains("locked")) return;
+            core.ui.show(b.dataset.loc, b.dataset.panel);
+        }
     })
     const carousel = document.querySelector("body");
     const left = document.getElementById("left-section");

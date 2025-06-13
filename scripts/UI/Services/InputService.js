@@ -8,6 +8,7 @@ export default class InputService {
             this.#resizeHandlers.forEach(cb => cb());
         })
     }
+
     static isAlphabetic(text) {
         return [...text].every(c => "abcdefghijklmnopqrstuvwxyz".includes(c.toLowerCase()))
     }
@@ -131,8 +132,7 @@ export default class InputService {
             i.classList.add("settled");
             i.style.transitionDuration = "";
             if (i.closest(".inputwrap")) i.parentNode.style.transitionDuration = "";
-            console.log(this.#resizeHandlers, i._resizeHandle);
-            this.#resizeHandlers.filter(h => h !== i._resizeHandle);
+            this.#resizeHandlers = this.#resizeHandlers.filter(h => h !== i._resizeHandle);
 
         });
         InputService.#center.classList.remove("alphaactive");

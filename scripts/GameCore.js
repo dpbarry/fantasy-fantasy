@@ -93,6 +93,7 @@ export default class GameCore {
         this.ui.readyPanels();
         await LoadingService.initialize();
         await this.loadLastSave();
+        this.managers.story.run();
         await LoadingService.hide();
         this.ui.boot();
 

@@ -1,5 +1,3 @@
-import {unlockPanel} from "../Utils.js";
-
 export default class UserManager {
     firstName = "";
     lastName = "";
@@ -7,40 +5,14 @@ export default class UserManager {
     savvy = 0;
     valor = 0;
     wisdom = 0;
-    morality = 0;
 
-    statusAccess = {
-        name: false, bonds: false
-    };
-
-    bonds = {
-        Tercius: 0, Daphna: 0,
-    };
-
-    #npcPersonalities = {
-        Tercius: "The castle’s butler. He is duly mannered, but has a wry side.",
-        Daphna: "The castle’s chef. She refuses to put up with any type of nonsense."
-    }
+    quickAccess = false;
 
     #subscribers = [];
 
-    #bondRunning = false;
-
-    get bondRunning() {return this.#bondRunning;}
-    set bondRunning(v) {this.#bondRunning = v;}
-
     constructor(core) {
         this.core = core;
-        this.npcTooltips();
         core.clock.subscribeRealTime(() => this.run(), {interval: 1});
-    }
-
-    npcTooltips() {
-        Object.keys(this.bonds).forEach((npc) => {
-            this.core.ui.tooltipService.registerTip(npc, () => {
-                return `<p><i>${this.#npcPersonalities[npc]}</i></p> <p><span class="bondWord term">Bond</span>: ${this.bonds[npc]}%</p>`
-            });
-        })
     }
 
     onUpdate(callback) {
@@ -53,17 +25,9 @@ export default class UserManager {
         });
     }
 
-    unlockStatus(firstName, lastName) {
+    setName(firstName, lastName) {
         this.firstName = firstName;
         this.lastName = lastName;
-        this.statusAccess.name = true;
-        unlockPanel(this.core.ui.userstatus);
-        this.broadcast();
-    }
-
-    unlockBonds() {
-        this.statusAccess.bonds = true;
-        this.broadcast();
     }
 
     getStatus() {
@@ -88,8 +52,8 @@ export default class UserManager {
     }
 
     updateAccess() {
-        if (Object.values(this.statusAccess).some(x => x)) {
-            let lock = this.core.ui.userstatus.querySelector(".lock");
+        if (this.quickAccess) {
+            let lock = this.core.ui.quickacc.querySelector(".lock");
             if (lock) lock.remove();
         }
         this.run();

@@ -9,15 +9,13 @@ export default class StoryManager {
 
     constructor(core) {
         this.core = core;
-        // set up the Prologue episode
+
         this.#episodes.Prologue = Prologue(this);
 
         this.progress = {Prologue: 0};
         this.snapshots = {Prologue: ""};
         this.choices = {Prologue: {}};
         this.currentEpisode = null;
-
-        core.clock.subscribeRealTime(() => this.run(), {interval: 1});
     }
 
     set subscriber(sub) {
@@ -28,7 +26,6 @@ export default class StoryManager {
         return this.#episodes;
     }
 
-    // internal: start a specific episode at a phase
     async runAt(episode, phase) {
         this.currentEpisode = episode;
         this.#subscriber.reset(this.snapshots[episode]);
@@ -56,7 +53,6 @@ export default class StoryManager {
     checkpoint(phase) {
         this.progress[this.currentEpisode] = phase;
         this.snapshots[this.currentEpisode] = this.core.ui.story.innerHTML || "";
-        this.core.managers.saves.record(this.currentEpisode, phase, {overwrite: true});
     }
 
     async typeP(text, opts = {}) {
@@ -115,6 +111,5 @@ export default class StoryManager {
     }
 
     updateAccess() {
-        this.run();
     }
 }

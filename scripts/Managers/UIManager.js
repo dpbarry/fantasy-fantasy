@@ -4,9 +4,8 @@ import setupGlobalBehavior from "../UI/Services/GlobalBehavior.js";
 import {verticalScroll} from "../Utils.js";
 import StoryPanel from "../UI/Panels/StoryPanel.js";
 import NewsPanel from "../UI/Panels/NewsPanel.js";
-import UserStatus from "../UI/Chrome/UserStatus.js";
+import QuickAccess from "../UI/Chrome/QuickAccess.js";
 import CityInfoPanel from "../UI/Panels/CityInfoPanel.js";
-import BondsPanel from "../UI/Panels/BondsPanel.js";
 
 export default class UIManager {
     constructor(core) {
@@ -14,9 +13,9 @@ export default class UIManager {
 
         this.tooltipService = createTooltipService(core);
         this.activePanels = {
-            "left": "team",
+            "left": "",
             "center": "story",
-            "right": "cityinfo",
+            "right": "",
         }
         this.visibleSection = "center";
 
@@ -28,9 +27,8 @@ export default class UIManager {
         this.panels = {
             story: new StoryPanel(this.core),
             news: new NewsPanel(this.core),
-            userstatus: new UserStatus(this.core),
+            quickacc: new QuickAccess(this.core),
             cityinfo: new CityInfoPanel(this.core),
-            bonds: new BondsPanel(this.core),
         }
     }
 
@@ -42,14 +40,13 @@ export default class UIManager {
     initShortcuts() {
         this.story = document.getElementById("story");
         this.news = document.getElementById("updates");
-        this.userstatus = document.getElementById("user-status");
+        this.quickacc = document.getElementById("quick-access");
 
         this.left = document.getElementById("left");
         this.center = document.getElementById("center");
         this.right = document.getElementById("right");
 
         this.cityinfo = document.getElementById("cityinfo");
-        this.bonds = document.getElementById("bonds");
     }
 
     initialize() {

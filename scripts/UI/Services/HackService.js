@@ -119,7 +119,7 @@ export default class HackService {
             switch (cmd.toLowerCase()) {
                 case 'help':
                     core.save();
-                    feedback.textContent = 'Commands: help, pause, resume, hardstop, restart, settime, save, savep, load, loadp, delsave';
+                    feedback.textContent = 'Commands: help, pause, resume, hardstop, restart, settime, save, load, delsave';
                     break;
                 case 'pause':
                     feedback.textContent = core.clock.isPaused ? "Already paused" : "Game paused";
@@ -193,28 +193,9 @@ export default class HackService {
                     core.clock.totalSeconds = parseInt(args[0]);
                     feedback.textContent = `Set game time to ${core.clock.gameTime({format: 'full'})} ${core.clock.gameDate({format: 'full'})}`;
                     break;
-                case 'savep':
-                    core.saves.record(core.story.currentEpisode, core.story.progress[core.story.currentEpisode], {overwrite: false});
-                    feedback.textContent = `Save recorded for ${core.story.currentEpisode} phase ${core.story.progress[core.story.currentEpisode]}`;
-                    break;
                 case 'save':
                     core.saves.record(core);
                     feedback.textContent = `Save recorded`;
-                    break;
-                case 'loadp':
-                    if (!args[0] || isNaN(args[0])) {
-                        feedback.textContent = `Usage: loadep <phaseNumber>`;
-                        break;
-                    }
-                    const episode = core.story.currentEpisode;
-                    const phase = parseInt(args[0]);
-                    try {
-                        await core.saves.jumpToEp(episode, phase);
-                        feedback.textContent = `Restored save for ${episode} phase ${phase}`;
-                    } catch (error) {
-                        console.log(error);
-                        feedback.textContent = `No save found for ${episode} phase ${phase}`;
-                    }
                     break;
                 case 'load':
                     if (!args[0] || isNaN(args[0])) {

@@ -7,9 +7,8 @@
     <link href="assets/TOURNAMENT.svg" rel="preload" as="image" type="image/svg+xml">
     <link href="assets/TOURNAMENT.svg" rel="icon" type="image/svg+xml">
 
-
-    <link rel="preload" href="assets/fonts/Vinque.woff2" as="font" type="font/woff2" crossorigin>
-
+    <link rel="preload" href="assets/fonts/SourceSerif.ttf" as="font" type="font/ttf" crossorigin>
+    <link rel="preload" href="assets/fonts/SourceSerifItalic.ttf" as="font" type="font/ttf" crossorigin>
 
 
     <style>
@@ -56,15 +55,8 @@
             --accentFilter: invert(56%) sepia(98%) saturate(2737%) hue-rotate(153deg) brightness(101%) contrast(84%);
 
             --savvyColor: hsl(159, 82.5%, 45%);
-            --savvyFilter: brightness(0) saturate(100%) invert(81%) sepia(26%) saturate(7244%) hue-rotate(108deg) brightness(96%) contrast(84%);
             --valorColor: hsl(19, 82.5%, 45%);
-            --valorFilter: brightness(0) saturate(100%) invert(33%) sepia(28%) saturate(3954%) hue-rotate(357deg) brightness(97%) contrast(89%);
             --wisdomColor: hsl(210, 82.5%, 45%);
-            --wisdomFilter: brightness(0) saturate(100%) invert(32%) sepia(79%) saturate(1483%) hue-rotate(190deg) brightness(93%) contrast(92%);
-            --moralColor: hsl(0, 0%, 45%);
-            --moralFilter: invert(0.8);
-            --bondColor: hsl(33, 82.5%, 45%);
-            --bondFilter: brightness(0) saturate(100%) invert(66%) sepia(56%) saturate(3245%) hue-rotate(354deg) brightness(85%) contrast(90%);
         }
 
         *, *::before, *::after {
@@ -106,11 +98,11 @@
 
         #center-section {
             display: grid;
-            grid-template-rows: min-content 76.5% 5% auto;
+            grid-template-rows: min-content 75% 6% auto;
             grid-template-areas:
              "navbar"
              "center"
-             "status"
+             "quick"
              "updates";
             gap: var(--boxGap);
         }
@@ -196,7 +188,7 @@
             position: relative;
             font-size: 1rem;
             opacity: 1;
-            font-family: Vinque;
+            font-family: SourceSerif;
         }
 
         .lock.hide {
@@ -231,8 +223,8 @@
             font-weight: 600;
             position: relative;
             border: 0;
-
-            transition: filter 0.1s, scale 0.1s;
+            font-family: SourceSerif;
+            transition: filter 0.1s, scale 0.1s, opacity 0.2s;
             white-space: nowrap;
             cursor: pointer;
 
@@ -240,6 +232,8 @@
                 height: 2.2em;
                 filter: var(--baseFilter);
                 user-select: none;
+                transition: scale 0.1s;
+                transform-origin: center;
             }
 
             &.chosen {
@@ -254,9 +248,13 @@
         }
 
         @media (pointer: fine) and (hover: hover) {
-            .navbutton:not(.locked, .nudged):hover {
+            .navbutton:not(.locked, .nudged):hover img {
                 scale: 1.06;
             }
+        }
+
+        #researchnav {
+            img {height: 2em; }
         }
 
         #story-wrap {
@@ -349,7 +347,7 @@
                 background: var(--darkBaseColor);
             }
 
-            .sonChoice, .daughterChoice {
+            .kingChoice, .queenChoice {
                 font-family: SourceSerif;
                 white-space: nowrap;
                 cursor: pointer;
@@ -420,18 +418,18 @@
                 }
             }
 
-            .sonChoice {
-                &.selected ~ .daughterChoice, &:has(~ .daughterChoice.selected) {
+            .kingChoice {
+                &.selected ~ .queenChoice, &:has(~ .queenChoice.selected) {
                     opacity: 0.8;
                 }
 
-                & ~ span:has(~ .daughterChoice).hide {
+                & ~ span:has(~ .queenChoice).hide {
                     transition: font-size 0.2s;
                     font-size: 0;
                 }
             }
 
-            p:has(.sonChoice.selected) + .cue, p:has(.daughterChoice.selected) + .cue {
+            p:has(.kingChoice.selected) + .cue, p:has(.queenChoice.selected) + .cue {
                 opacity: 0.8;
                 cursor: pointer;
                 pointer-events: all;
@@ -460,6 +458,7 @@
                     padding-left 0.2s ease,
                     opacity 0.2s ease,
                     font-weight 0.2s ease;
+                    will-change: font-size;
 
 
                     &.adding {
@@ -517,7 +516,6 @@
                         pointer-events: none;
                         transition: filter 0.25s ease, left 0.25s,
                         font-size 0.3s 0.25s cubic-bezier(0.34, 0, 0.32, 1);
-
                         filter: opacity(0);
                         left: -2rem;
 
@@ -616,7 +614,7 @@
             }
 
             &.done, &.done::before, &.done::after {
-                transition: opacity 0.2s, scale 0.3s !important;
+                transition: opacity 0.22s, scale 0.5s !important;
                 opacity: 0;
                 scale: 0;
             }
@@ -666,22 +664,8 @@
         .term {
             white-space: nowrap;
             transition: color 0.15s;
-            font-weight: 550;
+            font-weight: 650;
 
-            &::before {
-                display: inline-block;
-                height: 0.8em;
-                width: 0.8em;
-                vertical-align: baseline;
-                position: relative;
-                top: 1px;
-                margin-right: 0.09em;
-                background-size: contain;
-                background-repeat: no-repeat;
-                background-position: center;
-                transition: opacity 0.15s, filter 0.15s;
-                content: "";
-            }
 
             &.hidespan::before {
                 opacity: 0 !important;
@@ -691,73 +675,21 @@
                 @media (hover: hover) and (pointer: fine) {
                     &:hover {
                         color: var(--accent);
-
-                        &::before {
-                            filter: var(--accentFilter);
-                        }
                     }
                 }
             }
         }
 
-        .name {
-            font-weight: 550;
-        }
-
         .savvyWord {
             color: var(--savvyColor);
-
-            &::before {
-                background-image: url("./assets/SAVVY.svg");
-                filter: var(--savvyFilter);
-            }
         }
 
         .valorWord {
             color: var(--valorColor);
-
-            &::before {
-                background-image: url("./assets/VALOR.svg");
-                filter: var(--valorFilter);
-                margin-right: 0.05em;
-            }
         }
 
         .wisdomWord {
             color: var(--wisdomColor);
-
-            &::before {
-                background-image: url("./assets/WISDOM.svg");
-                filter: var(--wisdomFilter);
-                margin-right: 0.05em;
-                top: 1.5px;
-            }
-        }
-
-        .moralWord {
-            color: var(--moralColor);
-
-            &::before {
-                background-image: url("./assets/MORALITY.svg");
-                filter: var(--moralFilter);
-            }
-        }
-
-        .bondWord {
-            color: var(--bondColor);
-
-            &::before {
-                background-image: url("assets/BOND.svg");
-                filter: var(--bondFilter);
-            }
-        }
-
-        .codexWord {
-            &::before {
-                background-image: url("./assets/CODEX.svg");
-                filter: var(--baseFilter);
-                margin-right: 0.05em;
-            }
         }
 
         .click {
@@ -824,44 +756,22 @@
         }
 
 
-        #status-wrap {
-            grid-area: status;
+        #quick-wrap {
+            grid-area: quick;
         }
 
-        #user-status:not(:has(.lock)) {
+        #quick-access:not(:has(.lock)) {
             display: flex;
             align-items: center;
             flex-direction: row;
-            column-gap: 0.45em;
+            column-gap: 0.65em;
             padding: calc(var(--boxGap) * 0.5) var(--boxGap);
-
-            #character-name {
-                font-family: vinque, serif;
-                font-size: 1.12em;
-            }
-
-            #bondsnav {
-                @starting-style {
-                    opacity: 0;
-                }
-                transition: opacity 0.2s;
-
-                img {
-                    height: 1em;
-                }
-
-                &.chosen {
-                    filter: var(--bondFilter) !important;
-                }
-
-                top: 1px;
-            }
         }
 
         #updates {
             position: relative;
 
-            #notifnav {
+            #mailnav {
                 position: absolute;
                 height: min-content;
                 right: 0.7em;
@@ -995,38 +905,6 @@
             height: 13em;
         }
 
-        #bonds {
-            display: none;
-            height: 15em;
-            transition: height 0.1s linear, opacity 0.15s;
-            grid-auto-flow: column;
-            grid-auto-rows: auto;
-            row-gap: 0.2em;
-            max-height: 15em;
-            overflow-y: auto;
-
-            .bondPerson {
-                font-family: vinque, serif;
-            }
-
-            .bondValue {
-                font-family: SourceSerif, monospace;
-            }
-
-            &.hide {
-                height: 0;
-                opacity: 0;
-            }
-        }
-
-        #bonds.visible {
-            display: grid;
-            @starting-style {
-                height: 0;
-                opacity: 0.5;
-            }
-        }
-
         .tooltip {
             position: fixed;
             background: var(--contrastColor);
@@ -1145,7 +1023,7 @@
                 }
 
                 #city-name {
-                    font-family: Vinque, serif;
+                    font-family: SourceSerif, serif;
                     font-size: 1.2em;
                 }
 
@@ -1299,7 +1177,7 @@
                 width: 300px;
                 padding: 4px 2px 2px;
                 color: var(--accent);
-                font-family: Vinque;
+                font-family: SourceSerif;
                 font-size: 1.33rem;
                 outline: none;
                 background: transparent;
@@ -1314,7 +1192,8 @@
 
             .console-feedback {
                 color: var(--baseColor);
-                font-size: 0.9rem;
+                font-size: 0.85rem;
+                font-weight: 250;
                 padding: 0 2px 2px;
                 height: fit-content;
                 opacity: 0;
@@ -1422,40 +1301,41 @@
 <section id="center-section">
     <div class="wrapper" id="navbar-wrap">
         <div class="box" id="navbar">
-            <button class="nudge navbutton hastip" data-loc="center" data-panel="story" data-tip="storynav"
-                    id="storynav"><img
-                    alt="Story"
-                    src="assets/STORY.svg">
-            </button>
             <button class="nudge locked navbutton hastip" data-loc="center" data-panel="city" data-tip="citynav"
                     id="citynav"><img
                     alt="City"
                     src="assets/CITY.svg">
             </button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="campaign"
-                    data-tip="campaignnav" id="campaignnav"><img alt="Campaign"
-                                                                 src="assets/TRAIL.svg">
+            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="farm"
+                    data-tip="farmnav" id="farmnav">
+                <img
+                        alt="Farm" src="assets/FARM.svg">
             </button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="tournament"
-                    data-tip="tournamentnav" id="tournamentnav">
-                <img alt="Tournament"
-                     src="assets/TOURNAMENT.svg">
+            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="industry"
+                    data-tip="industrynav" id="industrynav">
+                <img
+                        alt="Industry" src="assets/INDUSTRY.svg">
             </button>
             <button class="nudge locked navbutton hastip" data-loc="center" data-panel="dungeon" data-tip="dungeonav"
                     id="dungeonav">
                 <img
                         alt="Dungeon" src="assets/DUNGEON.svg">
             </button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="industry"
-                    data-tip="industrynav" id="industrynav">
-                <img
-                        alt="Industry" src="assets/FARM.svg">
+            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="trade"
+                    data-tip="tradenav" id="tradenav"><img alt="Trade"
+                                                                 src="assets/TRADE.svg">
             </button>
             <button class="nudge locked navbutton hastip" data-loc="center" data-panel="army" data-tip="armynav"
                     id="armynav"><img
                     alt="Army"
                     src="assets/ARMY.svg">
             </button>
+            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="tournament"
+                    data-tip="tournamentnav" id="tournamentnav">
+                <img alt="Tournament"
+                     src="assets/TOURNAMENT.svg">
+            </button>
+
         </div>
     </div>
 
@@ -1509,28 +1389,19 @@
             <div class="key action bkspc">⟵</div>
             <div class="key action">⏎</div>
         </div>
-        <div class="box" id="bonds">
-            <h1>Bonds</h1>
-            <p>WIP</p>
-        </div>
     </div>
 
     <div class="wrapper" id="status-wrap">
-        <div class="box" id="user-status">
+        <div class="box" id="quick-access">
             <h1 class="lock"> LOCKED </h1>
-            <div class="hastip nodisplay" data-tip="mc-name" id="character-name"></div>
-            <button class="nudge navbutton hastip nodisplay" data-panel="bonds" data-tip="bondsnav" id="bondsnav"><img
-                    alt="Bonds"
-                    src="assets/BOND.svg">
-            </button>
         </div>
     </div>
 
     <div class="wrapper" id="updates-wrap">
         <div class="box" id="updates">
             <div data-masksize="20" id="upate-logs"></div>
-            <button class="nudge navbutton hastip" data-tip="notifnav" id="notifnav"><img alt="Mail"
-                                                                                          src="assets/NOTIFS.svg">
+            <button class="nudge navbutton hastip" data-tip="mailnav" id="mailnav"><img alt="Mail"
+                                                                                          src="assets/MAIL.svg">
             </button>
             <h1 class="lock"> LOCKED </h1>
         </div>

@@ -8,7 +8,7 @@ export default function Prologue(ctx) {
         beginPrologue: async () => {
             ctx.checkpoint(0);
             ctx.core.clock.pause();
-            ctx.typeWithInputs('You jolt awake, your head spinning. What a wild dream that must have been. ' + 'You can hardly even remember your own name... But of course, it is @ @!', "5.5em", "getname", InputService.firstlastNameValidate).then(ctx.episodes.Prologue.getName);
+            ctx.typeWithInputs("You jolt awake, your head spinning. What a wild dream that must have been. You can hardly even remember your own name... But of course, it is @ @!", "5.5em", "getname", InputService.firstlastNameValidate).then(ctx.episodes.Prologue.getName);
         },
 
         getName: async (res) => {
@@ -17,7 +17,7 @@ export default function Prologue(ctx) {
             ctx.core.ui.center.classList.add("alphaactive");
 
             const finishGetName = async () => {
-                ctx.core.mc.unlockStatus(inputFirst.value, inputSecond.value);
+                ctx.core.mc.setName(inputFirst.value, inputSecond.value);
                 unlockPanel(ctx.core.ui.news).then(async () => {
                     ctx.core.clock.resume();
                     ctx.core.news.update("You woke up from a strange dream.");
@@ -53,12 +53,12 @@ export default function Prologue(ctx) {
         getGender: async () => {
             ctx.checkpoint(1);
 
-            ctx.typeWithSpans("You roll out of bed, " + "hoping you haven’t missed the first bell. Your father said the meeting today had to be as " + "early as possible. Maybe that explained the odd sleep—you had a suspicion that this might be " + "“The Meeting,” the one long awaited by any firstborn @ / @ of a king.", ["son", "daughter"], ["sonChoice", "daughterChoice"]).then(([p, spans]) => {
-                const [sonChoice, daughterChoice] = spans;
-                [sonChoice, daughterChoice].forEach(c => {
+            ctx.typeWithSpans("You roll out of bed, suddenly filled with anticipation. The past week has been a blur of funerals and ceremonies, but it has finally arrived: your first day on the job as the @ / @ of your city.", ["king", "queen"], ["kingChoice", "queenChoice"]).then(([p, spans]) => {
+                const [kingChoice, queenChoice] = spans;
+                [kingChoice, queenChoice].forEach(c => {
                     c.onclick = () => {
-                        sonChoice.classList.remove("selected");
-                        daughterChoice.classList.remove("selected");
+                        kingChoice.classList.remove("selected");
+                        queenChoice.classList.remove("selected");
                         c.classList.add("selected");
                     };
                     c.onpointerdown = () => c.classList.add("nudged");
@@ -69,14 +69,14 @@ export default function Prologue(ctx) {
                     hinge.classList.add("hide");
                     hinge.previousElementSibling.classList.add("hide");
                     hinge.nextElementSibling.classList.add("hide");
-                    p.querySelector(".sonChoice:not(.selected), .daughterChoice:not(.selected)")
+                    p.querySelector(".kingChoice:not(.selected), .queenChoice:not(.selected)")
                         .classList.add("hide");
 
-                    const selected = p.querySelector(".sonChoice.selected, .daughterChoice.selected");
-                    ctx.core.mc.gender = selected.innerText === "son" ? "M" : "F";
+                    const selected = p.querySelector(".kingChoice.selected, .queenChoice.selected");
+                    ctx.core.mc.gender = selected.innerText === "king" ? "M" : "F";
 
 
-                    InputService.clearInput(p, ".sonChoice, .daughterChoice").then(() => {
+                    InputService.clearInput(p, ".kingChoice, .queenChoice").then(() => {
                         setTimeout(() => {
                             TypingService.collapseP(p, i => i.classList.contains("selected") ? `<span class='settled' style='font-weight: 515; display: inline-block; 
                     color: var(--accent)'>${i.innerText}</span>` : "");
@@ -91,7 +91,7 @@ export default function Prologue(ctx) {
 
         getSpecialty: async () => {
             ctx.checkpoint(2);
-            let res = await ctx.typeWithChoices("After throwing on some clothes, you check your reflection in the mirror. Presentable enough. No point in overdressing for what might just be a run-of-the-mill meeting. Still, you find yourself wondering " + `whether you will make a good ${ctx.core.mc.genderSwitch("king", "queen")}. You do already know what your strong suit would be:`, ["leading the people to economic prosperity", "waging fierce military campaigns", "spearheading fortuitous new discoveries"]);
+            let res = await ctx.typeWithChoices(`As you throw on some suitably regal clothes, you find yourself wondering whether you will make a good ${ctx.core.mc.genderSwitch("king", "queen")}. You do already know what your strong suit will be:`, ["leading the people to economic prosperity", "waging fierce military campaigns", "spearheading fortuitous new discoveries"]);
             ctx.recordChoice(res.i);
 
             await ctx.episodes.Prologue.specialtyHint();
@@ -131,7 +131,7 @@ export default function Prologue(ctx) {
         getCityName: async () => {
             ctx.checkpoint(4);
             let name;
-            ctx.typeWithInputs("You leave your bedroom and begin walking down the corridor. The walls are lined with grand paintings and statues of yesteryear’s kings and queens. Here and there, windows offer up sweeping views of your hometown from the castle’s hilltop vantage point. It is a small but proud city (by the name of @), inhabited by honest farmers and artisans.", "5.5em", "getname", InputService.nameValidate).then(res => {
+            ctx.typeWithInputs("You leave your bedroom and begin walking down the corridor, admiring through the windows the sweeping views of your hometown afforded by the castle’s hilltop vantage point. It is a small but proud city (by the name of @), nestled between the forest and the sea.", "5.5em", "getname", InputService.nameValidate).then(res => {
                 const [p, inputs] = res;
                 name = inputs[0];
                 ctx.core.ui.center.classList.add("alphaactive");
@@ -148,53 +148,14 @@ export default function Prologue(ctx) {
                     settledName.style.width = InputService.getTrueWidthName(ctx.core.ui.story, settledName.innerText) + "px";
                     settledName.ontransitionend = () => (settledName.style.width = "min-content");
                     await delay(225);
-                    //  ctx.core.city.unlockCityHeader(name.value)
-                    await ctx.episodes.Prologue.meetTercius();
+                    await ctx.episodes.Prologue.beginUpheaval();
                 });
             };
         },
 
-
-        meetTercius: async () => {
+        beginUpheaval: async () => {
             ctx.checkpoint(5);
-            await ctx.typeP("You turn a corner and nearly barrel into the butler, Tercius.");
-            let res = await ctx.typeWithChoices(`“Excuse me, ${ctx.core.mc.firstName}! I trust you’re heading to the meeting? Would like you like me to bring some refreshments there?”`, ["“Good morning Tercius. Some tea might be nice. How are you?”", "“Let’s make it a feast old boy! Quiche, scones, cakes, you get the picture. Oh, and don’t forget some port.”", "“No. Out of my way.”"]);
-            ctx.recordChoice(res.i);
-            ctx.recordFact("meetingFood", res.i === 0 ? "tea" : res.i === 1 ? "feast" : "nothing")
-            switch (res.i) {
-                case 0:
-                    ctx.core.mc.bonds.Tercius += 5;
-                    break;
-                case 1:
-                    ctx.core.mc.bonds.Daphna -= 5;
-                    break;
-                case 2:
-                    ctx.core.mc.bonds.Tercius -= 5;
-                    break;
-            }
-            ctx.core.mc.unlockBonds();
-            await ctx.episodes.Prologue.terciusResponse();
-        },
-
-        terciusResponse: async () => {
-            ctx.checkpoint(6);
-            let choice = ctx.getLastChoice();
-            switch (choice) {
-                case 0:
-                    await ctx.choiceNote("+5 @ with @", ["Bond", "Tercius"], ["bondWord term", "name"], ["bond", "Tercius"]);
-                    await ctx.typeP("Tercius smiles. “I’m very well, thanks. I’ll get that tea going.” He whisks off, as fleet-footed as always, and you continue on your way.");
-                    break;
-                case 1:
-                    await ctx.choiceNote("-5 @ with @", ["Bond", "Daphna"], ["bondWord term", "name"], ["bond", "Daphna"]);
-                    await ctx.typeP("Tercius chuckles. “I’ll see to it, but you know Daphna won’t be pleased at this hour!” He whisks off, as fleet-footed as always, and you continue on your way.")
-                    break;
-                case 2:
-                    await ctx.choiceNote("-5 @ with @", ["Bond", "Tercius"], ["bondWord term", "name"], ["bond", "Tercius"]);
-                    await ctx.typeP("“By all means,” he says frostily. The impediment dealt with, you continue on your way. ")
-                    break;
-            }
-
-            //  await ctx.episodes.Prologue.startMeeting();
+            await ctx.typeP("");
         },
 
         runFrom: async (phase) => {
@@ -215,10 +176,7 @@ export default function Prologue(ctx) {
                     await ctx.episodes.Prologue.getCityName();
                     break;
                 case 5:
-                    await ctx.episodes.Prologue.meetTercius();
-                    break;
-                case 6:
-                    await ctx.episodes.Prologue.terciusResponse();
+                    await ctx.episodes.Prologue.beginUpheaval();
                     break;
             }
         }
