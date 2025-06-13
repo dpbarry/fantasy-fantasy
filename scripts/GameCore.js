@@ -13,14 +13,12 @@ import SaveManager from "./Managers/SaveManager.js";
 export default class GameCore {
     static #instance = null;
     #lastFrameTime;
-    #accumulatedTime = 0;
-    #tickInterval = 0.1;
     #isRunning;
     #lastSaveTime;
     #saveThrottleMS;
     #pendingSave;
     #saveableComponents;
-    #currentVersion = "0.0.7";
+    #currentVersion = "0.0.8";
 
 
     constructor() {
@@ -111,13 +109,8 @@ export default class GameCore {
 
         const frameTime = (currentTime - this.#lastFrameTime) / 1000;
         this.#lastFrameTime = currentTime;
-        this.#accumulatedTime += frameTime;
 
-        // Run as many ticks as needed (e.g. if frame dropped)
-        while (this.#accumulatedTime >= this.#tickInterval) {
-            this.clock.advance(this.#tickInterval);
-            this.#accumulatedTime -= this.#tickInterval;
-        }
+        this.clock.advance(frameTime);
 
 
         const now = Date.now();

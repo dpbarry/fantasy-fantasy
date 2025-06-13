@@ -15,7 +15,7 @@ export default class UIManager {
         this.activePanels = {
             "left": "",
             "center": "story",
-            "right": "",
+            "right": "settings",
         }
         this.visibleSection = "center";
 
@@ -47,6 +47,7 @@ export default class UIManager {
         this.right = document.getElementById("right");
 
         this.cityinfo = document.getElementById("cityinfo");
+        this.settings = document.getElementById("settings");
     }
 
     initialize() {

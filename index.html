@@ -4,11 +4,11 @@
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
     <title>Fantasy Fantasy</title>
-    <link href="assets/TOURNAMENT.svg" rel="preload" as="image" type="image/svg+xml">
+    <link as="image" href="assets/TOURNAMENT.svg" rel="preload" type="image/svg+xml">
     <link href="assets/TOURNAMENT.svg" rel="icon" type="image/svg+xml">
 
-    <link rel="preload" href="assets/fonts/SourceSerif.ttf" as="font" type="font/ttf" crossorigin>
-    <link rel="preload" href="assets/fonts/SourceSerifItalic.ttf" as="font" type="font/ttf" crossorigin>
+    <link as="font" crossorigin href="assets/fonts/SourceSerif.ttf" rel="preload" type="font/ttf">
+    <link as="font" crossorigin href="assets/fonts/SourceSerifItalic.ttf" rel="preload" type="font/ttf">
 
 
     <style>
@@ -254,7 +254,9 @@
         }
 
         #researchnav {
-            img {height: 2em; }
+            img {
+                height: 2em;
+            }
         }
 
         #story-wrap {
@@ -755,6 +757,126 @@
             }
         }
 
+        #settings {
+            display: flex;
+            flex-direction: column;
+            h2 {
+                font-size: 1.4rem;
+                margin-bottom: 0.3rem;
+                border-bottom: 1.5px solid var(--midBaseColor);
+            }
+
+            .setting:has(+ h2) {
+                margin-bottom: 1rem;
+            }
+
+            label {
+                font-size: 1.3rem;
+                align-items: center;
+                display: flex;
+                flex-direction: row;
+                column-gap: 0.5rem;
+                white-space: nowrap;
+            }
+
+            #about-header {
+                margin-top: auto;
+            }
+            #about {
+                text-align: justify;
+                font-style: italic;
+            }
+
+            a {
+                color: var(--accent);
+                opacity: 0.8;
+
+                @media (hover: hover) and (pointer: fine) {
+                    &:hover {
+                        opacity: 1;
+                    }
+                }
+            }
+
+            /*noinspection CssInvalidPseudoSelector*/
+
+            select,
+            ::picker(select) {
+                appearance: base-select;
+            }
+
+            input, select, option {
+                font-family: SourceSerif;
+                outline: none;
+                border: none;
+                background: var(--darkBaseColor);
+                font-size: 1rem;
+                max-width: 9rem;
+                color: var(--accent);
+                font-weight: 800;
+            }
+
+            #github {
+                background: url("./assets/INVERTOCAT.svg") no-repeat;
+                background-size: 100%;
+                width: 30px;
+                height: 30px;
+                cursor: pointer;
+                margin-left: auto;
+                margin-right: auto;
+                margin-top: 5px;
+                display: block;
+                text-align: center;
+                filter: var(--accentFilter);
+            }
+
+            .theme {
+                input {
+                    display: inline-block;
+                    margin: 0;
+                    appearance: none;
+                    height: 1.3rem;
+                    width: 1.5rem;
+                    background-color: #C0C0C0;
+                    position: relative;
+                    border-radius: 1px;
+                    cursor: pointer;
+                    transition: filter 0.1s ease;
+                }
+
+                input:checked {
+                    border: 1.5px solid var(--baseColor);
+                }
+
+                #black {
+                    background-color: color-mix(in hsl, var(--contrastColor), var(--accent) 5%);
+                }
+
+                #dark {
+                    background-color: hsl(0, 0%, 10%);
+                }
+
+                #sepia {
+                    background-color: hsl(45, 99%, 85%);
+                }
+                #light {
+                    background-color: hsl(0, 0%, 95%);
+                }
+
+                #lightning {
+                    background-color: var(--accent);
+                }
+                #acid {
+                    background-color: hsl(125, 82.5%, 45%);
+                }
+                #amber {
+                    background-color: hsl(45, 82.5%, 45%);
+                }
+                #arcane {
+                    background-color: hsl(250, 82.5%, 45%);
+                }
+            }
+        }
 
         #quick-wrap {
             grid-area: quick;
@@ -1153,7 +1275,9 @@
                 p {
                     transition: opacity 0.3s;
                     opacity: 0.8;
-                    @starting-style {opacity: 0; }
+                    @starting-style {
+                        opacity: 0;
+                    }
                 }
             }
         }
@@ -1218,7 +1342,7 @@
             }
         }
     </style>
-  <!--  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
+    <!--  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
 </head>
 
 <body>
@@ -1323,7 +1447,7 @@
             </button>
             <button class="nudge locked navbutton hastip" data-loc="center" data-panel="trade"
                     data-tip="tradenav" id="tradenav"><img alt="Trade"
-                                                                 src="assets/TRADE.svg">
+                                                           src="assets/TRADE.svg">
             </button>
             <button class="nudge locked navbutton hastip" data-loc="center" data-panel="army" data-tip="armynav"
                     id="armynav"><img
@@ -1401,7 +1525,7 @@
         <div class="box" id="updates">
             <div data-masksize="20" id="upate-logs"></div>
             <button class="nudge navbutton hastip" data-tip="mailnav" id="mailnav"><img alt="Mail"
-                                                                                          src="assets/MAIL.svg">
+                                                                                        src="assets/MAIL.svg">
             </button>
             <h1 class="lock"> LOCKED </h1>
         </div>
@@ -1439,10 +1563,61 @@
         </div>
     </div>
     <div class="wrapper sidebar" id="right">
-        <div class="box" id="cityinfo">
+        <div class="box nodisplay" id="cityinfo">
             <div id="city-header"></div>
             <div id="city-stats"></div>
             <h1 class="lock"> LOCKED </h1>
+        </div>
+        <div class="box" id="settings">
+            <h2 id="appearance-header">Appearance</h2>
+            <div class="setting">
+                <label class="theme">
+                    Background
+                    <input checked id="black" name="background" type="radio"/>
+                    <input id="dark" name="background" type="radio"/>
+                    <input id="sepia" name="background" type="radio"/>
+                    <input id="light" name="background" type="radio"/>
+                </label>
+            </div>
+            <div class="setting">
+                <label class="theme">
+                    Theme
+                    <input checked id="lightning" name="accent" type="radio"/>
+                    <input id="acid" name="accent" type="radio"/>
+                    <input id="amber" name="accent" type="radio"/>
+                    <input id="arcane" name="accent" type="radio"/>
+                </label>
+            </div>
+            <h2 id="game-header">Game</h2>
+            <div class="setting">
+                <label>
+                    Number Format
+                    <select id="numformat" name="numformat">
+                        <option selected value="alphabetical">Alphabetical</option>
+                        <option value="scientific">Scientific</option>
+                    </select>
+                </label>
+            </div>
+            <h2 id="system-header">System</h2>
+            <div class="setting">
+                <label>
+                    UI Refresh Rate
+                    <select id="refreshUI" name="refreshUI">
+                        <option value="350">100</option>
+                        <option value="250">75</option>
+                        <option value="500">50</option>
+                        <option value="1000" selected>30</option>
+                        <option value="2000">20</option>
+                        <option value="2000">10</option>
+                        <option value="2000">5</option>
+                        <option value="2000">1</option>
+                    </select>                </label>
+            </div>
+            <h2 id="about-header">About</h2>
+            <div id="about">
+                This site does not collect any data and is a WIP. Most icons are sourced from <a href="https://game-icons.net/about.html#:~:text=Authors%20%26%20Contributors">game-icons.net</a>.
+                <a id="github" target="_blank" rel="noopener noreferrer" href="https://github.com/dpbarry/fantasy-fantasy"></a>
+            </div>
         </div>
     </div>
 
