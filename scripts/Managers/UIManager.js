@@ -6,6 +6,7 @@ import StoryPanel from "../UI/Panels/StoryPanel.js";
 import NewsPanel from "../UI/Panels/NewsPanel.js";
 import QuickAccess from "../UI/Chrome/QuickAccess.js";
 import CityInfoPanel from "../UI/Panels/CityInfoPanel.js";
+import SettingsPanel from "../UI/Panels/SettingsPanel.js";
 
 export default class UIManager {
     constructor(core) {
@@ -29,6 +30,7 @@ export default class UIManager {
             news: new NewsPanel(this.core),
             quickacc: new QuickAccess(this.core),
             cityinfo: new CityInfoPanel(this.core),
+            settings: new SettingsPanel(this.core),
         }
     }
 
@@ -104,8 +106,5 @@ export default class UIManager {
     deserialize(data) {
         this.activePanels = data.activePanels;
         this.visibleSection = data.visibleSection;
-    }
-
-    updateAccess() {
     }
 }

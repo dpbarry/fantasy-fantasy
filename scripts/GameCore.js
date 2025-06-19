@@ -9,6 +9,7 @@ import NewsManager from "./Managers/NewsManager.js";
 import HackService from "./UI/Services/HackService.js";
 import LoadingService from "./UI/Services/LoadingService.js";
 import SaveManager from "./Managers/SaveManager.js";
+import SettingsManager from "./Managers/SettingsManager.js";
 
 export default class GameCore {
     static #instance = null;
@@ -52,10 +53,11 @@ export default class GameCore {
             mc: new UserManager(this),
             news: new NewsManager(this),
             saves: new SaveManager(this),
+            settings: new SettingsManager(this),
         };
         Object.entries(this.managers).forEach(([k, m]) => {
             this[k] = m;
-            if (typeof m.serialize === "function" && typeof m.deserialize === "function" && typeof m.updateAccess === "function") {
+            if (typeof m.serialize === "function" && typeof m.deserialize === "function") {
                 this.#saveableComponents.set(k, m);
             }
         });
@@ -89,11 +91,13 @@ export default class GameCore {
     async #initializeGame() {
         HackService.initialize(this);
         this.ui.readyPanels();
-        await LoadingService.initialize();
         await this.loadLastSave();
-        this.managers.story.run();
+        this.managers.settings.earlyInit();
+        await LoadingService.initialize();
+        Object.values(this.managers).forEach(m => {
+            if (typeof m.boot === "function") m.boot();
+        })
         await LoadingService.hide();
-        this.ui.boot();
 
         this.#isRunning = true;
         this.#lastFrameTime = performance.now();
@@ -161,6 +165,7 @@ export default class GameCore {
             const snapshot = await this.storage.load();
             if (!snapshot) return false;
 
+
             if (snapshot.version !== this.#currentVersion) {
                 console.warn(`Save version ${snapshot.version} not supported (want ${this.#currentVersion}). Resetting...`);
                 return false;
@@ -169,7 +174,6 @@ export default class GameCore {
             for (const [key, component] of this.#saveableComponents) {
                 if (snapshot.data[key]) {
                     component.deserialize(snapshot.data[key]);
-                    component.updateAccess();
                 } else {
                     console.warn(`No saved data found for component: ${key}`);
                 }

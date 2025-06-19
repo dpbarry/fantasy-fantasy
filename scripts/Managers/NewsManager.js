@@ -40,7 +40,7 @@ export default class NewsManager {
         Object.assign(this, data);
     }
 
-    updateAccess() {
+    boot() {
         if (!this.logs.length) return;
         let lock = this.core.ui.news.querySelector(".lock");
         if (lock) lock.remove();

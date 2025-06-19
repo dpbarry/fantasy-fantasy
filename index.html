@@ -40,7 +40,7 @@
 
             --topFontSize: clamp(0.4rem, 1.5vw, 1.1rem);
             --contrastColor: #000;
-            --bgColor: color-mix(in hsl, var(--contrastColor), var(--accent) 5%);
+            --bgColor: color-mix(in hsl, var(--contrastColor), var(--accent) 4%);
             --baseColor: hsl(0, 0%, 90%);
             --baseFilter: invert(0.9);
             --darkBaseColor: color-mix(in hsl, var(--contrastColor) 93%, var(--baseColor));
@@ -48,7 +48,6 @@
             --lightBaseColor: color-mix(in hsl, var(--contrastColor) 20%, var(--baseColor));
             --boxColor: var(--baseColor);
             --accent: hsl(190, 82.5%, 45%);
-            /*  --accent: hsl(125, 82.5%, 45%); */
 
             --darkerAccent: color-mix(in hsl, var(--accent) 45%, var(--contrastColor));
             --darkAccent: color-mix(in hsl, var(--accent) 70%, var(--contrastColor));
@@ -59,6 +58,10 @@
             --wisdomColor: hsl(210, 82.5%, 45%);
         }
 
+        :root.notransition * {
+            transition-duration: 0.01s !important;
+            animation-duration: 0.01s !important;
+        }
         *, *::before, *::after {
             box-sizing: border-box;
             scrollbar-width: none;
@@ -156,7 +159,7 @@
             scroll-snap-type: x mandatory;
             scrollbar-width: none;
 
-            font-size: clamp(0.75rem, 1.5vw + 1.3vh, 1.25rem);
+            font-size: clamp(0.75rem, 1.4vw + 1.2vh, 1.25rem);
 
             & > section {
                 flex: 0 0 100%;
@@ -244,7 +247,7 @@
             &.locked {
                 cursor: default;
                 filter: none;
-                opacity: 0.5;
+                opacity: 0.33;
             }
         }
 
@@ -303,7 +306,6 @@
                 left: 0;
                 bottom: 0;
                 right: 0;
-                background: var(--darkBaseColor);
                 border: 0;
                 font-size: 1em;
                 border-bottom: 0.06em solid var(--baseColor);
@@ -347,7 +349,7 @@
                 color: var(--accent);
                 border-color: var(--accent);
                 caret-color: var(--darkAccent);
-                background: var(--darkBaseColor);
+                background: transparent
             }
 
             .kingChoice, .queenChoice {
@@ -367,11 +369,11 @@
                     content: "";
                     position: absolute;
                     left: 0;
-                    top: 0;
+                    top: 1px;
                     width: 100%;
                     height: 100%;
-                    border: 0.5px solid transparent;
-                    border-bottom-width: 1.75px;
+                    border: 1.5px solid transparent;
+                    border-bottom-width: 2px;
                     border-radius: 3px;
                     animation: cueing 0.7s linear infinite alternate;
                     transition: scale 0.1s, border 0.1s, opacity 0.05s, filter 0.1s;
@@ -380,8 +382,8 @@
 
 
                 &.visible::after {
-                    border: 0.5px solid var(--accent);
-                    border-bottom-width: 1.75px;
+                    border: 1.5px solid var(--accent);
+                    border-bottom-width: 2px;
                 }
 
                 @media (pointer: fine) and (hover: hover) {
@@ -454,15 +456,15 @@
                     font-weight: 600;
                     margin-bottom: 0.2rem;
                     text-align: justify;
-                    left: 0;
                     position: relative;
+                    left: 0;
                     opacity: 0;
-                    transition: color 0.12s ease,
+                    transition: color 0.05s ease,
                     padding-left 0.2s ease,
                     opacity 0.2s ease,
                     font-weight 0.2s ease;
                     will-change: font-size;
-
+                    counter-increment: item;
 
                     &.adding {
                         animation: choiceIn 0.35s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
@@ -473,12 +475,11 @@
                     }
 
                     &::before {
-                        content: none;
+                        content: counter(item) ".";
                         display: block;
                         position: relative;
-                        left: -0.7em;
-                        font-weight: 900;
                         opacity: 1;
+                        margin-right: 0.75em;
                         color: var(--accent);
                         transition: left 0.2s ease,
                         opacity 0.25s ease;
@@ -487,11 +488,6 @@
                     @media (hover: hover) and (pointer: fine) {
                         &:hover {
                             color: var(--accent);
-
-                            &::before {
-                                left: -0.22em;
-                            }
-
                         }
                     }
 
@@ -500,18 +496,13 @@
                         color: var(--accent);
                         padding-left: 0;
                         pointer-events: none;
-                        transition: color 0.12s ease,
+                        transition: color 0.05s ease,
                         padding-left 0.25s cubic-bezier(0.4, 0.0, 0.2, 1),
                         opacity 0.2s ease,
                         font-weight 0.2s ease, text-decoration 0.3s 0.2s ease;
 
                         &::before {
-                            animation: arrowPop 0.2s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
-                        }
-
-                        &.settled {
-                            &::before {
-                            }
+                            animation: counterHide 0.2s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
                         }
                     }
 
@@ -520,14 +511,11 @@
                         transition: filter 0.25s ease, left 0.25s,
                         font-size 0.3s 0.25s cubic-bezier(0.34, 0, 0.32, 1);
                         filter: opacity(0);
-                        left: -2rem;
 
 
                         &::before {
                             opacity: 0;
-                            left: -1rem;
-                            transition: opacity 0.25s ease,
-                            left 0.25s ease;
+                            transition: opacity 0.25s ease;
                         }
                     }
                 }
@@ -540,7 +528,7 @@
         }
 
 
-        @keyframes arrowPop {
+        @keyframes counterHide {
             from {
                 opacity: 1;
             }
@@ -572,7 +560,9 @@
             }
 
             &.enter::before {
-                content: "⏎";
+                content: url("./assets/RETURN.svg");
+                vertical-align: middle;
+                filter: var(--accentFilter);
             }
 
             &.escape::before {
@@ -586,7 +576,7 @@
                 top: 0;
                 width: 100%;
                 height: 100%;
-                border: 1px solid var(--accent);
+                border: 1.5px solid var(--accent);
                 border-bottom-width: 2px;
                 border-radius: 3px;
                 animation: cueing 0.5s linear infinite alternate;
@@ -853,22 +843,22 @@
                 }
 
                 #black {
-                    background-color: color-mix(in hsl, var(--contrastColor), var(--accent) 5%);
+                    background-color: color-mix(in hsl, #000, var(--accent) 5%);
                 }
 
                 #dark {
-                    background-color: hsl(0, 0%, 10%);
+                    background-color: color-mix(in hsl, #111, var(--accent) 5%);
                 }
 
-                #sepia {
-                    background-color: hsl(45, 99%, 85%);
+                #pastel {
+                    background-color: color-mix(in hsl, var(--accent), #fff 80%);
                 }
                 #light {
-                    background-color: hsl(0, 0%, 95%);
+                    background-color: color-mix(in hsl, #fff, var(--accent) 5%);
                 }
 
                 #lightning {
-                    background-color: var(--accent);
+                    background-color: hsl(190, 82.5%, 45%);
                 }
                 #acid {
                     background-color: hsl(125, 82.5%, 45%);
@@ -877,7 +867,7 @@
                     background-color: hsl(45, 82.5%, 45%);
                 }
                 #arcane {
-                    background-color: hsl(250, 82.5%, 45%);
+                    background-color: hsl(260, 82.5%, 45%);
                 }
             }
         }
@@ -1579,7 +1569,7 @@
                     Background
                     <input checked id="black" name="background" type="radio"/>
                     <input id="dark" name="background" type="radio"/>
-                    <input id="sepia" name="background" type="radio"/>
+                    <input id="pastel" name="background" type="radio"/>
                     <input id="light" name="background" type="radio"/>
                 </label>
             </div>
@@ -1602,19 +1592,28 @@
                     </select>
                 </label>
             </div>
+            <div class="setting">
+                <label>
+                    Offline Progress
+                    <select id="offlineprogress" name="offlineprogress">
+                        <option selected value="on">On</option>
+                        <option value="off">Off</option>
+                    </select>
+                </label>
+            </div>
             <h2 id="system-header">System</h2>
             <div class="setting">
                 <label>
                     UI Refresh Rate
                     <select id="refreshUI" name="refreshUI">
-                        <option value="350">100</option>
-                        <option value="250">75</option>
-                        <option value="500">50</option>
-                        <option value="1000" selected>30</option>
-                        <option value="2000">20</option>
-                        <option value="2000">10</option>
-                        <option value="2000">5</option>
-                        <option value="2000">1</option>
+                        <option value="100">100</option>
+                        <option value="75">75</option>
+                        <option value="50">50</option>
+                        <option value="30" selected>30</option>
+                        <option value="20">20</option>
+                        <option value="10">10</option>
+                        <option value="5">5</option>
+                        <option value="1">1</option>
                     </select>                </label>
             </div>
             <h2 id="about-header">About</h2>

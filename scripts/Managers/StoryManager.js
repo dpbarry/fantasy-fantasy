@@ -89,7 +89,7 @@ export default class StoryManager {
         return await TypingService.choiceNote(text, this.core.ui.story, ...args);
     }
 
-    run() {
+    boot() {
         if (this.core.ui.activePanels["center"] !== "story") {
             this.#running = false;
             return;
@@ -108,8 +108,5 @@ export default class StoryManager {
 
     deserialize(data) {
         Object.assign(this, data);
-    }
-
-    updateAccess() {
     }
 }

@@ -11,6 +11,6 @@ export default class HeroManager {
         Object.assign(this, data);
     }
 
-    updateAccess() {}
+    boot() {}
 
 }

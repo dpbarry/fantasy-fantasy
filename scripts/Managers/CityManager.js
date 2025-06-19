@@ -55,14 +55,13 @@ export default class CityManager {
 
     deserialize(data) {
         Object.assign(this, data);
-        this.run();
     }
 
-    updateAccess() {
+    boot() {
         if (Object.values(this.cityInfoAccess).some(x => x)) {
             let lock = this.core.ui.cityinfo.querySelector(".lock");
             if (lock) lock.remove();
         }
+        this.run();
     }
-
 }

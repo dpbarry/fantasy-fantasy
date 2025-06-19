@@ -51,7 +51,7 @@ export default class UserManager {
         Object.assign(this, data);
     }
 
-    updateAccess() {
+    boot() {
         if (this.quickAccess) {
             let lock = this.core.ui.quickacc.querySelector(".lock");
             if (lock) lock.remove();

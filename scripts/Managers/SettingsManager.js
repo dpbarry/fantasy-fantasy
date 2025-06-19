@@ -1,8 +1,10 @@
+import {applyTheme} from "../UI/Services/GlobalBehavior.js";
+
 export default class SettingsManager {
-    settings = {
-        bgTheme: "black",
-        bgAccent: "lightning",
-        refreshUI: "500",
+    configs = {
+        background: "black",
+        accent: "amber",
+        refreshUI: "30",
     }
     #subscribers = [];
 
@@ -21,7 +23,13 @@ export default class SettingsManager {
     }
 
     getSettings() {
-        return this.settings;
+        return this.configs;
+    }
+
+    updateSetting(setting, value) {
+        this.configs[setting] = value;
+        applyTheme(this.core);
+        this.broadcast();
     }
 
     serialize() {
@@ -33,7 +41,11 @@ export default class SettingsManager {
         Object.assign(this, data);
     }
 
-    updateAccess() {
+    boot() {
         this.broadcast();
+    }
+    
+    earlyInit() {
+        applyTheme(this.core);
     }
 }
