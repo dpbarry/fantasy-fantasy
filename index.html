@@ -62,6 +62,7 @@
             transition-duration: 0.01s !important;
             animation-duration: 0.01s !important;
         }
+
         *, *::before, *::after {
             box-sizing: border-box;
             scrollbar-width: none;
@@ -159,7 +160,7 @@
             scroll-snap-type: x mandatory;
             scrollbar-width: none;
 
-            font-size: clamp(0.75rem, 1.4vw + 1.2vh, 1.25rem);
+            font-size: clamp(0.5rem, 0.8vw + 1.4vh, 1.25rem);
 
             & > section {
                 flex: 0 0 100%;
@@ -273,7 +274,7 @@
             overflow-y: auto;
             height: 100%;
             margin: 0;
-            font-size: 1.1em;
+            font-size: 1em;
             font-family: SourceSerif;
             font-weight: 350;
             position: relative;
@@ -554,15 +555,19 @@
             &::before {
                 position: relative;
                 display: inline-block;
-                bottom: 1px;
                 transition: scale 0.1s;
                 z-index: 3;
             }
 
             &.enter::before {
-                content: url("./assets/RETURN.svg");
-                vertical-align: middle;
+                content: "EE";
                 filter: var(--accentFilter);
+
+                background-image: url("./assets/RETURN.svg");
+                background-size: 68%;
+                background-repeat: no-repeat;
+                background-position: center;
+                color: transparent;
             }
 
             &.escape::before {
@@ -751,8 +756,9 @@
         #settings {
             display: flex;
             flex-direction: column;
+
             h2 {
-                font-size: 1.22em;
+                font-size: 1.2em;
                 margin-bottom: 0.3em;
                 border-bottom: 1.5px solid var(--midBaseColor);
             }
@@ -760,12 +766,12 @@
             .setting {
                 margin-bottom: 0.5em;
             }
+
             .setting:has(+ h2) {
                 margin-bottom: 1em;
             }
 
             label {
-                font-size: 1.1em;
                 align-items: center;
                 display: flex;
                 flex-direction: row;
@@ -776,6 +782,7 @@
             #about-header {
                 margin-top: auto;
             }
+
             #about {
                 text-align: justify;
                 font-style: italic;
@@ -784,7 +791,7 @@
 
             a {
                 color: var(--accent);
-                opacity: 0.8;
+                opacity: 0.85;
 
                 @media (hover: hover) and (pointer: fine) {
                     &:hover {
@@ -794,6 +801,7 @@
             }
 
             /*noinspection CssInvalidPseudoSelector*/
+
             select,
             ::picker(select) {
                 appearance: base-select;
@@ -803,11 +811,15 @@
                 font-family: SourceSerif;
                 outline: none;
                 border: none;
-                background: var(--darkBaseColor);
+                background: var(--bgColor);
                 font-size: 0.85em;
                 max-width: 9em;
                 color: var(--accent);
                 font-weight: 800;
+            }
+
+            select, option {
+                cursor: pointer;
             }
 
             #github {
@@ -853,6 +865,7 @@
                 #pastel {
                     background-color: color-mix(in hsl, var(--accent), #fff 80%);
                 }
+
                 #light {
                     background-color: color-mix(in hsl, #fff, var(--accent) 5%);
                 }
@@ -860,12 +873,15 @@
                 #lightning {
                     background-color: hsl(190, 82.5%, 45%);
                 }
+
                 #acid {
                     background-color: hsl(125, 82.5%, 45%);
                 }
+
                 #amber {
                     background-color: hsl(45, 82.5%, 45%);
                 }
+
                 #arcane {
                     background-color: hsl(260, 82.5%, 45%);
                 }
@@ -1001,9 +1017,17 @@
                 color: transparent;
             }
 
+            .key.enter {
+                background-image: url("./assets/RETURN.svg");
+                background-size: 1em;
+                background-repeat: no-repeat;
+                background-position: center;
+                filter: var(--accentFilter);
+                color: transparent;
+            }
+
             .key.spc {
                 font-size: 0.95em;
-
             }
 
             .key.action:last-of-type {
@@ -1039,6 +1063,7 @@
             font-family: SourceSerif, serif;
             transition: opacity 0.1s;
             z-index: 1000;
+
             p + p {
                 margin-top: 0.35em;
             }
@@ -1341,7 +1366,7 @@
 
 <body>
 <div id="dialog-overlay"></div>
-<div id="loading-overlay">
+<div class="hidden" id="loading-overlay">
     <div class="filling-icon">
         <svg
                 class="icon-base"
@@ -1490,7 +1515,7 @@
             <div class="key">Z</div>
             <div class="key action bkspc">⟵</div>
             <div class="key action spc">SPC</div>
-            <div class="key action">⏎</div>
+            <div class="key action enter">⏎</div>
         </div>
         <div class="keyboard" id="numboard">
             <div class="key">1</div>
@@ -1505,7 +1530,7 @@
             <div class="key">0</div>
             <div class="key">.</div>
             <div class="key action bkspc">⟵</div>
-            <div class="key action">⏎</div>
+            <div class="key action enter">⏎</div>
         </div>
     </div>
 
@@ -1609,17 +1634,19 @@
                         <option value="100">100</option>
                         <option value="75">75</option>
                         <option value="50">50</option>
-                        <option value="30" selected>30</option>
+                        <option selected value="30">30</option>
                         <option value="20">20</option>
                         <option value="10">10</option>
                         <option value="5">5</option>
                         <option value="1">1</option>
-                    </select>                </label>
+                    </select> </label>
             </div>
             <h2 id="about-header">About</h2>
             <div id="about">
-                This site does not collect any data and is a WIP. Most icons are sourced from <a href="https://game-icons.net/about.html#:~:text=Authors%20%26%20Contributors">game-icons.net</a>.
-                <a id="github" target="_blank" rel="noopener noreferrer" href="https://github.com/dpbarry/fantasy-fantasy"></a>
+                This site does not collect any data and is a WIP. Most icons are sourced from <a
+                    href="https://game-icons.net/about.html#:~:text=Authors%20%26%20Contributors">game-icons.net</a>.
+                <a href="https://github.com/dpbarry/fantasy-fantasy" id="github" rel="noopener noreferrer"
+                   target="_blank"></a>
             </div>
         </div>
     </div>

@@ -57,12 +57,12 @@ export function applyTheme(core) {
         case "black":
             STYLE.setProperty("--contrastColor", "#000");
             STYLE.setProperty("--baseColor", "#eee");
-            STYLE.setProperty("--baseFilter", "invert(0.97)");
+            STYLE.setProperty("--baseFilter", "invert(0.9)");
             break;
         case "dark":
             STYLE.setProperty("--contrastColor", "#111");
             STYLE.setProperty("--baseColor", "#eee");
-            STYLE.setProperty("--baseFilter", "invert(0.97)");
+            STYLE.setProperty("--baseFilter", "invert(0.9)");
             break;
         case "pastel":
             STYLE.setProperty("--contrastColor", "color-mix(in hsl, var(--accent), #fff 80%)");
