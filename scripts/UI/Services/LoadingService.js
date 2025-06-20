@@ -129,10 +129,10 @@ export default class LoadingService {
                 this.y = Math.random() * LoadingService.#canvas.height;
                 this.speed = 0.5 + Math.random();
                 this.angle = Math.random() * Math.PI * 2;
-                this.size = 1 + Math.random() * 2;
+                this.size = 1 + Math.random() * 2.5;
                 this.life = this.maxLife = 0.7 + Math.random() * 0.3;
-                const hue = 15 + Math.random() * 35;
-                this.color = `hsl(${hue},${80 + Math.random() * 20}%,${50 + Math.random() * 20}%)`;
+                const hue = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--accent").match(/hsl\(([\d.]+)/)[1]);
+                this.color = `hsl(${hue},${80 + Math.random() * 40}%,${50 + Math.random() * 40}%)`;
             }
 
             update() {

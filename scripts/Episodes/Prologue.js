@@ -61,7 +61,6 @@ export default function Prologue(ctx) {
                         queenChoice.classList.remove("selected");
                         c.classList.add("selected");
                     };
-                    c.onpointerdown = () => c.classList.add("nudged");
                 });
 
                 const finishGetGender = () => {

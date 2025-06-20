@@ -374,7 +374,6 @@
                     width: 100%;
                     height: 100%;
                     border: 1.5px solid transparent;
-                    border-bottom-width: 2px;
                     border-radius: 3px;
                     animation: cueing 0.7s linear infinite alternate;
                     transition: scale 0.1s, border 0.1s, opacity 0.05s, filter 0.1s;
@@ -384,7 +383,6 @@
 
                 &.visible::after {
                     border: 1.5px solid var(--accent);
-                    border-bottom-width: 2px;
                 }
 
                 @media (pointer: fine) and (hover: hover) {
@@ -560,11 +558,11 @@
             }
 
             &.enter::before {
-                content: "EE";
+                content: "ee";
                 filter: var(--accentFilter);
 
                 background-image: url("./assets/RETURN.svg");
-                background-size: 68%;
+                background-size: 65%;
                 background-repeat: no-repeat;
                 background-position: center;
                 color: transparent;
@@ -582,9 +580,8 @@
                 width: 100%;
                 height: 100%;
                 border: 1.5px solid var(--accent);
-                border-bottom-width: 2px;
                 border-radius: 3px;
-                animation: cueing 0.5s linear infinite alternate;
+                animation: cueing 0.7s linear infinite alternate;
                 transition: scale 0.1s, opacity 0.1s;
             }
 
@@ -801,10 +798,15 @@
             }
 
             /*noinspection CssInvalidPseudoSelector*/
-
             select,
             ::picker(select) {
                 appearance: base-select;
+                background: var(--bgColor);
+            }
+            /*noinspection CssInvalidPseudoSelector*/
+            ::picker(select) {
+                border: 1px solid var(--baseColor);
+                font-size: 1em;
             }
 
             input, select, option {
@@ -851,7 +853,7 @@
                 }
 
                 input:checked {
-                    border: 1.5px solid var(--baseColor);
+                    border: 2px solid var(--baseColor);
                 }
 
                 #black {
@@ -984,8 +986,7 @@
 
             .key {
                 background: transparent;
-                border: 1.5px solid var(--accent);
-                border-bottom-width: 2.25px;
+                border: 2px solid var(--accent);
                 border-radius: 3px;
                 color: var(--accent);
                 font-weight: 750;
@@ -1010,7 +1011,7 @@
             .key.bkspc {
                 background-image: url("./assets/ARROW.svg");
                 rotate: 180deg;
-                background-size: 40%;
+                background-size: 1.2em;
                 background-repeat: no-repeat;
                 background-position: center;
                 filter: var(--accentFilter);
@@ -1019,7 +1020,7 @@
 
             .key.enter {
                 background-image: url("./assets/RETURN.svg");
-                background-size: 1em;
+                background-size: 0.8em;
                 background-repeat: no-repeat;
                 background-position: center;
                 filter: var(--accentFilter);
