@@ -77,12 +77,13 @@ export default class InputService {
      * @param {string} key
      * @param {function} cb
      * @param {boolean} immediatelyVisible
+     * @param {string} text
      * @returns {HTMLSpanElement}
      */
-    static getCue(key, cb, immediatelyVisible = false) {
+    static getCue(key, cb, immediatelyVisible = false, text = "") {
         const cue = document.createElement("span");
-        cue.className = `cue ${key.toLowerCase()}`;
-        cue.addEventListener("pointerdown", () => cue.classList.add("nudged"));
+        cue.innerText = text;
+        cue.className = `cue ${key.toLowerCase()} nudge`;
 
         function cueReceived() {
             document.removeEventListener("keydown", wrapKeydown);

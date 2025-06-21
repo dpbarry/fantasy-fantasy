@@ -139,6 +139,7 @@ export default function Prologue(ctx) {
             });
 
             const finishGetCityName = p => {
+                ctx.core.city.name = name.value;
                 InputService.clearInput(p).then(async () => {
                     TypingService.collapseP(p, i => `<span class='getname settled' style='display: inline-block; text-align: center; 
                width: ${p.querySelector(".getname").getBoundingClientRect().width}px; 
@@ -154,7 +155,22 @@ export default function Prologue(ctx) {
 
         beginUpheaval: async () => {
             ctx.checkpoint(5);
-            await ctx.typeP("");
+            await ctx.typeP(`Out of nowhere, the floor heaves, knocking you off your feat. Outside, the sky explodes into a kaleidoscope of surreal colors and the land beyond ${ctx.core.city.name} transforms. The events of your dream—that is, your vision—rush back to you:`);
+            await ctx.typeP("The long prophecied Cataclysm has arrived.", {italic: true});
+            await ctx.typeP("The creator of the universe has perished, and his limitless power has been scattered across the cosmos, rewriting the laws of reality along the way.", {italic: true});
+            await ctx.typeP("It so happens that some of that power has found its home in you.", {italic: true});
+
+            await ctx.episodes.Prologue.cueBegin();
+        },
+
+        cueBegin: async () => {
+            ctx.checkpoint(6);
+            const button = document.createElement("button");
+            button.id = "beginGame";
+            button.className = "ripples";
+            button.innerText = "Begin Game";
+
+            ctx.core.ui.story.appendChild(button);
         },
 
         runFrom: async (phase) => {
@@ -176,6 +192,9 @@ export default function Prologue(ctx) {
                     break;
                 case 5:
                     await ctx.episodes.Prologue.beginUpheaval();
+                    break;
+                case 6:
+                    await ctx.episodes.Prologue.cueBegin();
                     break;
             }
         }

@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!--suppress CssInvalidFunction -->
 <html lang="en">
 <head>
     <meta charset="UTF-8"/>
@@ -71,6 +72,9 @@
 
             &::selection {
                 background: color-mix(in hsl, transparent 30%, var(--darkerAccent));
+            }
+            &:focus {
+                outline: none;
             }
         }
 
@@ -542,7 +546,7 @@
             font-size: 1em;
             opacity: 0;
             color: var(--accent);
-            font-weight: 650;
+            font-weight: 600;
             transition: opacity 0.2s, padding 0.2s;
             user-select: none;
             pointer-events: none;
@@ -656,9 +660,58 @@
             }
         }
 
+        .ripples {
+            overflow: hidden;
+            position: relative;
+        }
+
+        .ripple {
+            background: var(--accent);
+            width: 3px;
+            height: 3px;
+            border-radius: 100%;
+            opacity: 0.3;
+            position: absolute;
+            transition: transform 0.5s cubic-bezier(.38,.23,.69,1.02), opacity 0.5s;
+            pointer-events: none;
+            will-change: transform;
+            z-index: -1;
+        }
+
+        .ripple.run {
+            transform: scale(280);
+            opacity: 0;
+        }
+
+        button:not(.navbutton) {
+            appearance: none;
+            font-family: SourceSerif;
+            background: transparent;
+            color: var(--accent);
+            border: 1.5px solid var(--accent);
+            font-weight: 600;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: scale 0.1s;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+
+            @media (hover: hover) and (pointer: fine) {
+                &:hover {
+
+                }
+            }
+        }
+
+        #beginGame {
+            padding: 2px 2em;
+        }
+
         .term {
             white-space: nowrap;
-            transition: color 0.15s;
+            transition: color 0.05s;
             font-weight: 650;
 
 
@@ -1049,14 +1102,14 @@
         .tooltip {
             position: fixed;
             background: var(--contrastColor);
-            filter: drop-shadow(0 0 0.3em var(--contrastColor));
+            filter: drop-shadow(0 0 0.3em light-dark(#ddd, #000));
             border: 1.5px solid var(--baseColor);
-            padding: 0.2rem 0.2rem;
+            padding: 0.3rem 0.3rem;
             width: fit-content;
             max-width: 16.5rem;
             border-radius: 3px;
             color: var(--baseColor);
-            font-size: 0.8em;
+            font-size: 0.75em;
             pointer-events: none;
             @starting-style {
                 opacity: 0;
@@ -1488,50 +1541,51 @@
             <div data-masksize="28" id="story"></div>
         </div>
         <div class="keyboard" id="alphaboard">
-            <div class="key">A</div>
-            <div class="key">B</div>
-            <div class="key">C</div>
-            <div class="key">D</div>
-            <div class="key">E</div>
-            <div class="key">F</div>
-            <div class="key">G</div>
-            <div class="key">H</div>
-            <div class="key">I</div>
-            <div class="key">J</div>
-            <div class="key">K</div>
-            <div class="key">L</div>
-            <div class="key">M</div>
-            <div class="key">N</div>
-            <div class="key">O</div>
-            <div class="key">P</div>
-            <div class="key">Q</div>
-            <div class="key">R</div>
-            <div class="key">S</div>
-            <div class="key">T</div>
-            <div class="key">U</div>
-            <div class="key">V</div>
-            <div class="key">W</div>
-            <div class="key">X</div>
-            <div class="key">Y</div>
-            <div class="key">Z</div>
-            <div class="key action bkspc">⟵</div>
-            <div class="key action spc">SPC</div>
-            <div class="key action enter">⏎</div>
+            <div class="key nudge">A</div>
+            <div class="key nudge">B</div>
+            <div class="key nudge">C</div>
+            <div class="key nudge">D</div>
+            <div class="key nudge">E</div>
+            <div class="key nudge">F</div>
+            <div class="key nudge">G</div>
+            <div class="key nudge">H</div>
+            <div class="key nudge">I</div>
+            <div class="key nudge">J</div>
+            <div class="key nudge">K</div>
+            <div class="key nudge">L</div>
+            <div class="key nudge">M</div>
+            <div class="key nudge">N</div>
+            <div class="key nudge">O</div>
+            <div class="key nudge">P</div>
+            <div class="key nudge">Q</div>
+            <div class="key nudge">R</div>
+            <div class="key nudge">S</div>
+            <div class="key nudge">T</div>
+            <div class="key nudge">U</div>
+            <div class="key nudge">V</div>
+            <div class="key nudge">W</div>
+            <div class="key nudge">X</div>
+            <div class="key nudge">Y</div>
+            <div class="key nudge">Z</div>
+            <div class="key action bkspc nudge">⟵</div>
+            <div class="key action spc nudge">SPC</div>
+            <div class="key action enter nudge">⏎</div>
         </div>
+
         <div class="keyboard" id="numboard">
-            <div class="key">1</div>
-            <div class="key">2</div>
-            <div class="key">3</div>
-            <div class="key">4</div>
-            <div class="key">5</div>
-            <div class="key">6</div>
-            <div class="key">7</div>
-            <div class="key">8</div>
-            <div class="key">9</div>
-            <div class="key">0</div>
-            <div class="key">.</div>
-            <div class="key action bkspc">⟵</div>
-            <div class="key action enter">⏎</div>
+            <div class="key nudge">1</div>
+            <div class="key nudge">2</div>
+            <div class="key nudge">3</div>
+            <div class="key nudge">4</div>
+            <div class="key nudge">5</div>
+            <div class="key nudge">6</div>
+            <div class="key nudge">7</div>
+            <div class="key nudge">8</div>
+            <div class="key nudge">9</div>
+            <div class="key nudge">0</div>
+            <div class="key nudge">.</div>
+            <div class="key action bkspc nudge">⟵</div>
+            <div class="key action enter nudge">⏎</div>
         </div>
     </div>
 

@@ -1,7 +1,6 @@
 export default function setupKeyboard() {
     document.querySelectorAll(".key").forEach(k => {
         k.tabIndex = 0;
-        k.addEventListener("pointerdown", () => k.classList.add("nudged"));
         k.onpointerdown = () => {
             k.focus();
 

@@ -45,6 +45,7 @@ export default function setupGlobalBehavior(core) {
     window.addEventListener("resize", () => {
         scrollSection(core.ui.visibleSection, "auto");
     });
+
 }
 
 export function applyTheme(core) {
@@ -58,21 +59,25 @@ export function applyTheme(core) {
             STYLE.setProperty("--contrastColor", "#000");
             STYLE.setProperty("--baseColor", "#eee");
             STYLE.setProperty("--baseFilter", "invert(0.9)");
+            STYLE.colorScheme = "dark";
             break;
         case "dark":
             STYLE.setProperty("--contrastColor", "#111");
             STYLE.setProperty("--baseColor", "#eee");
             STYLE.setProperty("--baseFilter", "invert(0.9)");
+            STYLE.colorScheme = "dark";
             break;
         case "pastel":
             STYLE.setProperty("--contrastColor", "color-mix(in hsl, var(--accent), #fff 80%)");
             STYLE.setProperty("--baseColor", "#111");
             STYLE.setProperty("--baseFilter", "invert(0.1)");
+            STYLE.colorScheme = "light";
             break;
         case "light":
             STYLE.setProperty("--contrastColor", "#fff");
             STYLE.setProperty("--baseColor", "#111");
             STYLE.setProperty("--baseFilter", "invert(0.1)");
+            STYLE.colorScheme = "light";
             break;
     }
 
@@ -97,4 +102,34 @@ export function applyTheme(core) {
     window.requestAnimationFrame(() => {
         document.documentElement.classList.remove("notransition");
     });
+}
+
+export function spawnRipple(mouseEvent, element) {
+    // Create a ripple element
+    const rippleEl = document.createElement('div');
+    rippleEl.classList.add('ripple');
+
+    // Position the ripple
+    let x = element.offsetWidth / (Math.floor(Math.random() * 5) + 1);
+    let y = element.offsetHeight / (Math.floor(Math.random() * 5) + 1);
+
+    if (!mouseEvent.simulated) {
+        x = mouseEvent.offsetX;
+        y = mouseEvent.offsetY;
+    }
+
+    rippleEl.style.left = `${x}px`;
+    rippleEl.style.top = `${y}px`;
+    element.appendChild(rippleEl);
+
+    requestAnimationFrame(() => {
+        rippleEl.classList.add('run');
+    });
+
+    // Remove ripple element when the transition is done
+    rippleEl.addEventListener('transitionend', () => {
+        rippleEl.remove();
+    });
+
+    return rippleEl;
 }

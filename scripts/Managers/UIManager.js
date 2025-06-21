@@ -1,6 +1,6 @@
 import createTooltipService from "../UI/Services/TooltipService.js";
 import setupKeyboard from "../UI/Components/Keyboard.js";
-import setupGlobalBehavior from "../UI/Services/GlobalBehavior.js";
+import setupGlobalBehavior, {spawnRipple} from "../UI/Services/GlobalBehavior.js";
 import {verticalScroll} from "../Utils.js";
 import StoryPanel from "../UI/Panels/StoryPanel.js";
 import NewsPanel from "../UI/Panels/NewsPanel.js";
@@ -71,6 +71,45 @@ export default class UIManager {
         document.onpointerup = () => {
             document.querySelectorAll(".nudged").forEach(b => b.classList.remove("nudged"));
         };
+
+        document.querySelectorAll(".ripples").forEach(el => {
+            el.addEventListener("click", (e) => {
+                spawnRipple(e, el);
+            });
+        });
+
+        const interactiveObserver = new MutationObserver(mutations => {
+            mutations.forEach(mutation => {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === 1) { // Element node
+                        if (node.classList.contains("nudge")) {
+                            node.addEventListener("pointerdown", () => node.classList.add("nudged"));
+                        }
+                        if (node.classList.contains("ripples")) {
+                            node.addEventListener("click", (e) => {
+                                spawnRipple(e, node);
+                            });
+                        }
+
+                        // Also check child elements, in case multiple elements were added inside a wrapper
+                        node.querySelectorAll?.(".nudge").forEach(b => {
+                            b.addEventListener("pointerdown", () => b.classList.add("nudged"));
+                        });
+                        node.querySelectorAll?.(".ripples").forEach(el => {
+                            el.addEventListener("click", (e) => {
+                                spawnRipple(e, el);
+                            });
+                        });
+                    }
+                });
+            });
+        });
+
+        // Start observing the document body for child additions
+        interactiveObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
 
         setupKeyboard();
         this.story.addEventListener("scroll", () => {

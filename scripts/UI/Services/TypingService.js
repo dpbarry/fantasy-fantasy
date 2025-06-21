@@ -12,8 +12,11 @@ export default class TypingService {
         return Promise.resolve(body);
     }
 
-    static async typeP(text, body) {
+    static async typeP(text, body, opts = {italic: false}) {
         const p = document.createElement("p");
+        if (opts.italic) {
+            p.style.fontStyle = "italic";
+        }
         body.appendChild(p);
         await this.type(text, p);
         return Promise.resolve(p);

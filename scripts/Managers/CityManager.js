@@ -29,9 +29,7 @@ export default class CityManager {
         return {...this};
     }
 
-    unlockCityHeader(pName) {
-        this.name = pName;
-        this.cityInfoAccess.header = true;
+    unlockCityHeader() {
         unlockPanel(this.core.ui.cityinfo.querySelector("#cityinfo")).then(() => {
             this.core.ui.show("right", "cityinfo")
         });
