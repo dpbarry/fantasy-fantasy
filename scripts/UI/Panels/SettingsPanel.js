@@ -39,6 +39,15 @@ export default class SettingsPanel {
                     }
                 });
             }
-        })
+        });
+    }
+
+    updateVisibility(loc, panel) {
+        if (loc === "right") {
+            if (panel === "settings")
+                this.root.classList.add("shown");
+            else
+                this.root.classList.remove("shown");
+        }
     }
 }

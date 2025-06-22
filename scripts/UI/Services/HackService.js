@@ -1,4 +1,3 @@
-import InputService from "./InputService.js";
 import {delay} from "../../Utils.js";
 
 export default class HackService {
@@ -52,35 +51,6 @@ export default class HackService {
                 }
             }
         });
-    }
-
-
-    static async show(core) {
-        if (!document.body.contains(this.#consoleElement)) {
-            document.body.appendChild(this.#consoleElement);
-        }
-
-        this.#consoleElement.show();
-        this.#consoleElement.classList.add('visible');
-
-
-        const input = this.#consoleElement.querySelector('.console-input');
-        input.textContent = '';
-        input.focus();
-        input.onblur = () => input.focus();
-
-        const cueWrapper = document.createElement('div');
-        cueWrapper.style.cssText = 'position: absolute; right: 0; bottom: -2rem;';
-        this.#consoleElement.appendChild(cueWrapper);
-
-        const escCue = InputService.getCue('Escape', () => this.hide());
-        cueWrapper.appendChild(escCue);
-        escCue.classList.add('visible');
-
-        const feedback = this.#consoleElement.querySelector('.console-feedback');
-
-        feedback.textContent = "";
-
 
         const handleCommand = async (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -96,6 +66,41 @@ export default class HackService {
 
 
         input.addEventListener('keydown', handleCommand);
+
+        document.addEventListener('click', (e) => {
+            const rect = this.#consoleElement.getBoundingClientRect();
+
+            const clickedInDialog = (
+                rect.top <= e.clientY &&
+                e.clientY <= rect.top + rect.height &&
+                rect.left <= e.clientX &&
+                e.clientX <= rect.left + rect.width
+            );
+
+            if (!clickedInDialog) {
+               this.hide();
+            }});
+    }
+
+
+    static async show() {
+        if (!document.body.contains(this.#consoleElement)) {
+            document.body.appendChild(this.#consoleElement);
+        }
+
+        this.#consoleElement.show();
+        this.#consoleElement.classList.add('visible');
+
+
+        const input = this.#consoleElement.querySelector('.console-input');
+        input.textContent = '';
+        input.focus();
+        input.onblur = () => input.focus();
+
+        const feedback = this.#consoleElement.querySelector('.console-feedback');
+
+        feedback.textContent = "";
+        
     }
 
     static hide() {

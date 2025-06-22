@@ -59,24 +59,28 @@ export function applyTheme(core) {
             STYLE.setProperty("--contrastColor", "#000");
             STYLE.setProperty("--baseColor", "#eee");
             STYLE.setProperty("--baseFilter", "invert(0.9)");
+            STYLE.setProperty("--alpha", "1");
             STYLE.colorScheme = "dark";
             break;
         case "dark":
             STYLE.setProperty("--contrastColor", "#111");
             STYLE.setProperty("--baseColor", "#eee");
             STYLE.setProperty("--baseFilter", "invert(0.9)");
+            STYLE.setProperty("--alpha", "0.6");
             STYLE.colorScheme = "dark";
             break;
         case "pastel":
-            STYLE.setProperty("--contrastColor", "color-mix(in hsl, var(--accent), #fff 80%)");
+            STYLE.setProperty("--contrastColor", "color-mix(in hsl, var(--accent), #fff 85%)");
             STYLE.setProperty("--baseColor", "#111");
             STYLE.setProperty("--baseFilter", "invert(0.1)");
+            STYLE.setProperty("--alpha", "0.15");
             STYLE.colorScheme = "light";
             break;
         case "light":
             STYLE.setProperty("--contrastColor", "#fff");
             STYLE.setProperty("--baseColor", "#111");
             STYLE.setProperty("--baseFilter", "invert(0.1)");
+            STYLE.setProperty("--alpha", "0.15");
             STYLE.colorScheme = "light";
             break;
     }

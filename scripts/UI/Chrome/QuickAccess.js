@@ -13,7 +13,7 @@ export default class QuickAccess {
     }
 
     render() {
-        if (this.root.querySelector(".lock")) {
+        if (!this.root.classList.contains("shown")) {
             return;
         }
         this.#status.quickAccess.forEach(() => {

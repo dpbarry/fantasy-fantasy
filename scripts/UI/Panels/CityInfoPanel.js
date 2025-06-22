@@ -13,7 +13,6 @@ export default class CityInfoPanel {
     }
 
     render() {
-        if (this.root.querySelector(".lock")) return;
         if (this.#status.cityInfoAccess.header) {
             let cityName = this.root.querySelector("#city-name");
             if (!cityName) {
@@ -29,6 +28,15 @@ export default class CityInfoPanel {
                 cityLevel.innerText = this.#status.level;
             }
             // this.header.appendChild(cityLevel);
+        }
+    }
+
+    updateVisibility(loc, panel) {
+        if (loc === "right") {
+            if (panel === "cityinfo")
+                this.root.classList.add("shown");
+            else
+                this.root.classList.remove("shown");
         }
     }
 }

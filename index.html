@@ -41,7 +41,7 @@
 
             --topFontSize: clamp(0.4rem, 1.5vw, 1.1rem);
             --contrastColor: #000;
-            --bgColor: color-mix(in hsl, var(--contrastColor), var(--accent) 4%);
+            --bgColor: color-mix(in hsl, var(--contrastColor), var(--accent) 2%);
             --baseColor: hsl(0, 0%, 90%);
             --baseFilter: invert(0.9);
             --darkBaseColor: color-mix(in hsl, var(--contrastColor) 93%, var(--baseColor));
@@ -49,6 +49,7 @@
             --lightBaseColor: color-mix(in hsl, var(--contrastColor) 20%, var(--baseColor));
             --boxColor: var(--baseColor);
             --accent: hsl(190, 82.5%, 45%);
+            --alpha: 0.3;
 
             --darkerAccent: color-mix(in hsl, var(--accent) 45%, var(--contrastColor));
             --darkAccent: color-mix(in hsl, var(--accent) 70%, var(--contrastColor));
@@ -70,17 +71,17 @@
             -webkit-tap-highlight-color: transparent;
             -webkit-user-drag: none;
 
+            backface-visibility: hidden;
+
             &::selection {
                 background: color-mix(in hsl, transparent 30%, var(--darkerAccent));
             }
+
             &:focus {
                 outline: none;
             }
         }
 
-        .nodisplay {
-            display: none !important;
-        }
 
         #left-section {
             grid-area: left;
@@ -130,6 +131,11 @@
             border: 2px solid var(--boxColor);
             border-radius: 3px;
             padding: var(--boxGap);
+            display: none;
+
+            &.shown {
+                display: flex;
+            }
         }
 
         html, body {
@@ -145,6 +151,14 @@
             width: 100%;
             height: 100%;
             align-items: center;
+
+            & > .box:not(.shown) {
+                display: none !important;
+            }
+
+            &:has(.shown) .lock {
+                display: none;
+            }
         }
 
         body {
@@ -177,27 +191,21 @@
             margin: 0;
         }
 
-        *:has(> .lock) {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        *:has(> .lock) *:not(.lock) {
-            position: absolute;
-            opacity: 0;
-            pointer-events: none;
-            height: 0;
-            width: 0;
-        }
-
-
         .lock {
             transition: opacity 0.15s, bottom 0.2s;
             position: relative;
             font-size: 0.9em;
             opacity: 1;
             font-family: SourceSerif;
+            background: transparent;
+            border: 2px solid var(--boxColor);
+            width: 100%;
+            height: 100%;
+            justify-content: center;
+            align-items: center;
+            border-radius: 3px;
+            padding: var(--boxGap);
+            display: flex;
         }
 
         .lock.hide {
@@ -207,7 +215,7 @@
 
         #left {
             display: grid;
-            grid-template-rows: 70% auto;
+            /*  grid-template-rows: 70% auto; */
             grid-template-columns: 100%;
             row-gap: var(--boxGap);
         }
@@ -274,6 +282,10 @@
             overflow-y: scroll;
         }
 
+        .box:has(#story) {
+            padding: 0;
+        }
+
         #story {
             overflow-y: auto;
             height: 100%;
@@ -282,6 +294,7 @@
             font-family: SourceSerif;
             font-weight: 350;
             position: relative;
+            padding: var(--boxGap);
             padding-bottom: 18vh; /* USED IN JS */
             scroll-behavior: smooth;
 
@@ -377,7 +390,7 @@
                     top: 1px;
                     width: 100%;
                     height: 100%;
-                    border: 1.5px solid transparent;
+                    border-bottom: 1px solid transparent;
                     border-radius: 3px;
                     animation: cueing 0.7s linear infinite alternate;
                     transition: scale 0.1s, border 0.1s, opacity 0.05s, filter 0.1s;
@@ -386,7 +399,7 @@
 
 
                 &.visible::after {
-                    border: 1.5px solid var(--accent);
+                    border: 1px solid var(--accent);
                 }
 
                 @media (pointer: fine) and (hover: hover) {
@@ -566,7 +579,7 @@
                 filter: var(--accentFilter);
 
                 background-image: url("./assets/RETURN.svg");
-                background-size: 65%;
+                background-size: 66%;
                 background-repeat: no-repeat;
                 background-position: center;
                 color: transparent;
@@ -583,7 +596,7 @@
                 top: 0;
                 width: 100%;
                 height: 100%;
-                border: 1.5px solid var(--accent);
+                border: 1px solid var(--accent);
                 border-radius: 3px;
                 animation: cueing 0.7s linear infinite alternate;
                 transition: scale 0.1s, opacity 0.1s;
@@ -670,9 +683,9 @@
             width: 3px;
             height: 3px;
             border-radius: 100%;
-            opacity: 0.3;
+            opacity: 0.35;
             position: absolute;
-            transition: transform 0.5s cubic-bezier(.38,.23,.69,1.02), opacity 0.5s;
+            transition: transform 0.5s cubic-bezier(.38, .23, .69, 1.02), opacity 0.5s;
             pointer-events: none;
             will-change: transform;
             z-index: -1;
@@ -693,17 +706,20 @@
             border-radius: 3px;
             cursor: pointer;
             font-size: 1em;
-            transition: scale 0.1s;
             position: relative;
             overflow: hidden;
             z-index: 1;
+            transition: transform 0.1s, background 0.1s, scale 0.1s;
+            box-shadow: 0 0 6px transparent;
 
             @media (hover: hover) and (pointer: fine) {
-                &:hover {
-
+                &:hover, &:active {
+                    transform: translateY(-1px);
+                    background: color-mix(in hsl, var(--accent) 15%, transparent);
                 }
             }
         }
+
 
         #beginGame {
             padding: 2px 2em;
@@ -851,12 +867,15 @@
             }
 
             /*noinspection CssInvalidPseudoSelector*/
+
             select,
             ::picker(select) {
                 appearance: base-select;
                 background: var(--bgColor);
             }
+
             /*noinspection CssInvalidPseudoSelector*/
+
             ::picker(select) {
                 border: 1px solid var(--baseColor);
                 font-size: 1em;
@@ -947,7 +966,7 @@
             grid-area: quick;
         }
 
-        #quick-access:not(:has(.lock)) {
+        #quick-access {
             display: flex;
             align-items: center;
             flex-direction: row;
@@ -1202,7 +1221,7 @@
             }
         }
 
-        #cityinfo:not(:has(.lock)) {
+        #cityinfo {
             #city-header {
                 display: flex;
                 width: 100%;
@@ -1270,7 +1289,7 @@
             z-index: 100;
             pointer-events: none;
 
-            background-color: rgba(0, 0, 0);
+            background-color: rgba(0, 0, 0, var(--alpha));
             opacity: 0;
             transition: opacity .25s cubic-bezier(0.39, 0.58, 0.57, 1);
         }
@@ -1319,6 +1338,10 @@
                     clip-path: inset(0 0 0 0);
                 }
             }
+
+            &.hidden {
+                visibility: hidden;
+            }
         }
 
         #loading-overlay {
@@ -1364,7 +1387,7 @@
             border: 1px solid var(--accent);
             border-radius: 4px;
             z-index: 9999;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 0 2px rgba(0, 0, 0, 0.4), 0 0 10px rgba(0, 0, 0, 0.1);
             padding: 5px;
             margin: 0;
             width: 30vw;
@@ -1420,8 +1443,8 @@
 
 <body>
 <div id="dialog-overlay"></div>
-<div class="hidden" id="loading-overlay">
-    <div class="filling-icon">
+<div id="loading-overlay">
+    <div class="filling-icon hidden">
         <svg
                 class="icon-base"
                 role="img"
@@ -1454,7 +1477,7 @@
 </div>
 <section id="left-section">
     <div class="wrapper" id="herobar-wrap">
-        <div class="box" id="herobar">
+        <div class="box shown" id="herobar">
             <button class="nudge navbutton locked hastip" data-loc="left" data-panel="team" data-tip="teamnav"
                     id="teamnav"><img
                     alt="Team"
@@ -1485,19 +1508,19 @@
 
     </div>
     <div class="wrapper sidebar" id="left">
+        <h1 class="lock"> LOCKED </h1>
+
         <div class="box" id="team">
-            <h1 class="lock"> LOCKED </h1>
         </div>
 
         <div class="box" id="roster">
-            <h1 class="lock"> LOCKED </h1>
         </div>
     </div>
 
 </section>
 <section id="center-section">
     <div class="wrapper" id="navbar-wrap">
-        <div class="box" id="navbar">
+        <div class="box shown" id="navbar">
             <button class="nudge locked navbutton hastip" data-loc="center" data-panel="city" data-tip="citynav"
                     id="citynav"><img
                     alt="City"
@@ -1540,6 +1563,7 @@
         <div class="box" id="story-wrap">
             <div data-masksize="28" id="story"></div>
         </div>
+        <div class="box" id="farm"></div>
         <div class="keyboard" id="alphaboard">
             <div class="key nudge">A</div>
             <div class="key nudge">B</div>
@@ -1590,25 +1614,25 @@
     </div>
 
     <div class="wrapper" id="status-wrap">
+        <h1 class="lock"> LOCKED </h1>
         <div class="box" id="quick-access">
-            <h1 class="lock"> LOCKED </h1>
         </div>
     </div>
 
     <div class="wrapper" id="updates-wrap">
+        <h1 class="lock"> LOCKED </h1>
         <div class="box" id="updates">
             <div data-masksize="20" id="upate-logs"></div>
             <button class="nudge navbutton hastip" data-tip="mailnav" id="mailnav"><img alt="Mail"
                                                                                         src="assets/MAIL.svg">
             </button>
-            <h1 class="lock"> LOCKED </h1>
         </div>
 
     </div>
 </section>
 <section id="right-section">
     <div class="wrapper" id="citybar-wrap">
-        <div class="box" id="citybar">
+        <div class="box shown" id="citybar">
             <button class="nudge locked navbutton hastip" data-loc="right" data-panel="cityinfo"
                     data-tip="cityinfonav" id="cityinfonav">
                 <img
@@ -1637,12 +1661,11 @@
         </div>
     </div>
     <div class="wrapper sidebar" id="right">
-        <div class="box nodisplay" id="cityinfo">
+        <div class="box" id="cityinfo">
             <div id="city-header"></div>
             <div id="city-stats"></div>
-            <h1 class="lock"> LOCKED </h1>
         </div>
-        <div class="box" id="settings">
+        <div class="box shown" id="settings">
             <h2 id="appearance-header">Appearance</h2>
             <div class="setting">
                 <label class="theme">

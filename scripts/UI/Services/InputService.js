@@ -60,11 +60,8 @@ export default class InputService {
             document.addEventListener("keydown", keydownHandler);
 
             // Clean up event listener when focus is lost
-            input.onblur = (e) => {
+            input.onblur = () => {
                 document.removeEventListener("keydown", keydownHandler);
-                if (!e.relatedTarget?.closest("input, dialog")) {
-                    e.target.focus({preventScroll: true});
-                }
             };
         };
 
@@ -256,5 +253,17 @@ export default class InputService {
         let store = rect.width;
         p.remove();
         return store;
+    }
+    
+    
+
+    static getButton(text, id, cb, className="ripples nudge") {
+        const b = document.createElement("button");
+        b.textContent = text;
+        b.id = id;
+        b.className = className;
+        b.onclick = cb;
+
+        return b;
     }
 }

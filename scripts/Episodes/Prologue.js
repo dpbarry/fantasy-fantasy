@@ -1,6 +1,6 @@
 import InputService from "../UI/Services/InputService.js";
 import TypingService from "../UI/Services/TypingService.js";
-import {delay, unlockPanel} from "../Utils.js";
+import {delay} from "../Utils.js";
 import createHintBox from "../UI/Components/HintBox.js";
 
 export default function Prologue(ctx) {
@@ -14,28 +14,32 @@ export default function Prologue(ctx) {
         getName: async (res) => {
             const [p, inputs] = res;
             const [inputFirst, inputSecond] = inputs;
+            inputs.forEach(i => {
+                i.addEventListener("blur", (e) => {
+                    if (!e.relatedTarget?.closest("#story input, dialog")) i.focus({preventScroll: true});
+                })
+            });
             ctx.core.ui.center.classList.add("alphaactive");
 
             const finishGetName = async () => {
                 ctx.core.mc.setName(inputFirst.value, inputSecond.value);
-                unlockPanel(ctx.core.ui.news).then(async () => {
-                    ctx.core.clock.resume();
-                    ctx.core.news.update("You woke up from a strange dream.");
-                    let n = 0;
+                ctx.core.clock.resume();
+                ctx.core.ui.news.classList.add("shown");
+                ctx.core.news.update("You woke up from a strange dream.");
+                let n = 0;
 
-                    await InputService.clearInput(p);
-                    TypingService.collapseP(p, i => `<span class='getname settled' style='display: inline-block; text-align: center; 
+                await InputService.clearInput(p);
+                TypingService.collapseP(p, i => `<span class='getname settled' style='display: inline-block; text-align: center; 
                width: ${p.querySelectorAll("input")[n++].getBoundingClientRect().width}px; 
                transition: width 0.2s;'>${i.firstChild.value}</span>`);
 
-                    document.querySelectorAll(".getname").forEach(el => {
-                        el.style.width = InputService.getTrueWidthName(ctx.core.ui.story, el.innerText) + "px";
-                        el.ontransitionend = () => (el.style.width = "min-content");
-                    });
-
-                    await delay(200);
-                    await ctx.episodes.Prologue.getGender();
+                document.querySelectorAll(".getname").forEach(el => {
+                    el.style.width = InputService.getTrueWidthName(ctx.core.ui.story, el.innerText) + "px";
+                    el.ontransitionend = () => (el.style.width = "min-content");
                 });
+
+                await delay(200);
+                await ctx.episodes.Prologue.getGender();
             };
 
             ctx.core.ui.story.append(InputService.getCue("Enter", () => finishGetName()));
@@ -133,6 +137,9 @@ export default function Prologue(ctx) {
             ctx.typeWithInputs("You leave your bedroom and begin walking down the corridor, admiring through the windows the sweeping views of your hometown afforded by the castle’s hilltop vantage point. It is a small but proud city (by the name of @), nestled between the forest and the sea.", "5.5em", "getname", InputService.nameValidate).then(res => {
                 const [p, inputs] = res;
                 name = inputs[0];
+                name.addEventListener("blur", (e) => {
+                    if (!e.relatedTarget?.closest("#story input, dialog")) name.focus({preventScroll: true})
+                });
                 ctx.core.ui.center.classList.add("alphaactive");
                 ctx.core.ui.story.append(InputService.getCue("Enter", () => finishGetCityName(p)));
                 setTimeout(() => name.focus({preventScroll: true}), 0);
@@ -165,12 +172,9 @@ export default function Prologue(ctx) {
 
         cueBegin: async () => {
             ctx.checkpoint(6);
-            const button = document.createElement("button");
-            button.id = "beginGame";
-            button.className = "ripples";
-            button.innerText = "Begin Game";
-
-            ctx.core.ui.story.appendChild(button);
+            ctx.core.ui.story.appendChild(InputService.getButton("Begin Game", "beginGame", () => {
+                ctx.core.ui.show("center", "farm")
+            }));
         },
 
         runFrom: async (phase) => {

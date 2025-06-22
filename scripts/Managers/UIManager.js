@@ -3,10 +3,11 @@ import setupKeyboard from "../UI/Components/Keyboard.js";
 import setupGlobalBehavior, {spawnRipple} from "../UI/Services/GlobalBehavior.js";
 import {verticalScroll} from "../Utils.js";
 import StoryPanel from "../UI/Panels/StoryPanel.js";
-import NewsPanel from "../UI/Panels/NewsPanel.js";
+import NewsPanel from "../UI/Chrome/NewsPanel.js";
 import QuickAccess from "../UI/Chrome/QuickAccess.js";
 import CityInfoPanel from "../UI/Panels/CityInfoPanel.js";
 import SettingsPanel from "../UI/Panels/SettingsPanel.js";
+import FarmPanel from "../UI/Panels/FarmPanel.js";
 
 export default class UIManager {
     constructor(core) {
@@ -16,8 +17,8 @@ export default class UIManager {
         this.activePanels = {
             "left": "",
             "center": "story",
-            "right": "settings",
-        }
+            "right": "settings"
+        };
         this.visibleSection = "center";
 
         this.initialize();
@@ -31,6 +32,7 @@ export default class UIManager {
             quickacc: new QuickAccess(this.core),
             cityinfo: new CityInfoPanel(this.core),
             settings: new SettingsPanel(this.core),
+            farm: new FarmPanel(this.core),
         }
     }
 
@@ -47,6 +49,8 @@ export default class UIManager {
         this.left = document.getElementById("left");
         this.center = document.getElementById("center");
         this.right = document.getElementById("right");
+
+        this.farm = document.getElementById("farm");
 
         this.cityinfo = document.getElementById("cityinfo");
         this.settings = document.getElementById("settings");
@@ -81,7 +85,7 @@ export default class UIManager {
         const interactiveObserver = new MutationObserver(mutations => {
             mutations.forEach(mutation => {
                 mutation.addedNodes.forEach(node => {
-                    if (node.nodeType === 1) { // Element node
+                    if (node.nodeType === 1) { 
                         if (node.classList.contains("nudge")) {
                             node.addEventListener("pointerdown", () => node.classList.add("nudged"));
                         }
@@ -91,7 +95,6 @@ export default class UIManager {
                             });
                         }
 
-                        // Also check child elements, in case multiple elements were added inside a wrapper
                         node.querySelectorAll?.(".nudge").forEach(b => {
                             b.addEventListener("pointerdown", () => b.classList.add("nudged"));
                         });
@@ -105,7 +108,6 @@ export default class UIManager {
             });
         });
 
-        // Start observing the document body for child additions
         interactiveObserver.observe(document.body, {
             childList: true,
             subtree: true
@@ -122,13 +124,20 @@ export default class UIManager {
 
 
     show(loc, panel) {
-        if (this.activePanels[loc])
-            this.activePanels[loc] = panel;
+        if (this.activePanels[loc] === undefined || !panel) return;
+
+        if (this.activePanels[loc] && this.activePanels[loc] !== panel) {
+            this.panels[this.activePanels[loc]].updateVisibility(loc, panel);
+        }
+        this.activePanels[loc] = panel;
+        this.panels[panel].updateVisibility(loc, panel);
+
         document.querySelectorAll(`.navbutton.chosen[data-loc='${loc}']`).forEach(el => el.classList.remove("chosen"));
         let button = document.querySelector(`.navbutton[data-panel='${panel}']`);
         if (button) {
             button.classList.add("chosen");
         }
+
     }
 
     showPanels() {

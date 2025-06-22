@@ -1,15 +1,9 @@
-export default class CityManager {
+export default class FarmManager {
     #subscribers = [];
-    #loop = null;
-
-    cityInfoAccess = {
-        header: false
-    };
+    #running = false;
 
     constructor(core) {
         this.core = core;
-        this.name = "";
-        this.level = 1;
     }
 
     onUpdate(callback) {
@@ -27,17 +21,7 @@ export default class CityManager {
     }
 
     run() {
-        if (this.core.ui.activePanels["right"] !== "cityinfo") {
-            clearTimeout(this.#loop);
-            this.#loop = null;
-            return;
-        }
-        if (this.#loop) return;
-
-        this.#loop = setInterval(() => {
-            console.log("here")
-            this.broadcast();
-        }, parseInt(this.core.settings.configs.refreshUI));
+        this.broadcast();
     }
 
     serialize() {
@@ -50,6 +34,10 @@ export default class CityManager {
     }
 
     boot() {
+        if (this.core.ui.activePanels["center"] !== "farm") {
+            this.#running = false;
+            return;
+        }
         this.run();
     }
 }

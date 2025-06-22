@@ -42,8 +42,7 @@ export default class NewsManager {
 
     boot() {
         if (!this.logs.length) return;
-        let lock = this.core.ui.news.querySelector(".lock");
-        if (lock) lock.remove();
+        this.core.ui.news.classList.add("shown");
         this.broadcast();
     }
 }

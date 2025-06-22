@@ -52,10 +52,9 @@ export default class UserManager {
     }
 
     boot() {
-        if (this.quickAccess) {
-            let lock = this.core.ui.quickacc.querySelector(".lock");
-            if (lock) lock.remove();
-        }
         this.run();
+        if (this.quickAccess) {
+            this.core.ui.quickacc.classList.add("shown");
+        }
     }
 }

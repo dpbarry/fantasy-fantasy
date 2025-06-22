@@ -196,6 +196,7 @@ export default class LoadingService {
 
     static show() {
         this.#overlay.classList.remove('hidden');
+        this.#fillIcon.classList.remove('hidden');
     }
 
     static hide() {
