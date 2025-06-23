@@ -5,7 +5,6 @@ import TypingService from "../UI/Services/TypingService.js";
 export default class StoryManager {
     #episodes = {};
     #running = false;
-    #subscriber;
 
     constructor(core) {
         this.core = core;
@@ -18,17 +17,13 @@ export default class StoryManager {
         this.currentEpisode = null;
     }
 
-    set subscriber(sub) {
-        this.#subscriber = sub;
-    }
-
     get episodes() {
         return this.#episodes;
     }
 
     async runAt(episode, phase) {
         this.currentEpisode = episode;
-        this.#subscriber.reset(this.snapshots[episode]);
+        this.core.ui.panels.story.reset(this.snapshots[episode]);
         // let the episode script take over
         await this.#episodes[episode].runFrom(phase);
     }

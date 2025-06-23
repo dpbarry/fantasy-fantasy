@@ -1,19 +1,8 @@
 export default class HeroManager {
-    #subscribers = [];
     #loops = {};
 
     constructor(core) {
         this.core = core;
-    }
-
-    onUpdate(callback) {
-        this.#subscribers.push(callback);
-    }
-
-    broadcast() {
-        this.#subscribers.forEach(cb => {
-            cb(this.getStatus());
-        });
     }
 
     getStatus() {

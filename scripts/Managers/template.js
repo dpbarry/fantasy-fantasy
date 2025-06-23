@@ -1,19 +1,17 @@
 export default class Manager {
-    #subscribers = [];
+    #panel;
     #loops = {};
 
     constructor(core) {
         this.core = core;
     }
 
-    onUpdate(callback) {
-        this.#subscribers.push(callback);
+    set panel(sub) {
+        this.#panel = sub;
     }
 
-    broadcast() {
-        this.#subscribers.forEach(cb => {
-            cb(this.getStatus());
-        });
+    broadcastPanel() {
+        
     }
 
     getStatus() {

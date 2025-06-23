@@ -1,5 +1,4 @@
 export default class CityManager {
-    #subscribers = [];
     #loops = {};
 
     cityInfoAccess = {
@@ -12,14 +11,8 @@ export default class CityManager {
         this.level = 1;
     }
 
-    onUpdate(callback) {
-        this.#subscribers.push(callback);
-    }
-
     broadcast() {
-        this.#subscribers.forEach(cb => {
-            cb(this.getStatus());
-        });
+        this.core.ui.panels.cityinfo.render(this.getStatus());
     }
 
     getStatus() {

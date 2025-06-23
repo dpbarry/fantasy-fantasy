@@ -1,21 +1,14 @@
 export default class NewsManager {
     logs = [];
-    #subscribers = [];
 
     constructor(core) {
         this.core = core;
     }
 
-    onUpdate(callback) {
-        this.#subscribers.push(callback);
+    broadcast() {
+        this.core.ui.panels.news.render(this.getLogs());
     }
 
-    broadcast() {
-        this.#subscribers.forEach(cb => {
-            cb(this.getLogs());
-        });
-    }
-    
     update(message) {
         const timestamp = (() => {
             const now = new Date();

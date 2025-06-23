@@ -1,19 +1,12 @@
 export default class FarmManager {
-    #subscribers = [];
     #loops = {};
 
     constructor(core) {
         this.core = core;
     }
 
-    onUpdate(callback) {
-        this.#subscribers.push(callback);
-    }
-
     broadcast() {
-        this.#subscribers.forEach(cb => {
-            cb(this.getStatus());
-        });
+        this.core.ui.panels.farm.render();
     }
 
     getStatus() {

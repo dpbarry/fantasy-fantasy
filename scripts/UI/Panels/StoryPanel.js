@@ -2,8 +2,6 @@ export default class StoryPanel {
     constructor(core) {
         this.core = core;
         this.root = document.getElementById("story");
-        this.manager = core.story;
-        this.manager.subscriber = this;
 
         // auto-scroll on new content
         this.setupAutoScroll();

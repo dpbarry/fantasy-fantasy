@@ -5,14 +5,10 @@ export default class CityInfoPanel {
         this.core = core;
         this.root = core.ui.cityinfo;
         this.header = this.root.querySelector("#city-header");
-
-        this.core.city.onUpdate((data) => {
-            this.#status = data;
-            this.render();
-        });
     }
 
-    render() {
+    render(data) {
+        this.#status = data;
         if (this.#status.cityInfoAccess.header) {
             let cityName = this.root.querySelector("#city-name");
             if (!cityName) {

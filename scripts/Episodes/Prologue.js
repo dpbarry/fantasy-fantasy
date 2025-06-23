@@ -162,7 +162,7 @@ export default function Prologue(ctx) {
 
         beginUpheaval: async () => {
             ctx.checkpoint(5);
-            await ctx.typeP(`Out of nowhere, the floor heaves, knocking you off your feat. Outside, the sky explodes into a kaleidoscope of surreal colors and the land beyond ${ctx.core.city.name} transforms. The events of your dream—that is, your vision—rush back to you:`);
+            await ctx.typeP(`Out of nowhere, the floor heaves, knocking you off your feat. Outside, the sky explodes into a kaleidoscope of surreal colors and the land beyond ${ctx.core.city.name} transforms. The events of your dream—or rather, your vision—rush back to you:`);
             await ctx.typeP("The long prophecied Cataclysm has arrived.", {italic: true});
             await ctx.typeP("The creator of the universe has perished, and his limitless power has been scattered across the cosmos, rewriting the laws of reality along the way.", {italic: true});
             await ctx.typeP("It so happens that some of that power has found its home in you.", {italic: true});

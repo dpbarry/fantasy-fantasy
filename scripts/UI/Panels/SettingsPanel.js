@@ -5,11 +5,6 @@ export default class SettingsPanel {
         this.core = core;
         this.root = core.ui.settings;
 
-        this.core.settings.onUpdate((data) => {
-            this.#settings = data;
-            this.render();
-        });
-
         this.root.querySelectorAll("input, select").forEach((i) => {
             i.onchange = () => {
                 if (i.type === "checkbox" || i.type === "radio") {
@@ -21,7 +16,8 @@ export default class SettingsPanel {
         })
     }
 
-    render() {
+    render(data) {
+        this.#settings = data;
         Object.entries(this.#settings).forEach(([k,v]) => {
             let i = this.root.querySelector(`input[name="${k}"][id="${v}"]`) ?? this.root.querySelector(`select[name="${k}"] option[value="${v}"]`);
             if (i.type === "checkbox" || i.type === "radio") {

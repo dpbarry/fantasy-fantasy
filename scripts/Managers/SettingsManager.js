@@ -7,20 +7,13 @@ export default class SettingsManager {
         refreshUI: "30",
     }
 
-    #subscribers = [];
 
     constructor(core) {
         this.core = core;
     }
 
-    onUpdate(callback) {
-        this.#subscribers.push(callback);
-    }
-
     broadcast() {
-        this.#subscribers.forEach(cb => {
-            cb(this.getStatus());
-        });
+        this.core.ui.panels.settings.render(this.getStatus());
     }
 
     getStatus() {
