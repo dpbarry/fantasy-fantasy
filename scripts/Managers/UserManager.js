@@ -9,10 +9,10 @@ export default class UserManager {
     quickAccess = false;
 
     #subscribers = [];
+    #loops = {};
 
     constructor(core) {
         this.core = core;
-        core.clock.subscribeRealTime(() => this.run(), {interval: 1});
     }
 
     onUpdate(callback) {
@@ -39,7 +39,14 @@ export default class UserManager {
     }
 
     run() {
-        this.broadcast();
+        if (this.quickAccess && !(this.#loops.quickAccess)) {
+            this.#loops.quickAccess = setInterval(() => {
+                this.broadcast();
+            }, parseInt(this.core.settings.configs.refreshUI));
+        } else {
+            clearTimeout(this.#loops.quickAccess);
+            this.#loops.quickAccess = null;
+        }
     }
 
     serialize() {
@@ -52,9 +59,9 @@ export default class UserManager {
     }
 
     boot() {
-        this.run();
         if (this.quickAccess) {
             this.core.ui.quickacc.classList.add("shown");
         }
+        this.run();
     }
 }

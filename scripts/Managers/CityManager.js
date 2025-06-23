@@ -1,6 +1,6 @@
 export default class CityManager {
     #subscribers = [];
-    #loop = null;
+    #loops = {};
 
     cityInfoAccess = {
         header: false
@@ -27,17 +27,14 @@ export default class CityManager {
     }
 
     run() {
-        if (this.core.ui.activePanels["right"] !== "cityinfo") {
-            clearTimeout(this.#loop);
-            this.#loop = null;
-            return;
+        if (this.core.ui.activePanels["right"] === "cityinfo" && !this.#loops.cityInfo) {
+            this.#loops.cityInfo = setInterval(() => {
+                this.broadcast();
+            }, parseInt(this.core.settings.configs.refreshUI));
+        } else {
+            clearTimeout(this.#loops.cityInfo);
+            this.#loops.cityInfo = null;
         }
-        if (this.#loop) return;
-
-        this.#loop = setInterval(() => {
-            console.log("here")
-            this.broadcast();
-        }, parseInt(this.core.settings.configs.refreshUI));
     }
 
     serialize() {

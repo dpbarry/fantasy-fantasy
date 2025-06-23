@@ -40,7 +40,6 @@ export default class StoryPanel {
     }
 
     updateVisibility(loc, panel) {
-        console.log(loc, panel)
         if (loc === "center") {
             if (panel === "story")
                 this.root.closest(".box").classList.add("shown");

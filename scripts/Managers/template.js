@@ -1,13 +1,6 @@
-import {applyTheme} from "../UI/Services/GlobalBehavior.js";
-
-export default class SettingsManager {
-    configs = {
-        background: "black",
-        accent: "amber",
-        refreshUI: "30",
-    }
-
+export default class Manager {
     #subscribers = [];
+    #loops = {};
 
     constructor(core) {
         this.core = core;
@@ -24,13 +17,11 @@ export default class SettingsManager {
     }
 
     getStatus() {
-        return this.configs;
+        return {...this};
     }
 
-    updateSetting(setting, value) {
-        this.configs[setting] = value;
-        applyTheme(this.core);
-        this.broadcast();
+    run() {
+
     }
 
     serialize() {
@@ -43,10 +34,6 @@ export default class SettingsManager {
     }
 
     boot() {
-        this.broadcast();
-    }
-    
-    earlyInit() {
-        applyTheme(this.core);
+        this.run();
     }
 }

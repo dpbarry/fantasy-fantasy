@@ -1,6 +1,7 @@
 export default class ClockManager {
     #realTimeListeners;
     #gameTimeListeners;
+
     constructor() {
         // Constants
         this.SECONDS_PER_MINUTE = 60;

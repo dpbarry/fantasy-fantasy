@@ -1,6 +1,6 @@
 export default class FarmManager {
     #subscribers = [];
-    #running = false;
+    #loops = {};
 
     constructor(core) {
         this.core = core;
@@ -21,7 +21,14 @@ export default class FarmManager {
     }
 
     run() {
-        this.broadcast();
+        if (this.core.ui.activePanels["center"] === "farm" && !this.#loops.farm) {
+            this.#loops.farm = setInterval(() => {
+                this.broadcast();
+            }, parseInt(this.core.settings.configs.refreshUI));
+        } else {
+            clearTimeout(this.#loops.loops);
+            this.#loops.loops = null;
+        }
     }
 
     serialize() {
@@ -34,10 +41,6 @@ export default class FarmManager {
     }
 
     boot() {
-        if (this.core.ui.activePanels["center"] !== "farm") {
-            this.#running = false;
-            return;
-        }
         this.run();
     }
 }
