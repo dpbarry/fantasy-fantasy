@@ -3,6 +3,9 @@ export default class FarmManager {
 
     constructor(core) {
         this.core = core;
+        this.access = {
+            basic: false,
+        };
     }
 
     broadcast() {
@@ -34,6 +37,9 @@ export default class FarmManager {
     }
 
     boot() {
+        if (this.access.basic) {
+            document.querySelector("#farmnav").classList.remove("locked");
+        }
         this.run();
     }
 }

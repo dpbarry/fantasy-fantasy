@@ -172,7 +172,10 @@ export default function Prologue(ctx) {
 
         cueBegin: async () => {
             ctx.checkpoint(6);
-            ctx.core.ui.story.appendChild(InputService.getButton("Begin Game", "beginGame", () => {
+            ctx.core.ui.story.appendChild(InputService.getButton("Begin Game", "beginGame", async () => {
+                await delay(200);
+                ctx.core.farm.access.basic = true;
+                document.querySelector("#farmnav").classList.remove("locked");
                 ctx.core.ui.show("center", "farm")
             }));
         },

@@ -135,6 +135,7 @@
 
             &.shown {
                 display: flex;
+                flex-direction: column;
             }
         }
 
@@ -225,6 +226,7 @@
             gap: var(--boxGap);
             overflow-x: auto;
             justify-content: space-around;
+            flex-direction: row;
             align-items: center;
             width: 100%;
         }
@@ -267,12 +269,6 @@
         @media (pointer: fine) and (hover: hover) {
             .navbutton:not(.locked, .nudged):hover img {
                 scale: 1.06;
-            }
-        }
-
-        #researchnav {
-            img {
-                height: 2em;
             }
         }
 
@@ -714,7 +710,6 @@
 
             @media (hover: hover) and (pointer: fine) {
                 &:hover, &:active {
-                    transform: translateY(-1px);
                     background: color-mix(in hsl, var(--accent) 15%, transparent);
                 }
             }
@@ -1250,6 +1245,33 @@
             }
         }
 
+
+        .panelnav {
+            display: flex;
+            width: 100%;
+            justify-content: space-evenly;
+            font-weight: 600;
+            margin-bottom: 1em;
+        }
+
+        .cropbox {
+            border: 1.5px solid var(--baseColor);
+            border-radius: 3px;
+            padding: 0.55em;
+            width: fit-content;
+            height: fit-content;
+            display: flex;
+            flex-direction: column;
+            row-gap: 0.35em;
+            .croptitle {
+
+            }
+
+            button {
+                width: 10em;
+            }
+        }
+
         /* DESKTOP VIEW */
         /* QUERY USED IN JS */
         @media (width > 950px) {
@@ -1563,7 +1585,22 @@
         <div class="box" id="story-wrap">
             <div data-masksize="28" id="story"></div>
         </div>
-        <div class="box" id="farm"></div>
+        <div class="box" id="farm">
+            <div class="panelnav">
+                <span id="farmresearchnav">Research</span>
+                <span id="farmmainnav">Cultivation</span>
+                <span id="farminspectionnav">Inspection</span>
+                <span id="farmsynthesisnav">Synthesis</span>
+            </div>
+
+            <div class="cropbox" id="wheat">
+                <span class="croptitle">Wheat</span>
+                <button class="nudge ripples">Plant</button>
+                <button class="nudge ripples">Grow</button>
+                <button class="nudge ripples">Harvest</button>
+            </div>
+
+        </div>
         <div class="keyboard" id="alphaboard">
             <div class="key nudge">A</div>
             <div class="key nudge">B</div>
