@@ -814,15 +814,15 @@
             }
         }
 
+        h2 {
+            font-size: 1.2em;
+            margin-bottom: 0.3em;
+            border-bottom: 1.5px solid var(--midBaseColor);
+        }
+
         #settings {
             display: flex;
             flex-direction: column;
-
-            h2 {
-                font-size: 1.2em;
-                margin-bottom: 0.3em;
-                border-bottom: 1.5px solid var(--midBaseColor);
-            }
 
             .setting {
                 margin-bottom: 0.5em;
@@ -1245,30 +1245,38 @@
             }
         }
 
-
-        .panelnav {
-            display: flex;
+        hr {
             width: 100%;
-            justify-content: space-evenly;
-            font-weight: 600;
-            margin-bottom: 1em;
+            border-bottom: 1px solid var(--baseColor);
         }
 
-        .cropbox {
-            border: 1.5px solid var(--baseColor);
-            border-radius: 3px;
-            padding: 0.55em;
-            width: fit-content;
+        .panelnav {
+            flex-direction: row !important;
+            display: flex;
+            width: 100%;
             height: fit-content;
+            font-size: 1.1em;
+            justify-content: space-evenly;
+            font-weight: 600;
+
+            span.chosen {
+                color: var(--accent);
+            }
+        }
+
+        #industry-theurgies {
             display: flex;
             flex-direction: column;
-            row-gap: 0.35em;
-            .croptitle {
-
-            }
+            row-gap: 0.3em;
+            width: 10em;
 
             button {
-                width: 10em;
+                width: 100%;
+                height: 2em;
+
+                p {
+                    font-size: 0.75em;
+                }
             }
         }
 
@@ -1548,16 +1556,17 @@
                     alt="City"
                     src="assets/CITY.svg">
             </button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="farm"
-                    data-tip="farmnav" id="farmnav">
-                <img
-                        alt="Farm" src="assets/FARM.svg">
-            </button>
             <button class="nudge locked navbutton hastip" data-loc="center" data-panel="industry"
                     data-tip="industrynav" id="industrynav">
                 <img
                         alt="Industry" src="assets/INDUSTRY.svg">
             </button>
+            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="research"
+                    data-tip="researchnav" id="researchnav">
+                <img
+                        alt="Research" src="assets/RESEARCH.svg">
+            </button>
+
             <button class="nudge locked navbutton hastip" data-loc="center" data-panel="dungeon" data-tip="dungeonav"
                     id="dungeonav">
                 <img
@@ -1585,21 +1594,17 @@
         <div class="box" id="story-wrap">
             <div data-masksize="28" id="story"></div>
         </div>
-        <div class="box" id="farm">
-            <div class="panelnav">
-                <span id="farmresearchnav">Research</span>
-                <span id="farmmainnav">Cultivation</span>
-                <span id="farminspectionnav">Inspection</span>
-                <span id="farmsynthesisnav">Synthesis</span>
-            </div>
-
-            <div class="cropbox" id="wheat">
-                <span class="croptitle">Wheat</span>
+        <div class="box panelnav" id="industrypanelnav">
+            <span class="nudge chosen" id="farmmainnav">Production</span>
+            <span class="nudge" id="farminspectionnav">Synthesis</span>
+            <span class="nudge" id="farmsynthesisnav">Logistics</span>
+        </div>
+        <div class="box" id="industry">
+            <h2>Farm</h2>
+            <div id="industry-theurgies">
+                <button class="nudge ripples">Forage</button>
                 <button class="nudge ripples">Plant</button>
-                <button class="nudge ripples">Grow</button>
-                <button class="nudge ripples">Harvest</button>
             </div>
-
         </div>
         <div class="keyboard" id="alphaboard">
             <div class="key nudge">A</div>

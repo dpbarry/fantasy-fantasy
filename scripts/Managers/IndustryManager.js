@@ -1,4 +1,4 @@
-export default class FarmManager {
+export default class IndustryManager {
     #loops = {};
 
     constructor(core) {
@@ -9,7 +9,7 @@ export default class FarmManager {
     }
 
     broadcast() {
-        this.core.ui.panels.farm.render();
+        this.core.ui.panels.industry.render();
     }
 
     getStatus() {
@@ -17,8 +17,8 @@ export default class FarmManager {
     }
 
     run() {
-        if (this.core.ui.activePanels["center"] === "farm" && !this.#loops.farm) {
-            this.#loops.farm = setInterval(() => {
+        if (this.core.ui.activePanels["center"] === "industry" && !this.#loops.industry) {
+            this.#loops.industry = setInterval(() => {
                 this.broadcast();
             }, parseInt(this.core.settings.configs.refreshUI));
         } else {
@@ -38,7 +38,7 @@ export default class FarmManager {
 
     boot() {
         if (this.access.basic) {
-            document.querySelector("#farmnav").classList.remove("locked");
+            document.querySelector("#industrynav").classList.remove("locked");
         }
         this.run();
     }

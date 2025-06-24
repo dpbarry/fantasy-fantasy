@@ -10,7 +10,7 @@ import HackService from "./UI/Services/HackService.js";
 import LoadingService from "./UI/Services/LoadingService.js";
 import SaveManager from "./Managers/SaveManager.js";
 import SettingsManager from "./Managers/SettingsManager.js";
-import FarmManager from "./Managers/FarmManager.js";
+import IndustryManager from "./Managers/IndustryManager.js";
 
 export default class GameCore {
     static #instance = null;
@@ -50,7 +50,7 @@ export default class GameCore {
             clock: this.clock,
             story: new StoryManager(this),
             city: new CityManager(this),
-            farm: new FarmManager(this),
+            industry: new IndustryManager(this),
             heroes: new HeroManager(this),
             mc: new UserManager(this),
             news: new NewsManager(this),

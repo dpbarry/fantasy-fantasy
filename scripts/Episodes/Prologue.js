@@ -165,7 +165,7 @@ export default function Prologue(ctx) {
             await ctx.typeP(`Out of nowhere, the floor heaves, knocking you off your feat. Outside, the sky explodes into a kaleidoscope of surreal colors and the land beyond ${ctx.core.city.name} transforms. The events of your dream—or rather, your vision—rush back to you:`);
             await ctx.typeP("The long prophecied Cataclysm has arrived.", {italic: true});
             await ctx.typeP("The creator of the universe has perished, and his limitless power has been scattered across the cosmos, rewriting the laws of reality along the way.", {italic: true});
-            await ctx.typeP("It so happens that some of that power has found its home in you.", {italic: true});
+            await ctx.typeP("Some of that power has found its home in you.", {italic: true});
 
             await ctx.episodes.Prologue.cueBegin();
         },
@@ -174,9 +174,9 @@ export default function Prologue(ctx) {
             ctx.checkpoint(6);
             ctx.core.ui.story.appendChild(InputService.getButton("Begin Game", "beginGame", async () => {
                 await delay(200);
-                ctx.core.farm.access.basic = true;
-                document.querySelector("#farmnav").classList.remove("locked");
-                ctx.core.ui.show("center", "farm")
+                ctx.core.industry.access.basic = true;
+                document.querySelector("#industrynav").classList.remove("locked");
+                ctx.core.ui.show("center", "industry")
             }));
         },
 

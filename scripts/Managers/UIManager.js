@@ -7,7 +7,7 @@ import NewsPanel from "../UI/Chrome/NewsPanel.js";
 import QuickAccess from "../UI/Chrome/QuickAccess.js";
 import CityInfoPanel from "../UI/Panels/CityInfoPanel.js";
 import SettingsPanel from "../UI/Panels/SettingsPanel.js";
-import FarmPanel from "../UI/Panels/FarmPanel.js";
+import IndustryPanel from "../UI/Panels/IndustryPanel.js";
 
 export default class UIManager {
     constructor(core) {
@@ -32,7 +32,7 @@ export default class UIManager {
             quickacc: new QuickAccess(this.core),
             cityinfo: new CityInfoPanel(this.core),
             settings: new SettingsPanel(this.core),
-            farm: new FarmPanel(this.core),
+            industry: new IndustryPanel(this.core),
         }
     }
 
@@ -50,7 +50,7 @@ export default class UIManager {
         this.center = document.getElementById("center");
         this.right = document.getElementById("right");
 
-        this.farm = document.getElementById("farm");
+        this.industry = document.getElementById("industry");
 
         this.cityinfo = document.getElementById("cityinfo");
         this.settings = document.getElementById("settings");
