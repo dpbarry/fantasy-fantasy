@@ -1,4 +1,3 @@
-import createStatsGrid from "../Components/StatGrid.js";
 
 export default function createTooltipService() {
     const tooltips = new Map();
@@ -38,18 +37,8 @@ export default function createTooltipService() {
       <p>Each point of <span class="wisdomWord term">Wisdom</span> grants a +1% boost to all Research bonuses.</p>
       <p>Current boost: +${core.mc.wisdom}%</p>
     `);
+        
 
-        registerTip('mc-name', () => {
-            const stats = [{name: "Savvy", value: core.mc.savvy, class: "savvyWord"}, {
-                name: "Valor", value: core.mc.valor, class: "valorWord"
-            }, {name: "Wisdom", value: core.mc.wisdom, class: "wisdomWord"}, {},];
-
-            return createStatsGrid(stats);
-        });
-
-        registerTip('verbosedate', () => {
-            return `<p>${core.clock.gameDate({format: "verbose"})}</p><p>${core.clock.gameTime({format: "full"})}</p>`;
-        });
 
         // NAVBAR
         const navButtons = document.querySelectorAll(".navbutton");

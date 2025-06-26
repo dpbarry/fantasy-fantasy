@@ -6,8 +6,8 @@ import CityManager from "./Managers/CityManager.js";
 import HeroManager from "./Managers/HeroManager.js";
 import UserManager from "./Managers/UserManager.js";
 import NewsManager from "./Managers/NewsManager.js";
-import HackService from "./UI/Services/HackService.js";
-import LoadingService from "./UI/Services/LoadingService.js";
+import HackService from "./Services/HackService.js";
+import LoadingService from "./Services/LoadingService.js";
 import SaveManager from "./Managers/SaveManager.js";
 import SettingsManager from "./Managers/SettingsManager.js";
 import IndustryManager from "./Managers/IndustryManager.js";
@@ -20,7 +20,7 @@ export default class GameCore {
     #saveThrottleMS;
     #pendingSave;
     #saveableComponents;
-    #currentVersion = "0.1.0";
+    #currentVersion = "0.1.1";
 
 
     constructor() {
@@ -57,6 +57,7 @@ export default class GameCore {
             saves: new SaveManager(this),
             settings: new SettingsManager(this),
         };
+
         Object.entries(this.managers).forEach(([k, m]) => {
             this[k] = m;
             if (typeof m.serialize === "function" && typeof m.deserialize === "function") {
@@ -117,7 +118,7 @@ export default class GameCore {
         this.#lastFrameTime = currentTime;
 
         this.clock.advance(frameTime);
-
+        this.industry.tick(frameTime);
 
         const now = Date.now();
         if (!this.#pendingSave && now - this.#lastSaveTime >= this.#saveThrottleMS) {

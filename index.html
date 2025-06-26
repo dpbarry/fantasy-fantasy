@@ -54,10 +54,6 @@
             --darkerAccent: color-mix(in hsl, var(--accent) 45%, var(--contrastColor));
             --darkAccent: color-mix(in hsl, var(--accent) 70%, var(--contrastColor));
             --accentFilter: invert(56%) sepia(98%) saturate(2737%) hue-rotate(153deg) brightness(101%) contrast(84%);
-
-            --savvyColor: hsl(159, 82.5%, 45%);
-            --valorColor: hsl(19, 82.5%, 45%);
-            --wisdomColor: hsl(210, 82.5%, 45%);
         }
 
         :root.notransition * {
@@ -107,11 +103,10 @@
 
         #center-section {
             display: grid;
-            grid-template-rows: min-content 75% 6% auto;
+            grid-template-rows: min-content 79% auto;
             grid-template-areas:
              "navbar"
              "center"
-             "quick"
              "updates";
             gap: var(--boxGap);
         }
@@ -131,12 +126,12 @@
             border: 2px solid var(--boxColor);
             border-radius: 3px;
             padding: var(--boxGap);
-            display: none;
+            display: flex;
+            flex-direction: column;
+        }
 
-            &.shown {
-                display: flex;
-                flex-direction: column;
-            }
+        .panel:not(.box).shown {
+            display: contents;
         }
 
         html, body {
@@ -153,7 +148,7 @@
             height: 100%;
             align-items: center;
 
-            & > .box:not(.shown) {
+            & > div:not(.shown) {
                 display: none !important;
             }
 
@@ -723,7 +718,7 @@
         .term {
             white-space: nowrap;
             transition: color 0.05s;
-            font-weight: 650;
+            font-weight: 550;
 
 
             &.hidespan::before {
@@ -739,34 +734,25 @@
             }
         }
 
-        .savvyWord {
-            color: var(--savvyColor);
+        .codexWord {
+            &::before {
+                background-image: url("./assets/CODEX.svg");
+                filter: var(--baseFilter);
+                display: inline-block;
+                height: 0.8em;
+                width: 0.8em;
+                top: 1px;
+                vertical-align: baseline;
+                position: relative;
+                margin-right: 0.025em;
+                background-size: contain;
+                background-repeat: no-repeat;
+                background-position: center;
+                content: "";
+            }
         }
-
-        .valorWord {
-            color: var(--valorColor);
-        }
-
-        .wisdomWord {
-            color: var(--wisdomColor);
-        }
-
         .click {
             cursor: pointer;
-        }
-
-        .statgrid {
-            display: grid;
-            grid-template-columns: min-content auto;
-
-            span:not(:nth-of-type(1), :nth-of-type(2)) {
-                padding-top: 0.2em;
-            }
-
-            span:not(:nth-last-of-type(1), :nth-last-of-type(2)) {
-                padding-bottom: 0.2em;
-                border-bottom: 1px solid var(--midBaseColor);
-            }
         }
 
         #navbar-wrap {
@@ -801,7 +787,7 @@
             height: 100%;
             row-gap: var(--boxGap);
             min-height: 0;
-            overflow: hidden;
+            overflow: visible;
         }
 
 
@@ -955,18 +941,6 @@
                     background-color: hsl(260, 82.5%, 45%);
                 }
             }
-        }
-
-        #quick-wrap {
-            grid-area: quick;
-        }
-
-        #quick-access {
-            display: flex;
-            align-items: center;
-            flex-direction: row;
-            column-gap: 0.65em;
-            padding: calc(var(--boxGap) * 0.5) var(--boxGap);
         }
 
         #updates {
@@ -1255,7 +1229,6 @@
             display: flex;
             width: 100%;
             height: fit-content;
-            font-size: 1.1em;
             justify-content: space-evenly;
             font-weight: 600;
 
@@ -1264,21 +1237,66 @@
             }
         }
 
-        #industry-theurgies {
-            display: flex;
-            flex-direction: column;
-            row-gap: 0.3em;
-            width: 10em;
+        .subbox {
+            position: relative;
 
-            button {
-                width: 100%;
-                height: 2em;
+            strong {
+                position: absolute;
+                top: 0;
+                left: 50%;
+                font-size: 0.75em;
+                transform: translate(-50%, -50%);
+                z-index: 2;
+                padding: 0 3px;
+                line-height: 1;
+                white-space: nowrap;
 
-                p {
-                    font-size: 0.75em;
+                &::after {
+                    content: "";
+                    position: absolute;
+                    top: 25%;
+                    bottom: 25%;
+                    left: 0;
+                    right: 0;
+                    background: var(--bgColor);
+                    z-index: -1;
                 }
             }
         }
+
+        #industry {
+            display: grid;
+            width: 100%;
+            height: 100%;
+            grid-template-areas:
+                    "industry-theurgy industry-theurgy"
+            "industry-resources industry-prod";
+            grid-template-rows: min-content 1fr;
+            grid-template-columns: 20% 1fr;
+            gap: var(--boxGap);
+
+            #industry-theurgy {
+                flex-direction: row;
+                column-gap: 0.5em;
+                grid-area: industry-theurgy;
+
+                button {
+                    min-width: 10%;
+                    font-size: 0.8em;
+                    height: 2em;
+                }
+            }
+
+            #industry-resources {
+                grid-area: industry-resources;
+            }
+
+            #industry-prod {
+                grid-area: industry-prod;
+            }
+
+        }
+
 
         /* DESKTOP VIEW */
         /* QUERY USED IN JS */
@@ -1539,12 +1557,6 @@
     </div>
     <div class="wrapper sidebar" id="left">
         <h1 class="lock"> LOCKED </h1>
-
-        <div class="box" id="team">
-        </div>
-
-        <div class="box" id="roster">
-        </div>
     </div>
 
 </section>
@@ -1591,19 +1603,22 @@
     </div>
 
     <div class="wrapper" id="center">
-        <div class="box" id="story-wrap">
+        <div class="box panel" id="story-wrap">
             <div data-masksize="28" id="story"></div>
         </div>
-        <div class="box panelnav" id="industrypanelnav">
-            <span class="nudge chosen" id="farmmainnav">Production</span>
-            <span class="nudge" id="farminspectionnav">Synthesis</span>
-            <span class="nudge" id="farmsynthesisnav">Logistics</span>
-        </div>
-        <div class="box" id="industry">
-            <h2>Farm</h2>
-            <div id="industry-theurgies">
-                <button class="nudge ripples">Forage</button>
-                <button class="nudge ripples">Plant</button>
+        <div class="panel" id="industry">
+            <div class="box subbox" id="industry-theurgy">
+                <strong>Theurgy</strong>
+                <button class="nudge ripples">Forage Seed</button>
+                <button class="nudge ripples">Plant Seed</button>
+                <button class="nudge ripples">Harvest Crop</button>
+                <button class="nudge ripples">Forage Acorn</button>
+            </div>
+            <div class="box subbox" id="industry-prod">
+                <strong>Production</strong>
+            </div>
+            <div class="box subbox" id="industry-resources">
+                <strong>Resources</strong>
             </div>
         </div>
         <div class="keyboard" id="alphaboard">
@@ -1655,15 +1670,9 @@
         </div>
     </div>
 
-    <div class="wrapper" id="status-wrap">
-        <h1 class="lock"> LOCKED </h1>
-        <div class="box" id="quick-access">
-        </div>
-    </div>
-
     <div class="wrapper" id="updates-wrap">
         <h1 class="lock"> LOCKED </h1>
-        <div class="box" id="updates">
+        <div class="box panel" id="updates">
             <div data-masksize="20" id="upate-logs"></div>
             <button class="nudge navbutton hastip" data-tip="mailnav" id="mailnav"><img alt="Mail"
                                                                                         src="assets/MAIL.svg">
@@ -1707,7 +1716,7 @@
             <div id="city-header"></div>
             <div id="city-stats"></div>
         </div>
-        <div class="box shown" id="settings">
+        <div class="box panel shown" id="settings">
             <h2 id="appearance-header">Appearance</h2>
             <div class="setting">
                 <label class="theme">

@@ -1,4 +1,4 @@
-import {applyTheme} from "../UI/Services/GlobalBehavior.js";
+import {applyTheme} from "../Services/GlobalBehavior.js";
 
 export default class SettingsManager {
     configs = {

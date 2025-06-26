@@ -1,5 +1,5 @@
-import InputService from "../UI/Services/InputService.js";
-import TypingService from "../UI/Services/TypingService.js";
+import InputService from "../Services/InputService.js";
+import TypingService from "../Services/TypingService.js";
 import {delay} from "../Utils.js";
 import createHintBox from "../UI/Components/HintBox.js";
 
@@ -110,19 +110,19 @@ export default function Prologue(ctx) {
                     case 0:
                         chosenSpecialty = "Savvy";
                         ctx.core.mc.savvy = 10;
-                        return ["+10 @", ["Savvy"], ["savvyWord term"], ["savvy"]];
+                        return ["+10 @", ["Savvy"], ["term"], ["savvy"]];
                     case 1:
                         chosenSpecialty = "Valor";
                         ctx.core.mc.valor = 10;
-                        return ["+10 @", ["Valor"], ["valorWord term"], ["valor"]];
+                        return ["+10 @", ["Valor"], ["term"], ["valor"]];
                     case 2:
                         chosenSpecialty = "Wisdom";
                         ctx.core.mc.wisdom = 10;
-                        return ["+10 @", ["Wisdom"], ["wisdomWord term"], ["wisdom"]];
+                        return ["+10 @", ["Wisdom"], ["term"], ["wisdom"]];
                 }
             })());
 
-            const box = createHintBox(ctx.core.ui.story, "Many things in the game can be hovered over or tapped to show a tooltip. Try it now on @! For more in-depth information, see the @.", [chosenSpecialty, "Codex"], ["term " + chosenSpecialty.toLowerCase() + "Word", "codexWord term click"], [chosenSpecialty.toLowerCase()]);
+            const box = createHintBox(ctx.core.ui.story, "Many things in the game can be hovered over or tapped to show a tooltip. Try it now on @! For more in-depth information, see the @.", [chosenSpecialty, "Codex"], ["term", "codexWord term"], [chosenSpecialty.toLowerCase()]);
 
             await delay(1000);
 

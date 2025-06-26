@@ -6,9 +6,6 @@ export default class UserManager {
     valor = 0;
     wisdom = 0;
 
-    quickAccess = false;
-
-    #loops = {};
 
     constructor(core) {
         this.core = core;
@@ -32,14 +29,7 @@ export default class UserManager {
     }
 
     run() {
-        if (this.quickAccess && !(this.#loops.quickAccess)) {
-            this.#loops.quickAccess = setInterval(() => {
-                this.broadcast();
-            }, parseInt(this.core.settings.configs.refreshUI));
-        } else {
-            clearTimeout(this.#loops.quickAccess);
-            this.#loops.quickAccess = null;
-        }
+
     }
 
     serialize() {
@@ -52,9 +42,6 @@ export default class UserManager {
     }
 
     boot() {
-        if (this.quickAccess) {
-            this.core.ui.quickacc.classList.add("shown");
-        }
         this.run();
     }
 }

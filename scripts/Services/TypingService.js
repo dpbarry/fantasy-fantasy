@@ -1,6 +1,6 @@
 import InputService from "./InputService.js";
-import * as Utils from "../../Utils.js";
-import {delay, waitForEvent} from "../../Utils.js";
+import * as Utils from "../Utils.js";
+import {delay, waitForEvent} from "../Utils.js";
 
 export default class TypingService {
     static TYPE_DELAY = 0;

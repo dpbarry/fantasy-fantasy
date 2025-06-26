@@ -1,4 +1,4 @@
-import {delay} from "../../Utils.js";
+import {delay} from "../Utils.js";
 
 export default class HackService {
     static #sequence = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown'];

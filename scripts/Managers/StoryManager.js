@@ -1,6 +1,6 @@
 // /src/managers/StoryManager.js
 import Prologue from "../Episodes/Prologue.js";
-import TypingService from "../UI/Services/TypingService.js";
+import TypingService from "../Services/TypingService.js";
 
 export default class StoryManager {
     #episodes = {};

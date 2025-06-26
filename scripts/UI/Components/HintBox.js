@@ -1,4 +1,4 @@
-import TypingService from "../Services/TypingService.js";
+import TypingService from "../../Services/TypingService.js";
 import {waitForEvent} from "../../Utils.js";
 
 export default function createHintBox(el, msg, spanTexts = [], spanClasses = [], spanTips = []) {

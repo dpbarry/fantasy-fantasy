@@ -1,3 +1,5 @@
+import Decimal from "../Services/break_infinity.esm.js";
+
 export default class IndustryManager {
     #loops = {};
 
@@ -6,6 +8,10 @@ export default class IndustryManager {
         this.access = {
             basic: false,
         };
+        
+       this.resources = {
+           gold: new Decimal(),
+       }
     }
 
     broadcast() {
@@ -25,6 +31,10 @@ export default class IndustryManager {
             clearTimeout(this.#loops.loops);
             this.#loops.loops = null;
         }
+    }
+    
+    tick(dt) {
+
     }
 
     serialize() {
