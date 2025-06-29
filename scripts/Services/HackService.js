@@ -6,6 +6,7 @@ export default class HackService {
     static #lastKeyTime = 0;
     static #consoleElement = null;
     static #isInitialized = false;
+    static #ignoreClick = false;
 
     static initialize(core) {
         if (this.#isInitialized) return;
@@ -77,7 +78,7 @@ export default class HackService {
                 e.clientX <= rect.left + rect.width
             );
 
-            if (!clickedInDialog) {
+            if (!clickedInDialog && !this.#ignoreClick) {
                this.hide();
             }});
     }
@@ -88,6 +89,8 @@ export default class HackService {
             document.body.appendChild(this.#consoleElement);
         }
 
+        this.#ignoreClick = true;
+        setTimeout(() => {this.#ignoreClick = false;}, 100);
         this.#consoleElement.show();
         this.#consoleElement.classList.add('visible');
 
