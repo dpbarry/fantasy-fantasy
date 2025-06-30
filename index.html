@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <!--suppress CssInvalidFunction -->
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8"/>
-    <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+    <meta charset="UTF-8" />
+    <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport" />
     <title>Fantasy Fantasy</title>
     <link as="image" href="assets/TOURNAMENT.svg" rel="preload" type="image/svg+xml">
     <link href="assets/TOURNAMENT.svg" rel="icon" type="image/svg+xml">
@@ -37,7 +38,8 @@
 
         :root {
             --boxGap: 0.5rem;
-            --sidebarWidth: 24vw;
+            --leftWidth: minmax(24vw, 24vw);
+            --rightWidth: minmax(22vw, min-content);
 
             --topFontSize: clamp(0.4rem, 1.5vw, 1.1rem);
             --contrastColor: #000;
@@ -61,7 +63,9 @@
             animation-duration: 0.01s !important;
         }
 
-        *, *::before, *::after {
+        *,
+        *::before,
+        *::after {
             box-sizing: border-box;
             scrollbar-width: none;
             -webkit-tap-highlight-color: transparent;
@@ -96,8 +100,8 @@
             grid-template-rows: min-content auto;
 
             grid-template-areas:
-             "herobar"
-             "left";
+                "herobar"
+                "left";
             gap: var(--boxGap);
         }
 
@@ -105,9 +109,9 @@
             display: grid;
             grid-template-rows: min-content 79% auto;
             grid-template-areas:
-             "navbar"
-             "center"
-             "updates";
+                "navbar"
+                "center"
+                "updates";
             gap: var(--boxGap);
         }
 
@@ -115,8 +119,8 @@
             display: grid;
             grid-template-rows: min-content auto;
             grid-template-areas:
-             "citybar"
-             "right";
+                "citybar"
+                "right";
             gap: var(--boxGap);
         }
 
@@ -134,7 +138,8 @@
             display: contents;
         }
 
-        html, body {
+        html,
+        body {
             padding: 0;
             margin: 0;
             width: 100%;
@@ -148,7 +153,7 @@
             height: 100%;
             align-items: center;
 
-            & > .panel:not(.shown) {
+            &>.panel:not(.shown) {
                 display: none !important;
             }
 
@@ -165,7 +170,7 @@
             grid-template-columns: 100% 100% 100%;
             grid-template-rows: 100%;
             grid-template-areas:
-             "left center right";
+                "left center right";
             gap: var(--boxGap);
             padding: var(--boxGap);
 
@@ -176,14 +181,17 @@
 
             font-size: clamp(0.5rem, 0.8vw + 1.4vh, 1.25rem);
 
-            & > section {
+            &>section {
                 flex: 0 0 100%;
                 height: 100%;
                 scroll-snap-align: center;
             }
         }
 
-        p, h1, h2, h3 {
+        p,
+        h1,
+        h2,
+        h3 {
             margin: 0;
         }
 
@@ -216,7 +224,9 @@
             row-gap: var(--boxGap);
         }
 
-        #navbar, #herobar, #citybar {
+        #navbar,
+        #herobar,
+        #citybar {
             display: flex;
             gap: var(--boxGap);
             overflow-x: auto;
@@ -225,7 +235,6 @@
             align-items: center;
             width: 100%;
         }
-
 
 
         .navbutton {
@@ -288,10 +297,13 @@
             font-weight: 350;
             position: relative;
             padding: var(--boxGap);
-            padding-bottom: 18vh; /* USED IN JS */
+            padding-bottom: 18vh;
+            /* USED IN JS */
             scroll-behavior: smooth;
 
-            p, .hintbox, .choice-note {
+            p,
+            .hintbox,
+            .choice-note {
                 text-align: justify;
                 margin-bottom: 0.5rem;
             }
@@ -311,7 +323,9 @@
                 visibility: hidden;
             }
 
-            input, .fakeinput, p.fakeinput {
+            input,
+            .fakeinput,
+            p.fakeinput {
                 position: absolute;
                 top: 0;
                 left: 0;
@@ -337,12 +351,14 @@
 
             }
 
-            .fakeinput, p.fakeinput {
+            .fakeinput,
+            p.fakeinput {
                 width: fit-content;
                 transition: none !important;
             }
 
-            input.settled, span.settled {
+            input.settled,
+            span.settled {
                 background: transparent !important;
                 border-color: transparent !important;
 
@@ -363,7 +379,8 @@
                 background: transparent
             }
 
-            .kingChoice, .queenChoice {
+            .kingChoice,
+            .queenChoice {
                 font-family: SourceSerif;
                 white-space: nowrap;
                 cursor: pointer;
@@ -433,17 +450,20 @@
             }
 
             .kingChoice {
-                &.selected ~ .queenChoice, &:has(~ .queenChoice.selected) {
+
+                &.selected~.queenChoice,
+                &:has(~ .queenChoice.selected) {
                     opacity: 0.8;
                 }
 
-                & ~ span:has(~ .queenChoice).hide {
+                &~span:has(~ .queenChoice).hide {
                     transition: font-size 0.2s;
                     font-size: 0;
                 }
             }
 
-            p:has(.kingChoice.selected) + .cue, p:has(.queenChoice.selected) + .cue {
+            p:has(.kingChoice.selected)+.cue,
+            p:has(.queenChoice.selected)+.cue {
                 opacity: 0.8;
                 cursor: pointer;
                 pointer-events: all;
@@ -469,9 +489,9 @@
                     left: 0;
                     opacity: 0;
                     transition: color 0.05s ease,
-                    padding-left 0.2s ease,
-                    opacity 0.2s ease,
-                    font-weight 0.2s ease;
+                        padding-left 0.2s ease,
+                        opacity 0.2s ease,
+                        font-weight 0.2s ease;
                     will-change: font-size;
                     counter-increment: item;
 
@@ -491,7 +511,7 @@
                         margin-right: 0.75em;
                         color: var(--accent);
                         transition: left 0.2s ease,
-                        opacity 0.25s ease;
+                            opacity 0.25s ease;
                     }
 
                     @media (hover: hover) and (pointer: fine) {
@@ -506,9 +526,9 @@
                         padding-left: 0;
                         pointer-events: none;
                         transition: color 0.05s ease,
-                        padding-left 0.25s cubic-bezier(0.4, 0.0, 0.2, 1),
-                        opacity 0.2s ease,
-                        font-weight 0.2s ease, text-decoration 0.3s 0.2s ease;
+                            padding-left 0.25s cubic-bezier(0.4, 0.0, 0.2, 1),
+                            opacity 0.2s ease,
+                            font-weight 0.2s ease, text-decoration 0.3s 0.2s ease;
 
                         &::before {
                             animation: counterHide 0.2s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
@@ -518,7 +538,7 @@
                     &.unselected {
                         pointer-events: none;
                         transition: filter 0.25s ease, left 0.25s,
-                        font-size 0.3s 0.25s cubic-bezier(0.34, 0, 0.32, 1);
+                            font-size 0.3s 0.25s cubic-bezier(0.34, 0, 0.32, 1);
                         filter: opacity(0);
 
 
@@ -541,6 +561,7 @@
             from {
                 opacity: 1;
             }
+
             to {
                 opacity: 0;
                 font-size: 0;
@@ -618,7 +639,9 @@
                 }
             }
 
-            &.done, &.done::before, &.done::after {
+            &.done,
+            &.done::before,
+            &.done::after {
                 transition: opacity 0.22s, scale 0.5s !important;
                 opacity: 0;
                 scale: 0;
@@ -629,6 +652,7 @@
             0% {
                 opacity: 0;
             }
+
             100% {
                 opacity: 0.8;
             }
@@ -639,6 +663,7 @@
                 opacity: 0;
                 top: 1rem;
             }
+
             to {
                 opacity: 1;
                 top: 0;
@@ -649,6 +674,7 @@
             from {
                 opacity: 1;
             }
+
             to {
                 opacity: 0.65;
             }
@@ -658,9 +684,11 @@
             0% {
                 border-color: var(--accent);
             }
+
             50% {
                 border-color: hsl(3, 75%, 70%);
             }
+
             100% {
                 border-color: var(--accent);
             }
@@ -706,7 +734,9 @@
             box-shadow: 0 0 6px transparent;
 
             @media (hover: hover) and (pointer: fine) {
-                &:hover, &:active {
+
+                &:hover,
+                &:active {
                     background: color-mix(in hsl, var(--accent) 15%, transparent);
                 }
             }
@@ -753,6 +783,7 @@
                 content: "";
             }
         }
+
         .click {
             cursor: pointer;
         }
@@ -797,6 +828,7 @@
             transition: opacity 0.1s;
             height: 100%;
             width: 100%;
+
             @starting-style {
                 opacity: 0;
             }
@@ -855,6 +887,7 @@
             ::picker(select) {
                 appearance: base-select;
                 background: var(--bgColor);
+                padding: 0;
             }
 
             /*noinspection CssInvalidPseudoSelector*/
@@ -864,7 +897,9 @@
                 font-size: 1em;
             }
 
-            input, select, option {
+            input,
+            select,
+            option {
                 font-family: SourceSerif;
                 outline: none;
                 border: none;
@@ -875,7 +910,8 @@
                 font-weight: 800;
             }
 
-            select, option {
+            select,
+            option {
                 cursor: pointer;
             }
 
@@ -978,10 +1014,12 @@
                 column-gap: 0.4em;
 
 
-                .timestamp, .message {
+                .timestamp,
+                .message {
                     position: relative;
                     top: 0;
                     transition: top 0.1s, opacity 0.1s;
+
                     @starting-style {
                         top: 1rem;
                         opacity: 0;
@@ -1001,14 +1039,15 @@
             }
         }
 
-        @media (width <= 950px) and (height > 300px) {
+        @media (width <=950px) and (height > 300px) {
             #center.alphaactive {
                 #alphaboard {
                     display: grid;
                 }
 
                 #story {
-                    padding-bottom: 7vh; /* The keyboard essentially acts as most of the padding */
+                    padding-bottom: 7vh;
+                    /* The keyboard essentially acts as most of the padding */
                 }
             }
         }
@@ -1023,6 +1062,7 @@
             min-height: fit-content;
 
             transition: opacity 0.1s;
+
             @starting-style {
                 opacity: 0;
             }
@@ -1043,7 +1083,8 @@
                 transition: transform .1s;
             }
 
-            .key:active, .key.forceactive {
+            .key:active,
+            .key.forceactive {
                 transform: translateY(2px);
             }
 
@@ -1101,14 +1142,17 @@
             color: var(--baseColor);
             font-size: 0.75em;
             pointer-events: none;
+
             @starting-style {
                 opacity: 0;
             }
-            font-family: SourceSerif, serif;
+
+            font-family: SourceSerif,
+            serif;
             transition: opacity 0.1s;
             z-index: 1000;
 
-            p + p {
+            p+p {
                 margin-top: 0.35em;
             }
         }
@@ -1241,6 +1285,13 @@
 
         .subbox {
             position: relative;
+            background: transparent;
+            border: 2px solid var(--boxColor);
+            border-radius: 3px;
+            padding: var(--boxGap);
+            display: flex;
+            flex-direction: column;
+
 
             strong {
                 position: absolute;
@@ -1268,15 +1319,28 @@
 
         #industry {
             display: grid;
+            grid-template-areas:
+                "industry-theurgy industry-theurgy"
+                "industry-resources industry-workers"
+                "industry-resources industry-prod";
+            grid-template-rows: min-content min-content 1fr;
+            grid-template-columns: var(--industry-resources-width, 10em) 1fr;
+            gap: var(--boxGap);
             width: 100%;
             height: 100%;
-            grid-template-areas:
-                    "industry-theurgy industry-theurgy"
-            "industry-resources industry-prod";
-            grid-template-rows: min-content 1fr;
-            grid-template-columns: 20% 1fr;
-            gap: var(--boxGap);
+        }
 
+        #industry.transitioning {
+            transition: grid-template-columns 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #industry.expanded {
+            --industry-resources-width: 14em;
+        }
+
+        #industry {
+
+            /* Subboxes */
             #industry-theurgy {
                 flex-direction: row;
                 column-gap: 0.5em;
@@ -1286,42 +1350,159 @@
                     min-width: 10%;
                     font-size: 0.8em;
                     height: 2em;
+                    user-select: none;
+                    transition: opacity 0.2s ease, cursor 0.2s ease;
+                    
+                    &:disabled {
+                        cursor: default;
+                        opacity: 0.5;
+                    }
+                    
+                    &:not(:disabled):hover {
+                        background: color-mix(in hsl, var(--accent) 15%, transparent);
+                    }
                 }
             }
 
             #industry-resources {
                 grid-area: industry-resources;
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+                position: relative;
+                min-width: 0;
+                min-height: 0;
+            }
+
+            #industry-workers {
+                grid-area: industry-workers;
+                min-width: 0;
+                min-height: 0;
             }
 
             #industry-prod {
                 grid-area: industry-prod;
+                min-width: 0;
+                min-height: 0;
             }
 
-        }
+            .chevron {
+                position: absolute;
+                right: 10px;
+                bottom: 11px;
+                width: 12px;
+                height: 12px;
+                cursor: pointer;
+                z-index: 10;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
 
+            .chevron::before {
+                content: "";
+                display: block;
+                width: 100%;
+                height: 100%;
+                border-bottom: 2.5px solid var(--baseColor);
+                border-right: 2.5px solid var(--baseColor);
+                border-radius: 0;
+                background: none;
+                transform: rotate(-45deg);
+                transform-origin: 50% 50%;
+                transition: transform 0.18s cubic-bezier(0.4,0,0.2,1), border-color 0.18s;
+            }
+
+            &.expanded .chevron::before {
+                transform: translateX(6px) scaleX(-1) rotate(-45deg)
+            }
+
+            .chevron:hover::before {
+                border-color: var(--accent);
+            }
+
+            .resource-row {
+                display: grid;
+                grid-template-columns: 1fr 0 2.5em;
+                align-items: center;
+                padding: 0 2px;
+                border-bottom: 1px solid var(--midBaseColor);
+                min-width: 0;
+            }
+
+            &.transitioning .resource-row {
+                transition: grid-template-columns 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            &.expanded .resource-row {
+                grid-template-columns: 1fr 4em 3em;
+            }
+
+            .resource-row:last-of-type {
+                border-bottom: none;
+            }
+
+            .resource-name,
+            .resource-rate,
+            .resource-value {
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .resource-name {
+                text-align: left;
+            }
+
+            .resource-rate {
+                opacity: 0;
+                font-size: 0;
+                max-width: 0;
+                transition:
+                    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                    font-size 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+                    max-width 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+                will-change: opacity, font-size, max-width;
+                user-select: none;
+                text-align: right;
+                padding-right: 8px;
+                overflow: hidden;
+            }
+
+            &.expanded .resource-rate {
+                opacity: 0.7;
+                font-size: 0.85em;
+                max-width: 5em;
+            }
+
+            .resource-value {
+                text-align: right;
+                display: inline-block;
+            }
+        }
 
         /* DESKTOP VIEW */
         /* QUERY USED IN JS */
         @media (width > 950px) {
             body {
-                grid-template-columns: var(--sidebarWidth) 1fr var(--sidebarWidth);
+                grid-template-columns: var(--leftWidth) 1fr var(--rightWidth);
                 overflow: visible;
                 scroll-snap-type: none;
                 font-size: clamp(0.75rem, 0.8vw + 0.8vh, 1.25rem);
 
-                & > section {
+                &>section {
                     scroll-snap-align: none;
                 }
             }
 
-            .sidebar {
-                width: var(--sidebarWidth);
-            }
+
 
         }
 
 
-        .nudged, .nudged::before, .nudged::after {
+        .nudged,
+        .nudged::before,
+        .nudged::after {
             scale: 0.96;
         }
 
@@ -1421,6 +1602,7 @@
                 p {
                     transition: opacity 0.3s;
                     opacity: 0.8;
+
                     @starting-style {
                         opacity: 0;
                     }
@@ -1482,6 +1664,7 @@
                 opacity: 0;
                 transform: translate(-50%, -60%);
             }
+
             to {
                 opacity: 1;
                 transform: translate(-50%, -50%);
@@ -1492,297 +1675,268 @@
 </head>
 
 <body>
-<div id="dialog-overlay"></div>
-<div id="loading-overlay">
-    <div class="filling-icon hidden">
-        <svg
-                class="icon-base"
-                role="img"
+    <div id="dialog-overlay"></div>
+    <div id="loading-overlay">
+        <div class="filling-icon hidden">
+            <svg class="icon-base" role="img"
                 viewBox="41.84208679199219 92.34098815917969 943.2019805908203 936.6300811767578"
-                xmlns="http://www.w3.org/2000/svg"
-        >
-            <g transform="rotate(180, 512, 512)">
-                <path
+                xmlns="http://www.w3.org/2000/svg">
+                <g transform="rotate(180, 512, 512)">
+                    <path
                         d="M769.936 259.056l137.563 137.563-56.945 56.943c-22.192-43.638-48.741-83.863-78.808-120.959-46.035 45.981-91.367 90.987-136.678 134.831 133.417 141.84 254.131 289.344 346.59 463.725-177.222-98.768-327.164-216.224-471.102-346.742-143.936 130.517-293.878 247.973-471.1 346.742 92.459-174.379 213.171-321.883 346.59-463.725-45.31-43.843-90.642-88.847-136.676-134.829-30.065 37.096-56.616 77.321-78.808 120.959l-56.945-56.945 137.565-137.565c-52.495-87.21-126.819-152.596-211.627-207.494l56.031-56.031c55.518 84.185 123.299 156.119 207.822 211.3l137.241-137.241 56.945 56.945c-41.857 24.183-82.004 50.951-119.653 80.527 44.67 44.585 89.031 88.453 132.617 132.245 43.586-43.791 87.949-87.66 132.619-132.245-37.649-29.577-77.797-56.343-119.653-80.527l56.945-56.945 137.243 137.243c84.523-55.181 152.302-127.113 207.82-211.298l56.031 56.031c-84.807 54.897-159.131 120.282-211.627 207.493z"
-                        fill="currentColor"
-                />
-            </g>
-        </svg>
+                        fill="currentColor" />
+                </g>
+            </svg>
 
-        <svg
-                class="icon-fill"
-                role="img"
+            <svg class="icon-fill" role="img"
                 viewBox="41.84208679199219 92.34098815917969 943.2019805908203 936.6300811767578"
-                xmlns="http://www.w3.org/2000/svg"
-        >
-            <g transform="rotate(180, 512, 512)">
-                <path
+                xmlns="http://www.w3.org/2000/svg">
+                <g transform="rotate(180, 512, 512)">
+                    <path
                         d="M769.936 259.056l137.563 137.563-56.945 56.943c-22.192-43.638-48.741-83.863-78.808-120.959-46.035 45.981-91.367 90.987-136.678 134.831 133.417 141.84 254.131 289.344 346.59 463.725-177.222-98.768-327.164-216.224-471.102-346.742-143.936 130.517-293.878 247.973-471.1 346.742 92.459-174.379 213.171-321.883 346.59-463.725-45.31-43.843-90.642-88.847-136.676-134.829-30.065 37.096-56.616 77.321-78.808 120.959l-56.945-56.945 137.565-137.565c-52.495-87.21-126.819-152.596-211.627-207.494l56.031-56.031c55.518 84.185 123.299 156.119 207.822 211.3l137.241-137.241 56.945 56.945c-41.857 24.183-82.004 50.951-119.653 80.527 44.67 44.585 89.031 88.453 132.617 132.245 43.586-43.791 87.949-87.66 132.619-132.245-37.649-29.577-77.797-56.343-119.653-80.527l56.945-56.945 137.243 137.243c84.523-55.181 152.302-127.113 207.82-211.298l56.031 56.031c-84.807 54.897-159.131 120.282-211.627 207.493z"
-                        fill="currentColor"
-                />
-            </g>
-        </svg>
+                        fill="currentColor" />
+                </g>
+            </svg>
+        </div>
+
     </div>
-
-</div>
-<section id="left-section">
-    <div class="wrapper" id="herobar-wrap">
-        <div class="box shown" id="herobar">
-            <button class="nudge navbutton locked hastip" data-loc="left" data-panel="team" data-tip="teamnav"
-                    id="teamnav"><img
-                    alt="Team"
-                    src="assets/TEAM.svg">
-            </button>
-            <button class="nudge navbutton locked hastip" data-loc="left" data-panel="hero" data-tip="heronav"
-                    id="heronav"><img
-                    alt="Hero"
-                    src="assets/HERO.svg">
-            </button>
-            <button class="nudge navbutton locked hastip" data-loc="left" data-panel="equipment"
+    <section id="left-section">
+        <div class="wrapper" id="herobar-wrap">
+            <div class="box shown" id="herobar">
+                <button class="nudge navbutton locked hastip" data-loc="left" data-panel="team" data-tip="teamnav"
+                    id="teamnav"><img alt="Team" src="assets/TEAM.svg">
+                </button>
+                <button class="nudge navbutton locked hastip" data-loc="left" data-panel="hero" data-tip="heronav"
+                    id="heronav"><img alt="Hero" src="assets/HERO.svg">
+                </button>
+                <button class="nudge navbutton locked hastip" data-loc="left" data-panel="equipment"
                     data-tip="equipmentnav" id="equipmentnav">
-                <img alt="Equipment"
-                     src="assets/INVENTORY.svg">
-            </button>
-            <button class="nudge navbutton locked hastip" data-loc="left" data-panel="augment"
-                    data-tip="augmentnav" id="augmentnav">
-                <img
-                        alt="Augment" src="assets/AUGMENT.svg">
-            </button>
-            <button class="nudge navbutton locked hastip" data-loc="left" data-panel="upgrade"
-                    data-tip="upgradenav" id="upgradenav">
-                <img
-                        alt="Upgrade"
-                        src="assets/TREE.svg">
-            </button>
+                    <img alt="Equipment" src="assets/INVENTORY.svg">
+                </button>
+                <button class="nudge navbutton locked hastip" data-loc="left" data-panel="augment" data-tip="augmentnav"
+                    id="augmentnav">
+                    <img alt="Augment" src="assets/AUGMENT.svg">
+                </button>
+                <button class="nudge navbutton locked hastip" data-loc="left" data-panel="upgrade" data-tip="upgradenav"
+                    id="upgradenav">
+                    <img alt="Upgrade" src="assets/TREE.svg">
+                </button>
+            </div>
+
+        </div>
+        <div class="wrapper sidebar" id="left">
+            <h1 class="lock"> LOCKED </h1>
         </div>
 
-    </div>
-    <div class="wrapper sidebar" id="left">
-        <h1 class="lock"> LOCKED </h1>
-    </div>
-
-</section>
-<section id="center-section">
-    <div class="wrapper" id="navbar-wrap">
-        <div class="box shown" id="navbar">
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="city" data-tip="citynav"
-                    id="citynav"><img
-                    alt="City"
-                    src="assets/CITY.svg">
-            </button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="industry"
+    </section>
+    <section id="center-section">
+        <div class="wrapper" id="navbar-wrap">
+            <div class="box shown" id="navbar">
+                <button class="nudge locked navbutton hastip" data-loc="center" data-panel="city" data-tip="citynav"
+                    id="citynav"><img alt="City" src="assets/CITY.svg">
+                </button>
+                <button class="nudge locked navbutton hastip" data-loc="center" data-panel="industry"
                     data-tip="industrynav" id="industrynav">
-                <img
-                        alt="Industry" src="assets/INDUSTRY.svg">
-            </button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="research"
+                    <img alt="Industry" src="assets/INDUSTRY.svg">
+                </button>
+                <button class="nudge locked navbutton hastip" data-loc="center" data-panel="research"
                     data-tip="researchnav" id="researchnav">
-                <img
-                        alt="Research" src="assets/RESEARCH.svg">
-            </button>
+                    <img alt="Research" src="assets/RESEARCH.svg">
+                </button>
 
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="dungeon" data-tip="dungeonav"
-                    id="dungeonav">
-                <img
-                        alt="Dungeon" src="assets/DUNGEON.svg">
-            </button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="trade"
-                    data-tip="tradenav" id="tradenav"><img alt="Trade"
-                                                           src="assets/TRADE.svg">
-            </button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="army" data-tip="armynav"
-                    id="armynav"><img
-                    alt="Army"
-                    src="assets/ARMY.svg">
-            </button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="tournament"
+                <button class="nudge locked navbutton hastip" data-loc="center" data-panel="dungeon"
+                    data-tip="dungeonav" id="dungeonav">
+                    <img alt="Dungeon" src="assets/DUNGEON.svg">
+                </button>
+                <button class="nudge locked navbutton hastip" data-loc="center" data-panel="trade" data-tip="tradenav"
+                    id="tradenav"><img alt="Trade" src="assets/TRADE.svg">
+                </button>
+                <button class="nudge locked navbutton hastip" data-loc="center" data-panel="army" data-tip="armynav"
+                    id="armynav"><img alt="Army" src="assets/ARMY.svg">
+                </button>
+                <button class="nudge locked navbutton hastip" data-loc="center" data-panel="tournament"
                     data-tip="tournamentnav" id="tournamentnav">
-                <img alt="Tournament"
-                     src="assets/TOURNAMENT.svg">
-            </button>
+                    <img alt="Tournament" src="assets/TOURNAMENT.svg">
+                </button>
 
-        </div>
-    </div>
-
-    <div class="wrapper" id="center">
-        <div class="box panel" id="story-wrap">
-            <div data-masksize="28" id="story"></div>
-        </div>
-        <div class="panel" id="industry">
-            <div class="box subbox" id="industry-theurgy">
-                <strong>Theurgy</strong>
-                <button class="nudge ripples">Forage Seed</button>
-                <button class="nudge ripples">Plant Seed</button>
-                <button class="nudge ripples">Harvest Crop</button>
-                <button class="nudge ripples">Forage Acorn</button>
-            </div>
-            <div class="box subbox" id="industry-prod">
-                <strong>Production</strong>
-            </div>
-            <div class="box subbox" id="industry-resources">
-                <strong>Resources</strong>
             </div>
         </div>
-        <div class="keyboard" id="alphaboard">
-            <div class="key nudge">A</div>
-            <div class="key nudge">B</div>
-            <div class="key nudge">C</div>
-            <div class="key nudge">D</div>
-            <div class="key nudge">E</div>
-            <div class="key nudge">F</div>
-            <div class="key nudge">G</div>
-            <div class="key nudge">H</div>
-            <div class="key nudge">I</div>
-            <div class="key nudge">J</div>
-            <div class="key nudge">K</div>
-            <div class="key nudge">L</div>
-            <div class="key nudge">M</div>
-            <div class="key nudge">N</div>
-            <div class="key nudge">O</div>
-            <div class="key nudge">P</div>
-            <div class="key nudge">Q</div>
-            <div class="key nudge">R</div>
-            <div class="key nudge">S</div>
-            <div class="key nudge">T</div>
-            <div class="key nudge">U</div>
-            <div class="key nudge">V</div>
-            <div class="key nudge">W</div>
-            <div class="key nudge">X</div>
-            <div class="key nudge">Y</div>
-            <div class="key nudge">Z</div>
-            <div class="key action bkspc nudge">⟵</div>
-            <div class="key action spc nudge">SPC</div>
-            <div class="key action enter nudge">⏎</div>
+
+        <div class="wrapper" id="center">
+            <div class="box panel" id="story-wrap">
+                <div data-masksize="28" id="story"></div>
+            </div>
+            <div class="panel" id="industry">
+
+                <div class="subbox" id="industry-theurgy">
+                    <strong>Theurgy</strong>
+                    <button id="theurgy-forage" class="ripples">Forage</button>
+                    <button id="theurgy-plant" class="ripples">Plant</button>
+                    <button id="theurgy-harvest" class="ripples">Harvest</button>
+                </div>
+                <div class="subbox" id="industry-resources">
+                    <strong>Resources</strong>
+                </div>
+                <div class="subbox" id="industry-workers">
+                    <strong>Workers</strong>
+                </div>
+                <div class="subbox" id="industry-prod">
+                    <strong>Production</strong>
+                </div>
+
+            </div>
+            <div class="keyboard" id="alphaboard">
+                <div class="key nudge">A</div>
+                <div class="key nudge">B</div>
+                <div class="key nudge">C</div>
+                <div class="key nudge">D</div>
+                <div class="key nudge">E</div>
+                <div class="key nudge">F</div>
+                <div class="key nudge">G</div>
+                <div class="key nudge">H</div>
+                <div class="key nudge">I</div>
+                <div class="key nudge">J</div>
+                <div class="key nudge">K</div>
+                <div class="key nudge">L</div>
+                <div class="key nudge">M</div>
+                <div class="key nudge">N</div>
+                <div class="key nudge">O</div>
+                <div class="key nudge">P</div>
+                <div class="key nudge">Q</div>
+                <div class="key nudge">R</div>
+                <div class="key nudge">S</div>
+                <div class="key nudge">T</div>
+                <div class="key nudge">U</div>
+                <div class="key nudge">V</div>
+                <div class="key nudge">W</div>
+                <div class="key nudge">X</div>
+                <div class="key nudge">Y</div>
+                <div class="key nudge">Z</div>
+                <div class="key action bkspc nudge">⟵</div>
+                <div class="key action spc nudge">SPC</div>
+                <div class="key action enter nudge">⏎</div>
+            </div>
+
+            <div class="keyboard" id="numboard">
+                <div class="key nudge">1</div>
+                <div class="key nudge">2</div>
+                <div class="key nudge">3</div>
+                <div class="key nudge">4</div>
+                <div class="key nudge">5</div>
+                <div class="key nudge">6</div>
+                <div class="key nudge">7</div>
+                <div class="key nudge">8</div>
+                <div class="key nudge">9</div>
+                <div class="key nudge">0</div>
+                <div class="key nudge">.</div>
+                <div class="key action bkspc nudge">⟵</div>
+                <div class="key action enter nudge">⏎</div>
+            </div>
         </div>
 
-        <div class="keyboard" id="numboard">
-            <div class="key nudge">1</div>
-            <div class="key nudge">2</div>
-            <div class="key nudge">3</div>
-            <div class="key nudge">4</div>
-            <div class="key nudge">5</div>
-            <div class="key nudge">6</div>
-            <div class="key nudge">7</div>
-            <div class="key nudge">8</div>
-            <div class="key nudge">9</div>
-            <div class="key nudge">0</div>
-            <div class="key nudge">.</div>
-            <div class="key action bkspc nudge">⟵</div>
-            <div class="key action enter nudge">⏎</div>
-        </div>
-    </div>
+        <div class="wrapper" id="updates-wrap">
+            <h1 class="lock"> LOCKED </h1>
+            <div class="box panel" id="updates">
+                <div data-masksize="20" id="upate-logs"></div>
+                <button class="nudge navbutton hastip" data-tip="mailnav" id="mailnav"><img alt="Mail"
+                        src="assets/MAIL.svg">
+                </button>
+            </div>
 
-    <div class="wrapper" id="updates-wrap">
-        <h1 class="lock"> LOCKED </h1>
-        <div class="box panel" id="updates">
-            <div data-masksize="20" id="upate-logs"></div>
-            <button class="nudge navbutton hastip" data-tip="mailnav" id="mailnav"><img alt="Mail"
-                                                                                        src="assets/MAIL.svg">
-            </button>
         </div>
-
-    </div>
-</section>
-<section id="right-section">
-    <div class="wrapper" id="citybar-wrap">
-        <div class="box shown" id="citybar">
-            <button class="nudge locked navbutton hastip" data-loc="right" data-panel="cityinfo"
+    </section>
+    <section id="right-section">
+        <div class="wrapper" id="citybar-wrap">
+            <div class="box shown" id="citybar">
+                <button class="nudge locked navbutton hastip" data-loc="right" data-panel="cityinfo"
                     data-tip="cityinfonav" id="cityinfonav">
-                <img
-                        alt="City Info"
-                        src="assets/CASTLE.svg">
-            </button>
-            <button class="nudge locked navbutton hastip" data-loc="right" data-panel="chart" data-tip="chartnav"
-                    id="chartnav"><img
-                    alt="Charts"
-                    src="assets/CHART.svg"></button>
-            <button class="nudge locked navbutton hastip" data-loc="right" data-panel="achievements"
+                    <img alt="City Info" src="assets/CASTLE.svg">
+                </button>
+                <button class="nudge locked navbutton hastip" data-loc="right" data-panel="chart" data-tip="chartnav"
+                    id="chartnav"><img alt="Charts" src="assets/CHART.svg"></button>
+                <button class="nudge locked navbutton hastip" data-loc="right" data-panel="achievements"
                     data-tip="achievenav" id="achievenav">
-                <img alt="Achievements"
-                     src="assets/TROPHY.svg">
-            </button>
-            <button class="nudge navbutton hastip" data-loc="right" data-panel="codex" data-tip="codexnav"
-                    id="codexnav"><img
-                    alt="Codex"
-                    src="assets/CODEX.svg">
-            </button>
-            <button class="nudge navbutton hastip" data-loc="right" data-panel="settings" data-tip="settingsnav"
+                    <img alt="Achievements" src="assets/TROPHY.svg">
+                </button>
+                <button class="nudge navbutton hastip" data-loc="right" data-panel="codex" data-tip="codexnav"
+                    id="codexnav"><img alt="Codex" src="assets/CODEX.svg">
+                </button>
+                <button class="nudge navbutton hastip" data-loc="right" data-panel="settings" data-tip="settingsnav"
                     id="settingsnav">
-                <img
-                        alt="Settings" src="assets/COG.svg">
-            </button>
-        </div>
-    </div>
-    <div class="wrapper sidebar" id="right">
-        <div class="box panel" id="cityinfo">
-            <div id="city-header"></div>
-            <div id="city-stats"></div>
-        </div>
-        <div class="box panel shown" id="settings">
-            <h2 id="appearance-header">Appearance</h2>
-            <div class="setting">
-                <label class="theme">
-                    Background
-                    <input checked id="black" name="background" type="radio"/>
-                    <input id="dark" name="background" type="radio"/>
-                    <input id="pastel" name="background" type="radio"/>
-                    <input id="light" name="background" type="radio"/>
-                </label>
-            </div>
-            <div class="setting">
-                <label class="theme">
-                    Theme
-                    <input checked id="lightning" name="accent" type="radio"/>
-                    <input id="acid" name="accent" type="radio"/>
-                    <input id="amber" name="accent" type="radio"/>
-                    <input id="arcane" name="accent" type="radio"/>
-                </label>
-            </div>
-            <h2 id="game-header">Game</h2>
-            <div class="setting">
-                <label>
-                    Number Format
-                    <select id="numformat" name="numformat">
-                        <option selected value="alphabetical">Alphabetical</option>
-                        <option value="scientific">Scientific</option>
-                    </select>
-                </label>
-            </div>
-            <div class="setting">
-                <label>
-                    Offline Progress
-                    <select id="offlineprogress" name="offlineprogress">
-                        <option selected value="on">On</option>
-                        <option value="off">Off</option>
-                    </select>
-                </label>
-            </div>
-            <h2 id="system-header">System</h2>
-            <div class="setting">
-                <label>
-                    UI Refresh Rate
-                    <select id="refreshUI" name="refreshUI">
-                        <option value="100">100</option>
-                        <option value="75">75</option>
-                        <option value="50">50</option>
-                        <option selected value="30">30</option>
-                        <option value="20">20</option>
-                        <option value="10">10</option>
-                        <option value="5">5</option>
-                        <option value="1">1</option>
-                    </select> </label>
-            </div>
-            <h2 id="about-header">About</h2>
-            <div id="about">
-                This site does not collect any data and is a WIP. Most icons are sourced from <a
-                    href="https://game-icons.net/about.html#:~:text=Authors%20%26%20Contributors">game-icons.net</a>.
-                <a href="https://github.com/dpbarry/fantasy-fantasy" id="github" rel="noopener noreferrer"
-                   target="_blank"></a>
+                    <img alt="Settings" src="assets/COG.svg">
+                </button>
             </div>
         </div>
-    </div>
+        <div class="wrapper sidebar" id="right">
+            <div class="box panel" id="cityinfo">
+                <div id="city-header"></div>
+                <div id="city-stats"></div>
+            </div>
+            <div class="box panel shown" id="settings">
+                <h2 id="appearance-header">Appearance</h2>
+                <div class="setting">
+                    <label class="theme">
+                        Background
+                        <input checked id="black" name="background" type="radio" />
+                        <input id="dark" name="background" type="radio" />
+                        <input id="pastel" name="background" type="radio" />
+                        <input id="light" name="background" type="radio" />
+                    </label>
+                </div>
+                <div class="setting">
+                    <label class="theme">
+                        Theme
+                        <input checked id="lightning" name="accent" type="radio" />
+                        <input id="acid" name="accent" type="radio" />
+                        <input id="amber" name="accent" type="radio" />
+                        <input id="arcane" name="accent" type="radio" />
+                    </label>
+                </div>
+                <h2 id="game-header">Game</h2>
+                <div class="setting">
+                    <label>
+                        Number Format
+                        <select id="numformat" name="numformat">
+                            <option selected value="alphabetical">Alphabetical</option>
+                            <option value="scientific">Scientific</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="setting">
+                    <label>
+                        Offline Progress
+                        <select id="offlineprogress" name="offlineprogress">
+                            <option selected value="on">On</option>
+                            <option value="off">Off</option>
+                        </select>
+                    </label>
+                </div>
+                <h2 id="system-header">System</h2>
+                <div class="setting">
+                    <label>
+                        UI Refresh Rate
+                        <select id="refreshUI" name="refreshUI">
+                            <option value="100">100</option>
+                            <option value="75">75</option>
+                            <option value="50">50</option>
+                            <option selected value="30">30</option>
+                            <option value="20">20</option>
+                            <option value="10">10</option>
+                            <option value="5">5</option>
+                            <option value="1">1</option>
+                        </select> </label>
+                </div>
+                <h2 id="about-header">About</h2>
+                <div id="about">
+                    This site does not collect any data and is a WIP. Most icons are sourced from <a
+                        href="https://game-icons.net/about.html#:~:text=Authors%20%26%20Contributors">game-icons.net</a>.
+                    <a href="https://github.com/dpbarry/fantasy-fantasy" id="github" rel="noopener noreferrer"
+                        target="_blank"></a>
+                </div>
+            </div>
+        </div>
 
-</section>
+    </section>
 </body>
 
 
@@ -1791,4 +1945,5 @@
 
     GameCore.getInstance();
 </script>
+
 </html>

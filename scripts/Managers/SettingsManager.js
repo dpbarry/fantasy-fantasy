@@ -20,6 +20,10 @@ export default class SettingsManager {
         return this.configs;
     }
 
+    get refreshUI() {
+        return 1000 / parseInt(this.configs.refreshUI);
+    }
+
     updateSetting(setting, value) {
         this.configs[setting] = value;
         applyTheme(this.core);
