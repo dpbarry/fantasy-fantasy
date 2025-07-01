@@ -5,7 +5,7 @@ export default class NewsPanel {
 
     constructor(core) {
         this.core = core;
-        this.root = core.ui.news.querySelector("#upate-logs");
+        this.root = core.ui.news.querySelector("#update-logs");
     }
 
     render(data) {

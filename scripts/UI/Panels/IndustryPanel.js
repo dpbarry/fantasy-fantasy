@@ -53,7 +53,6 @@ export default class IndustryPanel {
         floatingText.style.cssText = `
             position: fixed;
             color: var(--baseColor);
-            font-weight: 400;
             user-select: none;
             font-size: 0.9em;
             pointer-events: none;
@@ -108,11 +107,11 @@ export default class IndustryPanel {
                 
                 switch (theurgyType) {
                     case "forage":
-                        resourceName = "seeds"; 
+                        resourceName = "seed"; 
                         amount = 1;
                         break;
                     case "plant":
-                        resourceName = "crops"; 
+                        resourceName = "crop"; 
                         amount = 1;
                         break;
                     case "harvest":

@@ -127,7 +127,7 @@ export default class HackService {
             switch (cmd.toLowerCase()) {
                 case 'help':
                     core.save();
-                    feedback.textContent = 'Commands: help, pause, resume, hardstop, restart, settime, save, load, delsave';
+                    feedback.textContent = 'Commands: help, pause, resume, hardstop, restart, devstart, settime, save, load, delsave';
                     break;
                 case 'pause':
                     feedback.textContent = core.clock.isPaused ? "Already paused" : "Game paused";
@@ -162,6 +162,29 @@ export default class HackService {
                     });
 
                     localStorage.clear();
+                    location.reload();
+                    break;
+                case 'devstart':
+                    feedback.textContent = "Soft restarting game...";
+                    feedback.classList.add('visible');
+                    await delay(300);
+                    core.pause();
+                    window.onbeforeunload = null;
+                    await new Promise(resolve => {
+                        if (core.pendingSave) {
+                            const checkSave = setInterval(() => {
+                                if (!core.pendingSave) {
+                                    clearInterval(checkSave);
+                                    resolve();
+                                }
+                            }, 10);
+                        } else {
+                            resolve();
+                        }
+                    });
+
+                    const devSave = core.storage.devSave;
+                    core.storage.clearExcept(devSave);
                     location.reload();
                     break;
                 case 'set':

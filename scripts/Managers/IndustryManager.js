@@ -40,7 +40,6 @@ class Resource {
     get effectiveGrowthRate() {
         let rate = this.baseGrowthRate;
         
-        // Handle static modifiers
         Object.values(this.growthModifiers).forEach(m => {
             if (typeof m === 'object' && m.type && m.value) {
                 if (m.type === "add") {
@@ -53,7 +52,6 @@ class Resource {
             }
         });
         
-        // Handle dynamic modifiers (functions)
         Object.values(this.growthModifiers).forEach(m => {
             if (typeof m === 'function') {
                 const modifier = m();
@@ -77,11 +75,9 @@ class Resource {
     }
 
     update(dt) {
-        // dt is in seconds
         const growth = this.netGrowthRate.times(dt);
         this.value = this.value.plus(growth);
         
-        // Ensure value doesn't go below 0
         if (this.value.lt(0)) {
             this.value = new Decimal(0);
         }
@@ -163,15 +159,10 @@ export default class IndustryManager {
         this.access = { basic: false };
         this.resources = {
             food: new Resource(0),
-            workers: new Resource(0),
             gold: new Resource(0),
             seeds: new Resource(0),
             crops: new Resource(0),
         };
-        
-        // Give players some starting resources
-        this.resources.seeds.setValue(5);
-        this.resources.gold.setValue(10);
     }
 
     boot() {
@@ -186,12 +177,10 @@ export default class IndustryManager {
         
         switch (theurgyType) {
             case "forage":
-                // Forage: +1 seed (can be expanded later to include acorns, etc.)
                 this.resources.seeds.add(1);
                 success = true;
                 break;
             case "plant":
-                // Plant: -1 seed, +1 crop (if you have seeds)
                 if (this.resources.seeds.value.gte(1)) {
                     this.resources.seeds.subtract(1);
                     this.resources.crops.add(1);
@@ -199,7 +188,6 @@ export default class IndustryManager {
                 }
                 break;
             case "harvest":
-                // Harvest: -1 crop, +1 food (if you have crops)
                 if (this.resources.crops.value.gte(1)) {
                     this.resources.crops.subtract(1);
                     this.resources.food.add(1);
@@ -209,7 +197,6 @@ export default class IndustryManager {
         }
         
         if (success) {
-            // Trigger immediate UI update
             this.broadcast();
         }
         
@@ -219,7 +206,7 @@ export default class IndustryManager {
     canPerformTheurgy(theurgyType) {
         switch (theurgyType) {
             case "forage":
-                return true; // Always available
+                return true;
             case "plant":
                 return this.resources.seeds.value.gte(1);
             case "harvest":
@@ -240,19 +227,16 @@ export default class IndustryManager {
     }
     
     tick(dt) {
-        // Update all resources with their growth/consumption
         Object.values(this.resources).forEach(resource => {
             resource.update(dt);
         });
     }
 
     broadcast() {
-        // Use the already-calculated growth rates for UI display
         Object.values(this.resources).forEach(resource => {
             resource.rate = resource.netGrowthRate;
         });
         
-        // Resources now handle their own growth, just render the current state
         this.core.ui.panels.industry.render(this.getStatus());
     }
 

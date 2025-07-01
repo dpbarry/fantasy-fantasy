@@ -23,4 +23,76 @@ export default class GameStorage {
             throw error;
         }
     }
+
+    clearExcept(saveData) {
+        try {
+            localStorage.clear();
+            
+            if (saveData) {
+                localStorage.setItem(this.storageKey, JSON.stringify(saveData));
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Failed to clear storage:', error);
+            throw error;
+        }
+    }
+
+    get devSave() {
+        try {
+            const core = window.gameCore || GameCore.getInstance();
+            
+            const baseSave = {
+                version: core.currentVersion,
+                timestamp: Date.now(),
+                data: {}
+            };
+
+            for (const [key, component] of core.saveableComponents) {
+                baseSave.data[key] = component.serialize();
+            }
+
+            baseSave.data.story.progress = { Prologue: 6 };
+            baseSave.data.story.choices = { Prologue: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } };
+            baseSave.data.story.currentEpisode = null;
+
+            baseSave.data.mc.firstName = "Al";
+            baseSave.data.mc.lastName = "Green";
+            baseSave.data.mc.gender = "M";
+            baseSave.data.mc.savvy = 0;
+            baseSave.data.mc.valor = 0;
+            baseSave.data.mc.wisdom = 10;
+
+            baseSave.data.city.name = "Beliard";
+
+            baseSave.data.industry.access = { basic: true };
+
+            baseSave.data.news.logs = [{timestamp: "07:22", message: "You woke up from a strange dream."}];
+
+            baseSave.data.ui.activePanels = { 
+                left: "", 
+                center: "industry", 
+                right: "settings" 
+            };
+            baseSave.data.ui.visibleSection = "center";
+
+            return baseSave;
+        } catch (error) {
+            console.error('Failed to generate dev save from current state:', error);
+            
+            return {
+                version: "0.1.2",
+                timestamp: Date.now(),
+                data: {
+                    story: { progress: { Prologue: 6 }, choices: { Prologue: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } }, currentEpisode: null },
+                    mc: { firstName: "Test", lastName: "Player", gender: "M", savvy: 10, valor: 0, wisdom: 0 },
+                    city: { name: "Test City" },
+                    industry: { access: { basic: true } },
+                    news: { logs: [{timestamp: "07:22", message: "You woke up from a strange dream."}] },
+                    ui: { activePanels: { left: "", center: "industry", right: "settings" }, visibleSection: "center" }
+                }
+            };
+        }
+    }
 }

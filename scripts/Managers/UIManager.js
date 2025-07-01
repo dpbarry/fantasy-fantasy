@@ -35,7 +35,7 @@ export default class UIManager {
     }
 
     boot() {
-        setupGlobalBehavior(this.core);
+        this.globalBehaviorCleanup = setupGlobalBehavior(this.core);
         this.showPanels();
     }
 
@@ -151,5 +151,11 @@ export default class UIManager {
     deserialize(data) {
         this.activePanels = data.activePanels;
         this.visibleSection = data.visibleSection;
+    }
+
+    cleanup() {
+        if (this.globalBehaviorCleanup) {
+            this.globalBehaviorCleanup();
+        }
     }
 }

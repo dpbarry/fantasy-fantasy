@@ -136,6 +136,13 @@ export default class GameCore {
         this.#isRunning = false;
     }
 
+    cleanup() {
+        this.pause();
+        if (this.ui && typeof this.ui.cleanup === 'function') {
+            this.ui.cleanup();
+        }
+    }
+
     resume() {
         if (!this.#isRunning) {
             this.#isRunning = true;

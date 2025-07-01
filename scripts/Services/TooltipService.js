@@ -4,6 +4,22 @@ export default function createTooltipService() {
     const pointerDismissHandlers = new WeakMap();
     let observer = null;
 
+    window.addEventListener("scroll", () => {
+        const tooltips = document.querySelectorAll(".tooltip");
+        tooltips.forEach(tip => {
+            if (tip.isRemoving) return;
+            tip.isRemoving = true;
+            tip.style.opacity = '0';
+            tip.ontransitionend = () => { tip.remove(); }
+            setTimeout(() => {
+                tip.remove();
+            }, 300);
+        });
+        document.querySelectorAll('[data-hastooltip="true"]').forEach(el => {
+            el.dataset.hastooltip = false;
+        });
+    }, true);
+
     function registerTip(type, cb) {
         tooltips.set(type, cb);
     }
@@ -53,7 +69,8 @@ export default function createTooltipService() {
 
 
     function showTooltip(el) {
-        if (el.querySelector('.tooltip')) return;
+        if (el.dataset.hastooltip === "true") return;
+        el.dataset.hastooltip = true;
 
         const tipBox = document.createElement('div');
         tipBox.className = 'tooltip';
@@ -130,8 +147,11 @@ export default function createTooltipService() {
             if (tip.isRemoving) return;
             tip.isRemoving = true;
             tip.style.opacity = '0';
-            tip.ontransitionend = () => tip.remove();
-            setTimeout(() => tip.remove(), 300);
+            tip.ontransitionend = () => { tip.remove(); el.dataset.hastooltip = false; }
+            setTimeout(() => {
+                tip.remove();
+                el.dataset.hastooltip = false;
+            }, 300);
         });
     }
 
@@ -139,7 +159,6 @@ export default function createTooltipService() {
         pointerDismissHandlers.set(el, cb);
         document.addEventListener('pointerdown', cb);
         document.addEventListener('pointerup', cb);
-        window.addEventListener('scroll', cb, true);
     }
 
     function removeDismissHandlers(el) {
@@ -147,7 +166,6 @@ export default function createTooltipService() {
         if (!cb) return;
         document.removeEventListener('pointerdown', cb);
         document.removeEventListener('pointerup', cb);
-        window.removeEventListener('scroll', cb, true);
         pointerDismissHandlers.delete(el);
     }
 
@@ -155,7 +173,7 @@ export default function createTooltipService() {
         if (el._hastipBound) return;
         el._hastipBound = true;
 
-        el.addEventListener('mouseenter', onMouseEnter);
+        el.addEventListener('mousemove', onMouseMove);
         el.addEventListener('mouseleave', onMouseLeave);
         el.addEventListener('pointerdown', onPointerDown);
     }
@@ -164,7 +182,7 @@ export default function createTooltipService() {
         if (!el._hastipBound) return;
         el._hastipBound = false;
 
-        el.removeEventListener('mouseenter', onMouseEnter);
+        el.removeEventListener('mousemove', onMouseMove);
         el.removeEventListener('mouseleave', onMouseLeave);
         el.removeEventListener('pointerdown', onPointerDown);
 
@@ -172,7 +190,7 @@ export default function createTooltipService() {
         destroyTooltip(el);
     }
 
-    function onMouseEnter(e) {
+    function onMouseMove(e) {
         showTooltip(e.currentTarget);
     }
 

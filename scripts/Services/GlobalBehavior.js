@@ -20,32 +20,73 @@ export default function setupGlobalBehavior(core) {
             core.ui.show(b.dataset.loc, b.dataset.panel);
         }
     })
-    const carousel = document.querySelector("body");
-    const left = document.getElementById("left-section");
-    const center = document.getElementById('center-section');
-    const right = document.getElementById("right-section");
 
-    const scrollSection = (s, behavior) => {
-        let section = s === "center" ? center : s === "left" ? left : right;
+    const sectionsWrapper = document.getElementById("sections-wrapper");
+    if (!sectionsWrapper) return;
 
-        section.scrollIntoView({behavior: behavior});
+    // Store event listener references for cleanup
+    let mobileEventListeners = {
+        touchmove: null,
+        wheel: null
+    };
+
+    function setupMobileScroll() {
+        // Prevent touch scrolling and wheel scrolling on mobile
+        mobileEventListeners.touchmove = (e) => e.preventDefault();
+        mobileEventListeners.wheel = (e) => e.preventDefault();
+        
+        sectionsWrapper.addEventListener('touchmove', mobileEventListeners.touchmove, { passive: false });
+        sectionsWrapper.addEventListener('wheel', mobileEventListeners.wheel, { passive: false });
     }
 
-    scrollSection(core.ui.visibleSection, "auto");
+    function cleanupMobileScroll() {
+        // Remove mobile-specific event listeners
+        if (mobileEventListeners.touchmove) {
+            sectionsWrapper.removeEventListener('touchmove', mobileEventListeners.touchmove);
+            mobileEventListeners.touchmove = null;
+        }
+        if (mobileEventListeners.wheel) {
+            sectionsWrapper.removeEventListener('wheel', mobileEventListeners.wheel);
+            mobileEventListeners.wheel = null;
+        }
+    }
 
-    carousel.addEventListener("scroll", () => {
-        const cw = carousel.clientWidth;
-        const scrollX = carousel.scrollLeft;
+    function setInitialScrollPosition() {
+        const sectionNames = ["left", "center", "right"];
+        const currentIndex = sectionNames.indexOf(core.ui.visibleSection || "center");
+        const secWidth = sectionsWrapper.clientWidth;
+        sectionsWrapper.scrollTo({ left: currentIndex * secWidth, behavior: "instant" });
+    }
 
-        const index = Math.round(scrollX / cw);
+    // Initial setup
+    if (window.innerWidth <= 950) {
+        setupMobileScroll();
+        setInitialScrollPosition();
+    }
 
-        core.ui.visibleSection = index === 0 ? "left" : index === 1 ? "center" : "right";
-    });
-
+    let isMobile = window.innerWidth <= 950;
+    let resizeTimeout = null;
+    
     window.addEventListener("resize", () => {
-        scrollSection(core.ui.visibleSection, "auto");
+        if (resizeTimeout) {
+            clearTimeout(resizeTimeout);
+        }
+        
+        resizeTimeout = setTimeout(() => {
+            const wasMobile = isMobile;
+            isMobile = window.innerWidth <= 950;
+            
+            if (isMobile && !wasMobile) {
+                // Switching to mobile
+                setupMobileScroll();
+                setInitialScrollPosition();
+            } else if (!isMobile && wasMobile) {
+                // Switching to desktop
+                cleanupMobileScroll();
+                sectionsWrapper.scrollTo({ left: 0, behavior: "instant" });
+            }
+        }, 100); 
     });
-
 }
 
 export function applyTheme(core) {
