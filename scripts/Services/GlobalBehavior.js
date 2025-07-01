@@ -18,74 +18,16 @@ export default function setupGlobalBehavior(core) {
         b.onpointerdown = () => {
             if (b.classList.contains("locked")) return;
             core.ui.show(b.dataset.loc, b.dataset.panel);
-        }
-    })
 
-    const sectionsWrapper = document.getElementById("sections-wrapper");
-    if (!sectionsWrapper) return;
-
-    // Store event listener references for cleanup
-    let mobileEventListeners = {
-        touchmove: null,
-        wheel: null
-    };
-
-    function setupMobileScroll() {
-        // Prevent touch scrolling and wheel scrolling on mobile
-        mobileEventListeners.touchmove = (e) => e.preventDefault();
-        mobileEventListeners.wheel = (e) => e.preventDefault();
-        
-        sectionsWrapper.addEventListener('touchmove', mobileEventListeners.touchmove, { passive: false });
-        sectionsWrapper.addEventListener('wheel', mobileEventListeners.wheel, { passive: false });
-    }
-
-    function cleanupMobileScroll() {
-        // Remove mobile-specific event listeners
-        if (mobileEventListeners.touchmove) {
-            sectionsWrapper.removeEventListener('touchmove', mobileEventListeners.touchmove);
-            mobileEventListeners.touchmove = null;
-        }
-        if (mobileEventListeners.wheel) {
-            sectionsWrapper.removeEventListener('wheel', mobileEventListeners.wheel);
-            mobileEventListeners.wheel = null;
-        }
-    }
-
-    function setInitialScrollPosition() {
-        const sectionNames = ["left", "center", "right"];
-        const currentIndex = sectionNames.indexOf(core.ui.visibleSection || "center");
-        const secWidth = sectionsWrapper.clientWidth;
-        sectionsWrapper.scrollTo({ left: currentIndex * secWidth, behavior: "instant" });
-    }
-
-    // Initial setup
-    if (window.innerWidth <= 950) {
-        setupMobileScroll();
-        setInitialScrollPosition();
-    }
-
-    let isMobile = window.innerWidth <= 950;
-    let resizeTimeout = null;
-    
-    window.addEventListener("resize", () => {
-        if (resizeTimeout) {
-            clearTimeout(resizeTimeout);
-        }
-        
-        resizeTimeout = setTimeout(() => {
-            const wasMobile = isMobile;
-            isMobile = window.innerWidth <= 950;
-            
-            if (isMobile && !wasMobile) {
-                // Switching to mobile
-                setupMobileScroll();
-                setInitialScrollPosition();
-            } else if (!isMobile && wasMobile) {
-                // Switching to desktop
-                cleanupMobileScroll();
-                sectionsWrapper.scrollTo({ left: 0, behavior: "instant" });
+            // Update tactile scroll state when programmatically changing sections
+            if (isMobile) {
+                const sectionNames = ["left", "center", "right"];
+                const newSection = sectionNames.indexOf(b.dataset.loc);
+                if (newSection !== -1 && newSection !== scrollState.currentSection) {
+                    completeTransplant(newSection);
+                }
             }
-        }, 100); 
+        }
     });
 }
 

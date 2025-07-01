@@ -37,7 +37,7 @@
 
 
         :root {
-            --boxGap: 0.5rem;
+            --boxGap: 7px;
             --leftWidth: minmax(24vw, 24vw);
             --rightWidth: minmax(22vw, min-content);
 
@@ -131,11 +131,10 @@
 
         #right-section {
             display: grid;
-            grid-template-rows: min-content auto 20%;
+            grid-template-rows: min-content auto;
             grid-template-areas:
                 "citybar"
-                "right"
-                "updates";
+                "right";
             gap: var(--boxGap);
         }
 
@@ -160,6 +159,7 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
+            touch-action: manipulation;
         }
 
         /* ASSUMES MOBILE */
@@ -177,6 +177,7 @@
             font-family: SourceSerif;
             gap: var(--boxGap);
             padding: var(--boxGap);
+            background: var(--bgColor);
         }
 
         #sections-wrapper {
@@ -184,19 +185,59 @@
             gap: var(--boxGap);
             overflow-x: auto;
             padding-bottom: calc(var(--updates-height) + var(--boxGap));
-            /* User scroll is blocked by JS event listeners */
+            /* Scroll behavior handled by JS for tactile feedback */
+            scroll-snap-type: x mandatory;
             scroll-padding-left: 0;
             scroll-padding-right: 0;
             height: 100%;
             grid-area: sections;
-            background: var(--bgColor);
+            position: relative;
+            
 
             section {
                 min-width: 100%;
-                scroll-snap-align: center;
                 height: 100%;
                 border: none;
+                scroll-snap-align: center;
             }
+        }
+
+        .scroll-chevron {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%) scale(0.5);
+            width: 40px;
+            height: 40px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.1s ease, transform 0.1s ease;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .scroll-chevron::before {
+            content: '';
+            width: 12px;
+            height: 12px;
+            border-top: 2px solid var(--baseColor);
+            border-right: 2px solid var(--baseColor);
+            transform: rotate(-45deg);
+        }
+
+        .scroll-chevron-left {
+            left: 20px;
+        }
+
+        .scroll-chevron-right {
+            right: 20px;
+        }
+
+        .scroll-chevron-right::before {
+            transform: rotate(135deg);
         }
 
 
@@ -1005,7 +1046,7 @@
                 }
             }
 
-                            #update-logs {
+            #update-logs {
                 display: grid;
                 overflow-y: scroll;
                 width: 100%;
@@ -1512,6 +1553,14 @@
                 #updates-wrapper {
                     display: contents;
                 }
+
+                #right-section {
+                    grid-template-rows: min-content auto 20%;
+                    grid-template-areas:
+                        "citybar"
+                        "right"
+                        "updates-wrapper";
+                }
             }
         }
 
@@ -1685,8 +1734,6 @@
                 transform: translate(-50%, -50%);
             }
         }
-
-
     </style>
     <!--  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
 </head>
