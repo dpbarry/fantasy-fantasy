@@ -167,7 +167,4 @@ export default class ClockManager {
         Object.assign(this, data);
     }
 
-    boot() {
-
-    }
 }

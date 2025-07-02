@@ -63,7 +63,7 @@ export default class UIManager {
     initNavbar() {
         const navButtons = document.querySelectorAll(".navbutton");
         navButtons.forEach(b => {
-            b.onpointerdown = () => this.show(b.dataset.panel);
+            b.onpointerdown = () => this.show(b.dataset.loc, b.dataset.panel);
         });
     }
 
@@ -74,7 +74,7 @@ export default class UIManager {
         };
 
         document.querySelectorAll(".ripples").forEach(el => {
-            el.addEventListener("click", (e) => {
+            el.addEventListener("pointerdown", (e) => {
                 spawnRipple(e, el);
             });
         });
@@ -134,7 +134,6 @@ export default class UIManager {
         if (button) {
             button.classList.add("chosen");
         }
-
     }
 
     showPanels() {

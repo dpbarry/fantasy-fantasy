@@ -158,10 +158,10 @@ export default class IndustryManager {
         this.core = core;
         this.access = { basic: false };
         this.resources = {
-            food: new Resource(0),
-            gold: new Resource(0),
             seeds: new Resource(0),
             crops: new Resource(0),
+            food: new Resource(0),
+            gold: new Resource(0),
         };
     }
 
@@ -169,7 +169,6 @@ export default class IndustryManager {
         if (this.access.basic) {
             document.querySelector("#industrynav").classList.remove("locked");
         }
-        this.run();
     }
 
     performTheurgy(theurgyType) {
@@ -216,11 +215,11 @@ export default class IndustryManager {
         }
     }
 
-    run() {
+    updateLoops() {
         if (this.core.ui.activePanels.center === "industry" && !this.#loops.industry) {
             this.#loops.industry = setInterval(() => this.broadcast(),
                 parseInt(this.core.settings.refreshUI));
-        } else {
+        } else if(this.core.ui.activePanels.center !== "industry") {
             clearInterval(this.#loops.industry);
             this.#loops.industry = null;
         }

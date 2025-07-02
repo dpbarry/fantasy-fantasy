@@ -22,7 +22,7 @@ export default class HeroManager {
         Object.assign(this, data);
     }
 
-    boot() {
-        this.run();
+    updateLoops() {
+   
     }
 }

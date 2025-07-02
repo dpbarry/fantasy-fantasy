@@ -4,7 +4,6 @@ import UIManager from "./Managers/UIManager.js";
 import StoryManager from "./Managers/StoryManager.js";
 import CityManager from "./Managers/CityManager.js";
 import HeroManager from "./Managers/HeroManager.js";
-import UserManager from "./Managers/UserManager.js";
 import NewsManager from "./Managers/NewsManager.js";
 import HackService from "./Services/HackService.js";
 import LoadingService from "./Services/LoadingService.js";
@@ -52,7 +51,6 @@ export default class GameCore {
             city: new CityManager(this),
             industry: new IndustryManager(this),
             heroes: new HeroManager(this),
-            mc: new UserManager(this),
             news: new NewsManager(this),
             saves: new SaveManager(this),
             settings: new SettingsManager(this),

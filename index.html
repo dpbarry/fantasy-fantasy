@@ -41,7 +41,7 @@
             --leftWidth: minmax(24vw, 24vw);
             --rightWidth: minmax(22vw, min-content);
 
-            --updates-height: 10vh;
+            --updates-height: 12vh;
 
             --contrastColor: #000;
             --bgColor: color-mix(in hsl, var(--contrastColor), var(--accent) 2%);
@@ -186,7 +186,7 @@
             overflow-x: auto;
             scroll-snap-type: x mandatory;
             
-            height: calc(100% - var(--updates-height) - var(--boxGap));
+            height: calc(100vh - var(--updates-height) - var(--boxGap));
             grid-area: sections;
             position: relative;
             
@@ -799,8 +799,7 @@
 
             @media (hover: hover) and (pointer: fine) {
 
-                &:hover,
-                &:active {
+                &:hover:not(:disabled) {
                     background: color-mix(in hsl, var(--accent) 15%, transparent);
                 }
             }
@@ -869,6 +868,57 @@
             border-bottom: 1.5px solid var(--midBaseColor);
         }
 
+           /*noinspection CssInvalidPseudoSelector*/
+
+           select,
+            ::picker(select) {
+                appearance: base-select;
+                background: var(--bgColor);
+                padding: 0;
+            }
+
+            /*noinspection CssInvalidPseudoSelector*/
+
+            ::picker(select) {
+                border: 1.5px solid var(--baseColor);
+                border-radius: 3px;
+                font-size: 1em;
+                filter: drop-shadow(0 0 0.1em light-dark(#ddd, #000));
+            }
+
+          option::checkmark {
+                content: "•";
+            }
+
+            option:checked {
+                background: var(--darkBaseColor);
+            }
+
+            @media (hover: hover) and (pointer: fine) {
+                option:hover {
+                    background: var(--darkBaseColor);
+                }
+            }
+
+            input,
+            select,
+            option {
+                font-family: SourceSerif;
+                outline: none;
+                border: none;
+                background: var(--bgColor);
+                font-size: 0.95em;
+                max-width: 9em;
+                color: var(--accent);
+                font-weight: 800;
+            }
+
+            select,
+            option {
+                cursor: pointer;
+            }
+
+
         #settings {
             display: flex;
             flex-direction: column;
@@ -908,40 +958,6 @@
                         opacity: 1;
                     }
                 }
-            }
-
-            /*noinspection CssInvalidPseudoSelector*/
-
-            select,
-            ::picker(select) {
-                appearance: base-select;
-                background: var(--bgColor);
-                padding: 0;
-            }
-
-            /*noinspection CssInvalidPseudoSelector*/
-
-            ::picker(select) {
-                border: 1px solid var(--baseColor);
-                font-size: 1em;
-            }
-
-            input,
-            select,
-            option {
-                font-family: SourceSerif;
-                outline: none;
-                border: none;
-                background: var(--bgColor);
-                font-size: 0.85em;
-                max-width: 9em;
-                color: var(--accent);
-                font-weight: 800;
-            }
-
-            select,
-            option {
-                cursor: pointer;
             }
 
             #github {
@@ -1019,7 +1035,6 @@
             z-index: 100;
             padding: var(--boxGap);
             height: var(--updates-height);
-            box-sizing: content-box;
         }
 
         #updates {
@@ -1400,10 +1415,13 @@
                     &:disabled {
                         cursor: default;
                         opacity: 0.5;
+                        .ripple {display: none;}
                     }
 
-                    &:not(:disabled):hover {
-                        background: color-mix(in hsl, var(--accent) 15%, transparent);
+                    @media (hover: hover) and (pointer: fine) {
+                        &:not(:disabled):hover {
+                            background: color-mix(in hsl, var(--accent) 15%, transparent);
+                        }
                     }
                 }
             }
@@ -1533,13 +1551,13 @@
                 overflow: visible;
                 scroll-snap-type: none;
                 font-size: clamp(0.75rem, 0.7vw + 0.7vh, 1.25rem);
-                padding: var(--boxGap);
+                
 
                 #sections-wrapper {
                     display: grid;
                     grid-template-areas: "left-section center-section right-section";
                     grid-template-columns: var(--leftWidth) 1fr var(--rightWidth);
-                    padding-bottom: 0;
+                    height: 100%;
 
                     section {
                         min-width: unset;
@@ -1551,11 +1569,11 @@
                     display: contents;
                 }
 
-                #right-section {
-                    grid-template-rows: min-content auto 20%;
+                #center-section {
+                    grid-template-rows: min-content auto 10%;
                     grid-template-areas:
-                        "citybar"
-                        "right"
+                        "mainbar"
+                        "center"
                         "updates-wrapper";
                 }
             }
@@ -1779,9 +1797,9 @@
                 <div class="panel" id="industry">
                     <div class="subbox" id="industry-theurgy">
                         <strong>Theurgy</strong>
-                        <button id="theurgy-forage" class="ripples">Forage</button>
-                        <button id="theurgy-plant" class="ripples">Plant</button>
-                        <button id="theurgy-harvest" class="ripples">Harvest</button>
+                        <button id="theurgy-forage" class="ripples">Forage Seed</button>
+                        <button id="theurgy-plant" class="ripples">Plant Seed</button>
+                        <button id="theurgy-harvest" class="ripples">Harvest Seed</button>
                     </div>
                     <div class="subbox" id="industry-resources">
                         <strong>Resources</strong>
@@ -1838,6 +1856,13 @@
                     <div class="key nudge">.</div>
                     <div class="key action bkspc nudge">⟵</div>
                     <div class="key action enter nudge">⏎</div>
+                </div>
+            </div>
+            <div id="updates-wrapper">
+                <div class="box" id="updates">
+                    <div data-masksize="20" id="update-logs"></div>
+                    <button class="nudge navbutton hastip" data-tip="mailnav" id="mailnav"><img alt="Mail"
+                            src="assets/MAIL.svg"></button>
                 </div>
             </div>
         </section>
@@ -1920,13 +1945,6 @@
                         <a href="https://github.com/dpbarry/fantasy-fantasy" id="github" rel="noopener noreferrer"
                             target="_blank"></a>
                     </div>
-                </div>
-            </div>
-            <div id="updates-wrapper">
-                <div class="box panel" id="updates">
-                    <div data-masksize="20" id="update-logs"></div>
-                    <button class="nudge navbutton hastip" data-tip="mailnav" id="mailnav"><img alt="Mail"
-                            src="assets/MAIL.svg"></button>
                 </div>
             </div>
         </section>

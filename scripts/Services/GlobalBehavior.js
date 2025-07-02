@@ -2,6 +2,7 @@ import HackService from "./HackService.js";
 
 export default function setupGlobalBehavior(core) {
     let settingsClicks = 0;
+    const isMobile = window.matchMedia("(width <= 950px)").matches;
 
     const settingsButton = document.querySelector("#settingsnav");
     if (!settingsButton) return;
@@ -13,22 +14,68 @@ export default function setupGlobalBehavior(core) {
         }
     });
 
+    const sectionsWrapper = document.querySelector("#sections-wrapper");
+    const sectionMap = {
+        "left": 0,
+        "center": 1,
+        "right": 2
+    };
+
+    function scrollToVisibleSection() {
+        if (!isMobile || !sectionsWrapper) return;
+        
+        const sectionIndex = sectionMap[core.ui.visibleSection];
+        if (sectionIndex !== undefined) {
+            const sections = sectionsWrapper.querySelectorAll("section");
+            if (sections[sectionIndex]) {
+                sectionsWrapper.scrollTo({
+                    left: sections[sectionIndex].offsetLeft,
+                    behavior: "auto"
+                });
+            }
+        }
+    }
+
+    function updateVisibleSectionFromScroll() {
+        if (!isMobile || !sectionsWrapper) return;
+        
+        const sections = sectionsWrapper.querySelectorAll("section");
+        const scrollLeft = sectionsWrapper.scrollLeft;
+        const wrapperWidth = sectionsWrapper.offsetWidth;
+        
+        for (let i = 0; i < sections.length; i++) {
+            const section = sections[i];
+            const sectionLeft = section.offsetLeft;
+            const sectionRight = sectionLeft + section.offsetWidth;
+            
+            if (scrollLeft >= sectionLeft - wrapperWidth / 2 && scrollLeft < sectionRight - wrapperWidth / 2) {
+                const sectionNames = ["left", "center", "right"];
+                core.ui.visibleSection = sectionNames[i];
+                break;
+            }
+        }
+    }
+
     const navbuttons = document.querySelectorAll(".navbutton");
     navbuttons.forEach(b => {
         b.onpointerdown = () => {
             if (b.classList.contains("locked")) return;
             core.ui.show(b.dataset.loc, b.dataset.panel);
-
-            // Update tactile scroll state when programmatically changing sections
-            if (isMobile) {
-                const sectionNames = ["left", "center", "right"];
-                const newSection = sectionNames.indexOf(b.dataset.loc);
-                if (newSection !== -1 && newSection !== scrollState.currentSection) {
-                    completeTransplant(newSection);
-                }
-            }
         }
     });
+
+    const resizeHandler = () => {
+        scrollToVisibleSection();
+    };
+
+    const scrollHandler = () => {
+        updateVisibleSectionFromScroll();
+    };
+
+    window.addEventListener("resize", resizeHandler);
+    sectionsWrapper.addEventListener("scroll", scrollHandler);
+
+    scrollToVisibleSection();
 }
 
 export function applyTheme(core) {
@@ -92,6 +139,7 @@ export function applyTheme(core) {
 }
 
 export function spawnRipple(mouseEvent, element) {
+    if (element.disabled) return;
     // Create a ripple element
     const rippleEl = document.createElement('div');
     rippleEl.classList.add('ripple');

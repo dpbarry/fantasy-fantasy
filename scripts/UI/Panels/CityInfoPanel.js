@@ -28,6 +28,7 @@ export default class CityInfoPanel {
     }
 
     updateVisibility(loc, panel) {
+        this.core.city.updateLoops();
         if (loc === "right") {
             if (panel === "cityinfo")
                 this.root.classList.add("shown");

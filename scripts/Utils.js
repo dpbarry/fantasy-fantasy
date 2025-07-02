@@ -1,16 +1,3 @@
-export function unlockPanel(el) {
-    const locked = el.querySelector('.lock');
-    if (!locked) return Promise.resolve();
-
-    locked.classList.add('hide');
-    return new Promise(resolve => {
-        locked.ontransitionend = () => {
-            locked.remove();
-            resolve();
-        };
-    });
-}
-
 export async function delay(ms) {
     return new Promise(res => setTimeout(res, ms));
 }

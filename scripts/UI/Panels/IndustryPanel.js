@@ -27,17 +27,17 @@ export default class IndustryPanel {
 
         const forageBtn = theurgyContainer.querySelector("#theurgy-forage");
         if (forageBtn) {
-            forageBtn.addEventListener("click", (event) => this.handleTheurgyClick("forage", event));
+            forageBtn.addEventListener("pointerdown", (event) =>{ if (forageBtn.disabled) return; this.handleTheurgyClick("forage", event);});
         }
 
         const plantBtn = theurgyContainer.querySelector("#theurgy-plant");
         if (plantBtn) {
-            plantBtn.addEventListener("click", (event) => this.handleTheurgyClick("plant", event));
+            plantBtn.addEventListener("pointerdown", (event) => {if (plantBtn.disabled) return; this.handleTheurgyClick("plant", event)});
         }
 
         const harvestBtn = theurgyContainer.querySelector("#theurgy-harvest");
         if (harvestBtn) {
-            harvestBtn.addEventListener("click", (event) => this.handleTheurgyClick("harvest", event));
+            harvestBtn.addEventListener("pointerdown", (event) => {if (harvestBtn.disabled) return; this.handleTheurgyClick("harvest", event)});
         }
 
         this.theurgyButtons = {
@@ -130,6 +130,7 @@ export default class IndustryPanel {
     updateTheurgyButtonStates() {
         if (!this.theurgyButtons) return;
 
+
         if (this.theurgyButtons.plant) {
             const canPlant = this.core.industry.canPerformTheurgy("plant");
             this.theurgyButtons.plant.disabled = !canPlant;
@@ -194,9 +195,7 @@ export default class IndustryPanel {
                 const { valueSpan, rateSpan } = this.resourcebox._rows[k];
                 valueSpan.textContent = v.value;
                 
-                // Update rate display if in expanded view
                 if (this.isExpanded && v.rate !== undefined) {
-                    // Convert Decimal to number and format
                     const rateValue = parseFloat(v.rate.toString());
                     rateSpan.textContent = rateValue >= 0 ? `+${rateValue.toFixed(2)}/s` : `${rateValue.toFixed(2)}`;
                 }
@@ -207,6 +206,7 @@ export default class IndustryPanel {
     }
 
     updateVisibility(loc, panel) {
+        this.core.industry.updateLoops();
         if (loc === "center") {
             if (panel === "industry") {
                 this.root.classList.add("shown");

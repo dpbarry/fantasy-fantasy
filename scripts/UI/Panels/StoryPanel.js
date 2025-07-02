@@ -38,6 +38,7 @@ export default class StoryPanel {
     }
 
     updateVisibility(loc, panel) {
+        this.core.story.updateRunning();
         if (loc === "center") {
             if (panel === "story")
                 this.root.closest(".box").classList.add("shown");

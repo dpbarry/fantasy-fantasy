@@ -1,4 +1,3 @@
-
 export default function createTooltipService() {
     const tooltips = new Map();
     const pointerDismissHandlers = new WeakMap();
@@ -39,19 +38,19 @@ export default function createTooltipService() {
         registerTip('savvy', () => `
       <p><i>Measures economic know-how.</i></p>
       <p>Each point of <span class="savvyWord term">Savvy</span> grants a +1% boost to all Production profits.</p>
-      <p>Current boost: +${core.mc.savvy}%</p>
+      <p>Current boost: +${core.city.ruler.savvy}%</p>
     `);
 
         registerTip('valor', () => `
       <p><i>Measures military expertise.</i></p>
       <p>Each point of <span class="valorWord term">Valor</span> grants a +1% boost to all damage dealt by Heroes and the Army.</p>
-      <p>Current boost: +${core.mc.valor}%</p>
+      <p>Current boost: +${core.city.ruler.valor}%</p>
     `);
 
         registerTip('wisdom', () => `
       <p><i>Measures scholastic prowess.</i></p>
       <p>Each point of <span class="wisdomWord term">Wisdom</span> grants a +1% boost to all Research bonuses.</p>
-      <p>Current boost: +${core.mc.wisdom}%</p>
+      <p>Current boost: +${core.city.ruler.wisdom}%</p>
     `);
         
 
