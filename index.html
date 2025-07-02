@@ -157,7 +157,7 @@
             padding: 0;
             margin: 0;
             width: 100%;
-            height: 100vh;
+            height: 100%;
             overflow: hidden;
             touch-action: manipulation;
         }
@@ -170,8 +170,6 @@
             grid-template-columns: auto;
             grid-template-areas:
                 "sections";
-            height: 100vh;
-            min-height: 0;
             overflow: hidden;
             font-size: clamp(0.5rem, 0.7vw + 1.3vh, 1.25rem);
             font-family: SourceSerif;
@@ -186,7 +184,7 @@
             overflow-x: auto;
             scroll-snap-type: x mandatory;
             
-            height: calc(100vh - var(--updates-height) - var(--boxGap));
+            height: calc(100% - var(--updates-height) - var(--boxGap));
             grid-area: sections;
             position: relative;
             
@@ -1479,9 +1477,12 @@
                 transform: translateX(6px) scaleX(-1) rotate(-45deg)
             }
 
+            @media (hover: hover) and (pointer: fine) {
             .chevron:hover::before {
-                border-color: var(--accent);
+                    border-color: var(--accent);
+                }
             }
+
 
             .resource-row {
                 display: grid;
