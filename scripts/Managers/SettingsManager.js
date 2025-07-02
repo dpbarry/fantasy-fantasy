@@ -2,8 +2,8 @@ import {applyTheme} from "../Services/GlobalBehavior.js";
 
 export default class SettingsManager {
     configs = {
-        background: "black",
-        accent: "amber",
+        background: "light",
+        accent: "arcane",
         refreshUI: "30",
     }
 

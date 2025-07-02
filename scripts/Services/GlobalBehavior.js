@@ -2,7 +2,7 @@ import HackService from "./HackService.js";
 
 export default function setupGlobalBehavior(core) {
     let settingsClicks = 0;
-    const isMobile = window.matchMedia("(width <= 950px)").matches;
+    let isMobile = window.matchMedia("(width <= 950px)").matches;
 
     const settingsButton = document.querySelector("#settingsnav");
     if (!settingsButton) return;
@@ -65,6 +65,7 @@ export default function setupGlobalBehavior(core) {
     });
 
     const resizeHandler = () => {
+        isMobile = window.matchMedia("(width <= 950px)").matches;
         scrollToVisibleSection();
     };
 
@@ -85,26 +86,12 @@ export function applyTheme(core) {
 
     document.documentElement.classList.add("notransition");
     switch (background) {
-        case "black":
+        case "dark":
             STYLE.setProperty("--contrastColor", "#000");
             STYLE.setProperty("--baseColor", "#eee");
             STYLE.setProperty("--baseFilter", "invert(0.9)");
             STYLE.setProperty("--alpha", "1");
             STYLE.colorScheme = "dark";
-            break;
-        case "dark":
-            STYLE.setProperty("--contrastColor", "#111");
-            STYLE.setProperty("--baseColor", "#eee");
-            STYLE.setProperty("--baseFilter", "invert(0.9)");
-            STYLE.setProperty("--alpha", "0.6");
-            STYLE.colorScheme = "dark";
-            break;
-        case "pastel":
-            STYLE.setProperty("--contrastColor", "color-mix(in hsl, var(--accent), #fff 85%)");
-            STYLE.setProperty("--baseColor", "#111");
-            STYLE.setProperty("--baseFilter", "invert(0.1)");
-            STYLE.setProperty("--alpha", "0.15");
-            STYLE.colorScheme = "light";
             break;
         case "light":
             STYLE.setProperty("--contrastColor", "#fff");

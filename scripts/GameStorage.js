@@ -1,5 +1,6 @@
 export default class GameStorage {
-    constructor() {
+    constructor(core) {
+        this.core = core;
         this.storageKey = "gameState";
     }
 
@@ -41,15 +42,13 @@ export default class GameStorage {
 
     get devSave() {
         try {
-            const core = window.gameCore || GameCore.getInstance();
-            
             const baseSave = {
-                version: core.currentVersion,
+                version: this.core.currentVersion,
                 timestamp: Date.now(),
                 data: {}
             };
 
-            for (const [key, component] of core.saveableComponents) {
+            for (const [key, component] of this.core.saveableComponents) {
                 baseSave.data[key] = component.serialize();
             }
 
@@ -82,7 +81,6 @@ export default class GameStorage {
             return baseSave;
         } catch (error) {
             console.error('Failed to generate dev save from current state:', error);
-            
             return {
                 version: "0.1.2",
                 timestamp: Date.now(),
