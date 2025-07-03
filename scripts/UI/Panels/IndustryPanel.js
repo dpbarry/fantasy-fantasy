@@ -172,69 +172,98 @@ export default class IndustryPanel {
 
     createWorkerSection() {
         this.workerbox = this.root.querySelector("#industry-workers");
-        this.workerbox.classList.add('worker-cards-row');
+        this.workerbox.classList.add('worker-rows');
         const jobs = [
-            { key: "forager", label: "Forager", prod: [{res: "seeds", val: 0.2}], drain: [{res: "food", val: 0.1}] },
-            { key: "planter", label: "Planter", prod: [{res: "crops", val: 0.2}], drain: [{res: "food", val: 0.15}, {res: "seeds", val: 0.2}] },
-            { key: "harvester", label: "Harvester", prod: [{res: "food", val: 0.3}], drain: [{res: "crops", val: 0.2}] }
+            { key: "forager", label: "Forager", prod: [{res: "seeds", val: 0.2}], drain: [{res: "food", val: 0.1}], fluff: "Foragers gather seeds from the wild." },
+            { key: "planter", label: "Planter", prod: [{res: "crops", val: 0.2}], drain: [{res: "food", val: 0.15}, {res: "seeds", val: 0.2}], fluff: "Planters sow seeds to grow crops." },
+            { key: "harvester", label: "Harvester", prod: [{res: "food", val: 0.3}], drain: [{res: "crops", val: 0.2}], fluff: "Harvesters collect ripe crops for food." }
         ];
-        this.jobCards = {};
+        this.jobRows = {};
         jobs.forEach(job => {
-            const card = document.createElement("div");
-            card.className = "worker-card";
+            const row = document.createElement("div");
+            row.className = "worker-row";
+            row.dataset.job = job.key;
 
             // Job name
-            const title = document.createElement("div");
-            title.className = "worker-card-title";
-            title.textContent = job.label;
-            card.appendChild(title);
+            const name = document.createElement("span");
+            name.className = "worker-row-name";
+            name.textContent = job.label;
+            row.appendChild(name);
 
-            // Assign row
-            const assignRow = document.createElement("div");
-            assignRow.className = "worker-card-assign";
+            // Count
+            const count = document.createElement("span");
+            count.className = "worker-row-count";
+            row.appendChild(count);
+
+            // Minus button
             const minusBtn = document.createElement("button");
+            minusBtn.className = "worker-row-minus";
             minusBtn.textContent = "-";
             minusBtn.addEventListener("click", () => this.core.industry.unassignWorker(job.key));
-            const count = document.createElement("span");
-            count.className = "worker-card-count";
+            row.appendChild(minusBtn);
+
+            // Plus button
             const plusBtn = document.createElement("button");
+            plusBtn.className = "worker-row-plus";
             plusBtn.textContent = "+";
             plusBtn.addEventListener("click", () => this.core.industry.assignWorker(job.key));
-            assignRow.appendChild(minusBtn);
-            assignRow.appendChild(count);
-            assignRow.appendChild(plusBtn);
-            card.appendChild(assignRow);
+            row.appendChild(plusBtn);
 
-            // Per-worker stats
+            // Chevron (expand/collapse)
+            const chevron = document.createElement("button");
+            chevron.className = "worker-row-chevron";
+            chevron.innerHTML = '<span class="chevron-icon"></span>';
+            row.appendChild(chevron);
+
+            // Details (hidden by default)
+            const details = document.createElement("div");
+            details.className = "worker-row-details";
+            details.style.display = "none";
+            // Per-worker
             const perRow = document.createElement("div");
-            perRow.className = "worker-card-per";
+            perRow.className = "worker-row-per";
             perRow.textContent = "Per worker: ";
             job.prod.forEach(p => {
                 const span = document.createElement("span");
-                span.className = "worker-card-prod";
+                span.className = "worker-row-prod";
                 span.textContent = `+${p.val} ${p.res}`;
                 perRow.appendChild(span);
             });
             job.drain.forEach(d => {
                 const span = document.createElement("span");
-                span.className = "worker-card-drain";
+                span.className = "worker-row-drain";
                 span.textContent = `-${d.val} ${d.res}`;
                 perRow.appendChild(span);
             });
-            card.appendChild(perRow);
-
-            // Total stats
+            details.appendChild(perRow);
+            // Total
             const totalRow = document.createElement("div");
-            totalRow.className = "worker-card-total";
+            totalRow.className = "worker-row-total";
             totalRow.textContent = "Total: ";
-            // Placeholders, will be filled in render
             const totalStats = document.createElement("span");
-            totalStats.className = "worker-card-total-stats";
+            totalStats.className = "worker-row-total-stats";
             totalRow.appendChild(totalStats);
-            card.appendChild(totalRow);
+            details.appendChild(totalRow);
+            // Fluff
+            const fluff = document.createElement("div");
+            fluff.className = "worker-row-fluff";
+            fluff.textContent = job.fluff;
+            details.appendChild(fluff);
+            row.appendChild(details);
 
-            this.workerbox.appendChild(card);
-            this.jobCards[job.key] = { count, minusBtn, plusBtn, totalStats, job };
+            // Expand/collapse logic
+            chevron.addEventListener("click", () => {
+                const expanded = row.classList.toggle("expanded");
+                details.style.display = expanded ? "block" : "none";
+                chevron.classList.toggle("expanded", expanded);
+            });
+
+            // Divider
+            const divider = document.createElement("hr");
+            divider.className = "worker-row-divider";
+            this.workerbox.appendChild(row);
+            this.workerbox.appendChild(divider);
+            this.jobRows[job.key] = { count, minusBtn, plusBtn, totalStats, row, details, chevron, job };
         });
         this.strikeWarning = document.createElement("div");
         this.strikeWarning.className = "worker-strike-warning";
@@ -296,7 +325,7 @@ export default class IndustryPanel {
                 }
                 if (this.isExpanded && v.rate !== undefined) {
                     let rateNum = v.rate.toNumber();
-                    rateSpan.textContent = (rateNum >= 0 ? '+' : '') + formatRate(v.rate) + '/s';
+                    rateSpan.textContent = (rateNum >= 0 ? '+' : '') + formatRate(v.rate);
                     rateSpan.classList.toggle('positive', rateNum > 0);
                     rateSpan.classList.toggle('negative', rateNum < 0);
                 }
@@ -307,22 +336,21 @@ export default class IndustryPanel {
             this.workerCountSpan.textContent = Math.floor(data.resources.workers.value);
             this.workerCapSpan.textContent = data.workerCap;
         }
-        if (this.jobCards && data.workerJobs) {
-            Object.entries(this.jobCards).forEach(([job, card]) => {
+        if (this.jobRows && data.workerJobs) {
+            Object.entries(this.jobRows).forEach(([job, rowObj]) => {
                 const assigned = data.workerJobs[job] || 0;
-                card.count.textContent = assigned;
-                // Per-worker stats are static
+                rowObj.count.textContent = assigned;
                 // Total stats:
                 let totalStrs = [];
-                card.job.prod.forEach(p => {
+                rowObj.job.prod.forEach(p => {
                     const total = (assigned * p.val).toFixed(2);
                     totalStrs.push(`+${total} ${p.res}`);
                 });
-                card.job.drain.forEach(d => {
+                rowObj.job.drain.forEach(d => {
                     const total = (assigned * d.val).toFixed(2);
                     totalStrs.push(`-${total} ${d.res}`);
                 });
-                card.totalStats.innerHTML = totalStrs.map(s => `<span>${s}</span>`).join(' ');
+                rowObj.totalStats.innerHTML = totalStrs.map(s => `<span>${s}</span>`).join(' ');
             });
         }
         if (this.strikeWarning) {

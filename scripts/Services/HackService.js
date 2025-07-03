@@ -126,7 +126,6 @@ export default class HackService {
 
             switch (cmd.toLowerCase()) {
                 case 'help':
-                    core.save();
                     feedback.textContent = 'Commands: help, pause, resume, hardstop, restart, devstart, settime, save, load, delsave';
                     break;
                 case 'pause':
@@ -225,7 +224,7 @@ export default class HackService {
                     feedback.textContent = `Set game time to ${core.clock.gameTime({format: 'full'})} ${core.clock.gameDate({format: 'full'})}`;
                     break;
                 case 'save':
-                    core.saves.record(core);
+                    core.storage.record(core);
                     feedback.textContent = `Save recorded`;
                     break;
                 case 'load':
@@ -235,7 +234,7 @@ export default class HackService {
                     }
                     const i = parseInt(args[0]);
                     try {
-                        await core.saves.jump(i);
+                        await core.storage.jump(i);
                         feedback.textContent = `Restored save at index ${i}`;
                     } catch (error) {
                         console.log(error);
@@ -243,9 +242,9 @@ export default class HackService {
                     }
                     break;
                 case 'slist':
-                    const lines = core.saves.list.map((s, idx) => {
+                    const lines = core.storage.list.map((s, idx) => {
                         const timeAgo = HackService.#formatTimeAgo(s.timestamp);
-                        if (s.typeP === "story") return `[${idx}] [${s.episode} ${s.phase}] ${timeAgo}`; else return `[${idx}] ${timeAgo}`;
+                        return `[${idx}] ${timeAgo}`;
                     });
                     feedback.innerHTML = lines.length ? lines.join('<br>') : "No saves found";
                     break;
@@ -255,12 +254,12 @@ export default class HackService {
                         break;
                     }
                     const delIndex = parseInt(args[0]);
-                    if (!core.saves.list[delIndex]) {
+                    if (!core.storage.list[delIndex]) {
                         feedback.textContent = `No save to delete at index ${delIndex}`;
                         break;
                     }
                     try {
-                        core.saves.delete(delIndex);
+                        core.storage.delete(delIndex);
                         feedback.textContent = `Deleted save at index ${delIndex}`;
                     } catch (error) {
                         console.error(error);

@@ -3,7 +3,7 @@ import setupKeyboard from "../UI/Components/Keyboard.js";
 import setupGlobalBehavior, {spawnRipple} from "../Services/GlobalBehavior.js";
 import {verticalScroll} from "../Utils.js";
 import StoryPanel from "../UI/Panels/StoryPanel.js";
-import NewsPanel from "../UI/Chrome/NewsPanel.js";
+import NewsPanel from "../UI/Panels/NewsPanel.js";
 import CityInfoPanel from "../UI/Panels/CityInfoPanel.js";
 import SettingsPanel from "../UI/Panels/SettingsPanel.js";
 import IndustryPanel from "../UI/Panels/IndustryPanel.js";
@@ -35,7 +35,7 @@ export default class UIManager {
     }
 
     boot() {
-        this.globalBehaviorCleanup = setupGlobalBehavior(this.core);
+        setupGlobalBehavior(this.core);
         this.showPanels();
     }
 
@@ -150,11 +150,5 @@ export default class UIManager {
     deserialize(data) {
         this.activePanels = data.activePanels;
         this.visibleSection = data.visibleSection;
-    }
-
-    cleanup() {
-        if (this.globalBehaviorCleanup) {
-            this.globalBehaviorCleanup();
-        }
     }
 }

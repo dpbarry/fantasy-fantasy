@@ -11,7 +11,7 @@ export default class IndustryManager {
             crops: new Resource(0),
             food: new Resource(0),
             gold: new Resource(0),
-            workers: new Resource(10, { cap: 20, baseGrowthRate: 0.05 }),
+            workers: new Resource(10, { cap: 20 }),
         };
         this.workerJobs = {
             forager: 0,
