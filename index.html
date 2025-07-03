@@ -1337,9 +1337,8 @@
             display: grid;
             grid-template-areas:
                 "industry-theurgy industry-theurgy"
-                "industry-resources industry-workers"
                 "industry-resources industry-prod";
-            grid-template-rows: min-content min-content 1fr;
+            grid-template-rows: min-content 1fr;
             grid-template-columns: var(--industry-resources-width, 10em) 1fr;
             gap: var(--boxGap);
             width: 100%;
@@ -1764,15 +1763,11 @@
                 <div class="panel" id="industry">
                     <div class="subbox" id="industry-theurgy">
                         <strong>Theurgy</strong>
-                        <button id="theurgy-forage" class="ripples">Forage Seed</button>
                         <button id="theurgy-plant" class="ripples">Plant Seed</button>
-                        <button id="theurgy-harvest" class="ripples">Harvest Seed</button>
+                        <button id="theurgy-harvest" class="ripples">Harvest Crop</button>
                     </div>
                     <div class="subbox" id="industry-resources">
                         <strong>Resources</strong>
-                    </div>
-                    <div class="subbox" id="industry-workers">
-                        <strong>Workers</strong>
                     </div>
                     <div class="subbox" id="industry-prod">
                         <strong>Production</strong>

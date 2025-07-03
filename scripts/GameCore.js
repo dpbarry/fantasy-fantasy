@@ -18,7 +18,7 @@ export default class GameCore {
     #saveThrottleMS;
     #pendingSave;
     #saveableComponents;
-    #currentVersion = "0.1.3";
+    #currentVersion = "0.1.4";
 
 
     constructor() {

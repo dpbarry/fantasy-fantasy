@@ -3,13 +3,14 @@ export default class IndustryPanel {
         this.core = core;
         this.root = core.ui.industry;
 
+        this.defs = this.core.industry.constructor.BUILDING_DEFS;
+
         this.resourcebox = this.root.querySelector("#industry-resources");
         this.resourcebox._rows = {};
         this.setupChevron();
         this.setupTheurgyButtons();
-        
         this.createResourceRows();
-        this.createWorkerSection();
+        this.createProductionGrid();
 
         this.isExpanded = false;
     }
@@ -26,11 +27,6 @@ export default class IndustryPanel {
         const theurgyContainer = document.querySelector("#industry-theurgy");
         if (!theurgyContainer) return;
 
-        const forageBtn = theurgyContainer.querySelector("#theurgy-forage");
-        if (forageBtn) {
-            forageBtn.addEventListener("pointerdown", (event) =>{ if (forageBtn.disabled) return; this.handleTheurgyClick("forage", event);});
-        }
-
         const plantBtn = theurgyContainer.querySelector("#theurgy-plant");
         if (plantBtn) {
             plantBtn.addEventListener("pointerdown", (event) => {if (plantBtn.disabled) return; this.handleTheurgyClick("plant", event)});
@@ -42,7 +38,6 @@ export default class IndustryPanel {
         }
 
         this.theurgyButtons = {
-            forage: forageBtn,
             plant: plantBtn,
             harvest: harvestBtn
         };
@@ -107,10 +102,6 @@ export default class IndustryPanel {
                 let amount = 1;
                 
                 switch (theurgyType) {
-                    case "forage":
-                        resourceName = "seed"; 
-                        amount = 1;
-                        break;
                     case "plant":
                         resourceName = "crop"; 
                         amount = 1;
@@ -130,13 +121,10 @@ export default class IndustryPanel {
 
     updateTheurgyButtonStates() {
         if (!this.theurgyButtons) return;
-
-
         if (this.theurgyButtons.plant) {
             const canPlant = this.core.industry.canPerformTheurgy("plant");
             this.theurgyButtons.plant.disabled = !canPlant;
         }
-
         if (this.theurgyButtons.harvest) {
             const canHarvest = this.core.industry.canPerformTheurgy("harvest");
             this.theurgyButtons.harvest.disabled = !canHarvest;
@@ -144,132 +132,112 @@ export default class IndustryPanel {
     }
 
     createResourceRows() {
-        Object.keys(this.core.industry.resources).forEach(resource => {
-            const row = document.createElement("div");
-            row.classList.add("resource-row");
-
-            const nameSpan = document.createElement("span");
-            nameSpan.classList.add("resource-name");
-            nameSpan.textContent = resource.replace(/\w\S*/g, txt =>
-                txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase()
-            );
-            
-            const rateSpan = document.createElement("span");
-            rateSpan.classList.add("resource-rate");
-            
-            const valueSpan = document.createElement("span");
-            valueSpan.classList.add("resource-value");
-            valueSpan.textContent = "0";
-
-            row.appendChild(nameSpan);
-            row.appendChild(rateSpan);
-            row.appendChild(valueSpan);
-
-            this.resourcebox.appendChild(row);
-            this.resourcebox._rows[resource] = { valueSpan, rateSpan };
+        Object.entries(this.core.industry.resources).forEach(([resource, resObj]) => {
+            if (!resObj.isDiscovered) return;
+            this.appendResourceRow(resource);
         });
     }
 
-    createWorkerSection() {
-        this.workerbox = this.root.querySelector("#industry-workers");
-        this.workerbox.classList.add('worker-rows');
-        const jobs = [
-            { key: "forager", label: "Forager", prod: [{res: "seeds", val: 0.2}], drain: [{res: "food", val: 0.1}], fluff: "Foragers gather seeds from the wild." },
-            { key: "planter", label: "Planter", prod: [{res: "crops", val: 0.2}], drain: [{res: "food", val: 0.15}, {res: "seeds", val: 0.2}], fluff: "Planters sow seeds to grow crops." },
-            { key: "harvester", label: "Harvester", prod: [{res: "food", val: 0.3}], drain: [{res: "crops", val: 0.2}], fluff: "Harvesters collect ripe crops for food." }
-        ];
-        this.jobRows = {};
-        jobs.forEach(job => {
-            const row = document.createElement("div");
-            row.className = "worker-row";
-            row.dataset.job = job.key;
+    appendResourceRow(resource) {
+        const row = document.createElement("div");
+        row.classList.add("resource-row");
 
-            // Job name
-            const name = document.createElement("span");
-            name.className = "worker-row-name";
-            name.textContent = job.label;
-            row.appendChild(name);
+        const nameSpan = document.createElement("span");
+        nameSpan.classList.add("resource-name");
+        nameSpan.textContent = resource.replace(/\w\S*/g, txt =>
+            txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase()
+        );
 
+        const rateSpan = document.createElement("span");
+        rateSpan.classList.add("resource-rate");
+
+        const valueSpan = document.createElement("span");
+        valueSpan.classList.add("resource-value");
+        valueSpan.textContent = "0";
+
+        row.appendChild(nameSpan);
+        row.appendChild(rateSpan);
+        row.appendChild(valueSpan);
+
+        this.resourcebox.appendChild(row);
+        this.resourcebox._rows[resource] = { valueSpan, rateSpan };
+    }
+
+    createProductionGrid() {
+        this.prodBox = this.root.querySelector('#industry-prod');
+        this.prodBox.innerHTML = '';
+        this.buildingCards = {};
+
+        for (const [type, b] of Object.entries(this.core.industry.buildings)) {
+            const def = this.defs[type];
+            const card = document.createElement('div');
+            card.className = 'building-card';
+            // Name
+            const name = document.createElement('div');
+            name.className = 'building-name';
+            name.textContent = def ? def.name : type;
+            card.appendChild(name);
             // Count
-            const count = document.createElement("span");
-            count.className = "worker-row-count";
-            row.appendChild(count);
+            const count = document.createElement('div');
+            count.className = 'building-count';
+            count.textContent = `Built: ${b.count}`;
+            card.appendChild(count);
+            // Build button
+            const buildBtn = document.createElement('button');
+            buildBtn.className = 'building-build';
+            buildBtn.textContent = 'Build';
+            buildBtn.onclick = () => {
+                this.core.industry.buildBuilding(type);
+            };
+            // Show cost
+            const cost = document.createElement('span');
+            cost.className = 'building-cost';
+            cost.textContent = def ? ' (' + Object.entries(def.buildCost).map(([res, amt]) => `${amt} ${res}`).join(', ') + ')' : '';
+            buildBtn.appendChild(cost);
+            card.appendChild(buildBtn);
+            // Worker assign/unassign
+            const workerRow = document.createElement('div');
+            workerRow.className = 'building-workers';
+            const assignBtn = document.createElement('button');
+            assignBtn.textContent = '+';
+            assignBtn.onclick = () => this.core.industry.assignWorkerToBuilding(type);
+            const unassignBtn = document.createElement('button');
+            unassignBtn.textContent = '-';
+            unassignBtn.onclick = () => this.core.industry.unassignWorkerFromBuilding(type);
+            const workerCount = document.createElement('span');
+            workerCount.className = 'building-worker-count';
+            workerCount.textContent = b.workers;
+            workerRow.appendChild(assignBtn);
+            workerRow.appendChild(workerCount);
+            workerRow.appendChild(unassignBtn);
+            card.appendChild(workerRow);
+            // Production/drain rates
+            const prodRow = document.createElement('div');
+            prodRow.className = 'building-prod';
+            prodRow.textContent = this.getBuildingProdText(def, b);
+            card.appendChild(prodRow);
+            this.prodBox.appendChild(card);
+            this.buildingCards[type] = { card, count, workerCount, prodRow };
+        }
+    }
 
-            // Minus button
-            const minusBtn = document.createElement("button");
-            minusBtn.className = "worker-row-minus";
-            minusBtn.textContent = "-";
-            minusBtn.addEventListener("click", () => this.core.industry.unassignWorker(job.key));
-            row.appendChild(minusBtn);
-
-            // Plus button
-            const plusBtn = document.createElement("button");
-            plusBtn.className = "worker-row-plus";
-            plusBtn.textContent = "+";
-            plusBtn.addEventListener("click", () => this.core.industry.assignWorker(job.key));
-            row.appendChild(plusBtn);
-
-            // Chevron (expand/collapse)
-            const chevron = document.createElement("button");
-            chevron.className = "worker-row-chevron";
-            chevron.innerHTML = '<span class="chevron-icon"></span>';
-            row.appendChild(chevron);
-
-            // Details (hidden by default)
-            const details = document.createElement("div");
-            details.className = "worker-row-details";
-            details.style.display = "none";
-            // Per-worker
-            const perRow = document.createElement("div");
-            perRow.className = "worker-row-per";
-            perRow.textContent = "Per worker: ";
-            job.prod.forEach(p => {
-                const span = document.createElement("span");
-                span.className = "worker-row-prod";
-                span.textContent = `+${p.val} ${p.res}`;
-                perRow.appendChild(span);
-            });
-            job.drain.forEach(d => {
-                const span = document.createElement("span");
-                span.className = "worker-row-drain";
-                span.textContent = `-${d.val} ${d.res}`;
-                perRow.appendChild(span);
-            });
-            details.appendChild(perRow);
-            // Total
-            const totalRow = document.createElement("div");
-            totalRow.className = "worker-row-total";
-            totalRow.textContent = "Total: ";
-            const totalStats = document.createElement("span");
-            totalStats.className = "worker-row-total-stats";
-            totalRow.appendChild(totalStats);
-            details.appendChild(totalRow);
-            // Fluff
-            const fluff = document.createElement("div");
-            fluff.className = "worker-row-fluff";
-            fluff.textContent = job.fluff;
-            details.appendChild(fluff);
-            row.appendChild(details);
-
-            // Expand/collapse logic
-            chevron.addEventListener("click", () => {
-                const expanded = row.classList.toggle("expanded");
-                details.style.display = expanded ? "block" : "none";
-                chevron.classList.toggle("expanded", expanded);
-            });
-
-            // Divider
-            const divider = document.createElement("hr");
-            divider.className = "worker-row-divider";
-            this.workerbox.appendChild(row);
-            this.workerbox.appendChild(divider);
-            this.jobRows[job.key] = { count, minusBtn, plusBtn, totalStats, row, details, chevron, job };
-        });
-        this.strikeWarning = document.createElement("div");
-        this.strikeWarning.className = "worker-strike-warning";
-        this.strikeWarning.style.display = "none";
-        this.strikeWarning.textContent = "Workers are on strike! (No food)";
-        this.workerbox.appendChild(this.strikeWarning);
+    getBuildingProdText(def, b) {
+        let lines = [];
+        if (def && def.effects) {
+            for (const [res, eff] of Object.entries(def.effects)) {
+                let line = '';
+                if (eff.base) {
+                    if (eff.base.gain) line += `+${(b.count * eff.base.gain).toFixed(2)} ${res}/s`;
+                    if (eff.base.drain) line += `${line ? ', ' : ''}-${(b.count * eff.base.drain).toFixed(2)} ${res}/s`;
+                }
+                if (eff.worker) {
+                    if (eff.worker.gain) line += `${line ? ', ' : ''}+${(b.workers * eff.worker.gain).toFixed(2)} ${res}/s (workers)`;
+                    if (eff.worker.drain) line += `${line ? ', ' : ''}-${(b.workers * eff.worker.drain).toFixed(2)} ${res}/s (workers)`;
+                }
+                if (line) lines.push(line);
+            }
+        }
+        return lines.join(' | ');
     }
 
     toggleView() {
@@ -291,11 +259,11 @@ export default class IndustryPanel {
         }
     }
 
-    render(data) {
+    renderResources(data) {
         function formatValueParts(val) {
             let num = val.toNumber(); // val being Decimal
             if (num < 1) {
-                const decPart = num.toFixed(2).slice(1); 
+                const decPart = num.toFixed(2).slice(1);
                 return { int: '0', dec: decPart };
             }
             if (num < 1000) {
@@ -329,34 +297,28 @@ export default class IndustryPanel {
                     rateSpan.classList.toggle('positive', rateNum > 0);
                     rateSpan.classList.toggle('negative', rateNum < 0);
                 }
+            } else {
+                this.appendResourceRow(k);
             }
         });
-        // Update workers UI
-        if (this.workerCountSpan && this.workerCapSpan && data.resources.workers) {
-            this.workerCountSpan.textContent = Math.floor(data.resources.workers.value);
-            this.workerCapSpan.textContent = data.workerCap;
-        }
-        if (this.jobRows && data.workerJobs) {
-            Object.entries(this.jobRows).forEach(([job, rowObj]) => {
-                const assigned = data.workerJobs[job] || 0;
-                rowObj.count.textContent = assigned;
-                // Total stats:
-                let totalStrs = [];
-                rowObj.job.prod.forEach(p => {
-                    const total = (assigned * p.val).toFixed(2);
-                    totalStrs.push(`+${total} ${p.res}`);
-                });
-                rowObj.job.drain.forEach(d => {
-                    const total = (assigned * d.val).toFixed(2);
-                    totalStrs.push(`-${total} ${d.res}`);
-                });
-                rowObj.totalStats.innerHTML = totalStrs.map(s => `<span>${s}</span>`).join(' ');
-            });
-        }
-        if (this.strikeWarning) {
-            this.strikeWarning.style.display = data.workersOnStrike ? "block" : "none";
-        }
+    }
+
+    render(data) {
+        this.renderResources(data);
+
         this.updateTheurgyButtonStates();
+
+        // Update production grid
+        if (this.buildingCards && data.buildings) {
+            for (const [type, b] of Object.entries(data.buildings)) {
+                const def = this.defs[type];
+                if (this.buildingCards[type]) {
+                    this.buildingCards[type].count.textContent = `Built: ${b.count}`;
+                    this.buildingCards[type].workerCount.textContent = b.workers;
+                    this.buildingCards[type].prodRow.textContent = this.getBuildingProdText(def, b);
+                }
+            }
+        }
     }
 
     updateVisibility(loc, panel) {

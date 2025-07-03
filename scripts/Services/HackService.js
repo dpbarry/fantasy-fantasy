@@ -164,8 +164,10 @@ export default class HackService {
                     location.reload();
                     break;
                 case 'devstart':
-                    feedback.textContent = "Soft restarting game...";
+                    const devSave = core.storage.devSave;
+                    feedback.textContent = devSave ? "Soft restarting game..." : "Error";
                     feedback.classList.add('visible');
+                    if (!devSave) return;
                     await delay(300);
                     core.pause();
                     window.onbeforeunload = null;
@@ -182,7 +184,6 @@ export default class HackService {
                         }
                     });
 
-                    const devSave = core.storage.devSave;
                     core.storage.clearExcept(devSave);
                     location.reload();
                     break;
@@ -224,7 +225,7 @@ export default class HackService {
                     feedback.textContent = `Set game time to ${core.clock.gameTime({format: 'full'})} ${core.clock.gameDate({format: 'full'})}`;
                     break;
                 case 'save':
-                    core.storage.record(core);
+                    core.storage.recordSave(core);
                     feedback.textContent = `Save recorded`;
                     break;
                 case 'load':
@@ -234,7 +235,7 @@ export default class HackService {
                     }
                     const i = parseInt(args[0]);
                     try {
-                        await core.storage.jump(i);
+                        await core.storage.loadSave(i);
                         feedback.textContent = `Restored save at index ${i}`;
                     } catch (error) {
                         console.log(error);
@@ -259,7 +260,7 @@ export default class HackService {
                         break;
                     }
                     try {
-                        core.storage.delete(delIndex);
+                        core.storage.deleteSave(delIndex);
                         feedback.textContent = `Deleted save at index ${delIndex}`;
                     } catch (error) {
                         console.error(error);
