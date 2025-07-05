@@ -106,8 +106,7 @@ export default class UIManager {
         });
 
         interactiveObserver.observe(document.body, {
-            childList: true,
-            subtree: true
+            childList: true, subtree: true
         });
 
         setupKeyboard();

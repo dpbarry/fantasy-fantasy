@@ -19,7 +19,7 @@ export default class IndustryPanel {
         const chevron = document.createElement("div");
         chevron.classList.add("chevron");
         chevron.addEventListener("click", () => this.toggleView());
-        
+
         this.resourcebox.appendChild(chevron);
     }
 
@@ -29,12 +29,18 @@ export default class IndustryPanel {
 
         const plantBtn = theurgyContainer.querySelector("#theurgy-plant");
         if (plantBtn) {
-            plantBtn.addEventListener("pointerdown", (event) => {if (plantBtn.disabled) return; this.handleTheurgyClick("plant", event)});
+            plantBtn.addEventListener("pointerdown", (event) => {
+                if (plantBtn.disabled) return;
+                this.handleTheurgyClick("plant", event)
+            });
         }
 
         const harvestBtn = theurgyContainer.querySelector("#theurgy-harvest");
         if (harvestBtn) {
-            harvestBtn.addEventListener("pointerdown", (event) => {if (harvestBtn.disabled) return; this.handleTheurgyClick("harvest", event)});
+            harvestBtn.addEventListener("pointerdown", (event) => {
+                if (harvestBtn.disabled) return;
+                this.handleTheurgyClick("harvest", event)
+            });
         }
 
         this.theurgyButtons = {
@@ -42,42 +48,92 @@ export default class IndustryPanel {
             harvest: harvestBtn
         };
     }
-
-    createFloatingText(button, resourceName, amount = 1, event) {
-        const floatingText = document.createElement("div");
-        floatingText.textContent = `+${amount} ${resourceName}`;
-        floatingText.style.cssText = `
-            position: fixed;
-            color: var(--baseColor);
-            user-select: none;
-            font-size: 0.9em;
-            pointer-events: none;
-            z-index: 1000;
-            opacity: 1;
-            transform: translateY(0);
-            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
-            white-space: nowrap;
-        `;
-
+    createParticleExplosion(event) {
+        const GRAVITY = 0.05; 
+        const DRAG = 0.97;
+        const LIFESPAN = 70;
+        const particles = [];
+      
         const startX = event.clientX;
         const startY = event.clientY;
-        
-        // Generate random arc trajectory
-        const minAngle = 75 * Math.PI / 180; 
-        const maxAngle = 105 * Math.PI / 180; 
-        const angle = minAngle + Math.random() * (maxAngle - minAngle); 
-        const distance = 60 + Math.random() * 40; 
-        const endX = startX + Math.cos(angle) * distance;
-        const endY = startY - Math.sin(angle) * distance; 
-        
-        floatingText.style.left = `${startX}px`;
-        floatingText.style.top = `${startY}px`;
+        const count = 8 + Math.floor(Math.random() * 4);
+      
+        for (let i = 0; i < count; i++) {
+          const el = document.createElement('div');
+          el.className = 'theurgyParticle';
+      
+          const size = 1.2 + Math.random() * 1.2;
+          el.style.width = `${size}px`;
+          el.style.height = `${size}px`;
+          el.style.left = `${startX}px`;
+          el.style.top = `${startY}px`;
+      
+          document.body.appendChild(el);
+      
+          // Stronger upward launch
+          const angle = Math.random() * 2 * Math.PI;
+          const speed = 1.2 + Math.random() * 1.8;
+          const vx = Math.cos(angle) * speed;
+          const vy = Math.sin(angle) * speed * 0.6
+                    - (0.8 + Math.random());
+      
+          particles.push({ el, x: 0, y: 0, vx, vy, age: 0 });
+        }
+      
+        function animate() {
+          for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+      
+            p.vx *= DRAG;
+            p.vy = p.vy * DRAG + GRAVITY;
+            p.x += p.vx;
+            p.y += p.vy;
+            p.age++;
+      
+            const t = p.age / LIFESPAN;
+            p.el.style.opacity = 1 - t;
+            p.el.style.transform = `translate(${p.x}px, ${p.y}px)`;
+      
+            if (p.age >= LIFESPAN) {
+              p.el.remove();
+              particles.splice(i, 1);
+            }
+          }
+      
+          if (particles.length > 0) {
+            requestAnimationFrame(animate);
+          }
+        }
+      
+        requestAnimationFrame(animate);
+      }
+      
+      
+
+    addResourceFloater(resourceName, change) {
+        const resourceRow = this.resourcebox._rows[resourceName];
+        if (!resourceRow) return;
+
+        const floatingText = document.createElement("div");
+        floatingText.textContent = `${change.type === "gain" ? "+" : "-"}${change.amt}`;
+        floatingText.className = "resourceFloater";
+        floatingText.style.color = change.type === "gain" ? "var(--gainColor)" : "var(--drainColor)";
+
+        const nameText = resourceRow.nameText;
+        const textRect = nameText.getBoundingClientRect();
+        const spanRect = resourceRow.nameSpan.getBoundingClientRect();
+
+        const availableSpace = spanRect.right - textRect.right;
+        const minDistance = availableSpace * 0.1;
+        const randomX = textRect.right + minDistance + Math.random() * (availableSpace * 0.9)
+        floatingText.style.left = `${randomX}px`;
+        floatingText.style.top = `${textRect.top + 4}px`;
 
         document.body.appendChild(floatingText);
 
         requestAnimationFrame(() => {
             floatingText.style.opacity = "0";
-            floatingText.style.transform = `translate(${endX - startX}px, ${endY - startY}px)`;
+            floatingText.style.transform = `translateY(-16px)`;
         });
 
         setTimeout(() => {
@@ -88,39 +144,21 @@ export default class IndustryPanel {
     }
 
     handleTheurgyClick(theurgyType, event) {
-        const success = this.core.industry.performTheurgy(theurgyType);
-        
-        if (success) {
-            const button = this.theurgyButtons[theurgyType];
-            if (button) {
-                button.classList.add("nudged");
-                setTimeout(() => {
-                    button.classList.remove("nudged");
-                }, 100);
+        const changes = this.core.industry.performTheurgy(theurgyType);
+        const button = this.theurgyButtons[theurgyType];
+        button.classList.add("nudged");
+        setTimeout(() => { button.classList.remove("nudged") }, 100);
 
-                let resourceName = "resource";
-                let amount = 1;
-                
-                switch (theurgyType) {
-                    case "plant":
-                        resourceName = "crop"; 
-                        amount = 1;
-                        break;
-                    case "harvest":
-                        resourceName = "food";
-                        amount = 1;
-                        break;
-                }
-                
-                this.createFloatingText(button, resourceName, amount, event);
-            }
-        }
-        
+        this.createParticleExplosion(event);
+
+        changes.forEach(change => {
+            this.addResourceFloater(change.res, change);
+        })
+
         this.updateTheurgyButtonStates();
     }
 
     updateTheurgyButtonStates() {
-        if (!this.theurgyButtons) return;
         if (this.theurgyButtons.plant) {
             const canPlant = this.core.industry.canPerformTheurgy("plant");
             this.theurgyButtons.plant.disabled = !canPlant;
@@ -144,9 +182,26 @@ export default class IndustryPanel {
 
         const nameSpan = document.createElement("span");
         nameSpan.classList.add("resource-name");
-        nameSpan.textContent = resource.replace(/\w\S*/g, txt =>
+
+        const nameText = document.createElement("span");
+        nameText.classList.add("resource-text");
+
+        const displayName = resource.replace(/\w\S*/g, txt =>
             txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase()
         );
+
+        // Separated for animation purposes
+        for (let i = 0; i < displayName.length; i++) {
+            const letterSpan = document.createElement("span");
+            letterSpan.classList.add("letter");
+            letterSpan.textContent = displayName[i];
+            letterSpan.style.animationDelay = `${i * 0.1125}s`;
+            nameText.appendChild(letterSpan);
+        }
+
+        // Set animation duration based on text length
+        const totalDuration = (displayName.length * 0.1125) + 0.8; // 0.8s for the actual animation
+        nameText.style.setProperty('--animation-duration', `${totalDuration}s`);
 
         const rateSpan = document.createElement("span");
         rateSpan.classList.add("resource-rate");
@@ -155,12 +210,13 @@ export default class IndustryPanel {
         valueSpan.classList.add("resource-value");
         valueSpan.textContent = "0";
 
+        nameSpan.appendChild(nameText);
         row.appendChild(nameSpan);
         row.appendChild(rateSpan);
         row.appendChild(valueSpan);
 
         this.resourcebox.appendChild(row);
-        this.resourcebox._rows[resource] = { valueSpan, rateSpan };
+        this.resourcebox._rows[resource] = { nameSpan, nameText, valueSpan, rateSpan };
     }
 
     createProductionGrid() {
@@ -275,6 +331,7 @@ export default class IndustryPanel {
             if (num < 1e9) return { int: (num / 1e6).toFixed(2).replace(/\.00$/, '') + 'M', dec: '' };
             return { int: num.toExponential(2), dec: '' };
         }
+
         function formatRate(val) {
             let num = val.toNumber();
             if (Math.abs(num) < 1000) return num.toFixed(2);
@@ -282,6 +339,7 @@ export default class IndustryPanel {
             if (Math.abs(num) < 1e9) return (num / 1e6).toFixed(2).replace(/\.00$/, '') + 'M';
             return num.toExponential(2);
         }
+
         Object.entries(data.resources).forEach(([k, v]) => {
             if (this.resourcebox._rows[k]) {
                 const { valueSpan, rateSpan } = this.resourcebox._rows[k];
@@ -296,6 +354,21 @@ export default class IndustryPanel {
                     rateSpan.textContent = (rateNum >= 0 ? '+' : '') + formatRate(v.rate);
                     rateSpan.classList.toggle('positive', rateNum > 0);
                     rateSpan.classList.toggle('negative', rateNum < 0);
+                }
+
+                if (v.rate !== undefined) {
+                    let rateNum = v.rate.toNumber();
+                    const { nameSpan } = this.resourcebox._rows[k];
+
+                    if (rateNum > 0) {
+                        nameSpan.classList.remove('draining');
+                        nameSpan.classList.add('gaining');
+                    } else if (rateNum < 0) {
+                        nameSpan.classList.remove('gaining');
+                        nameSpan.classList.add('draining');
+                    } else {
+                        nameSpan.classList.remove('gaining', 'draining');
+                    }
                 }
             } else {
                 this.appendResourceRow(k);

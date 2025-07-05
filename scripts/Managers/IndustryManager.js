@@ -85,24 +85,23 @@ export default class IndustryManager {
     }
 
     performTheurgy(theurgyType) {
-        let success = false;
+        let changes = [];
         switch (theurgyType) {
             case "plant":
                 this.resources.crops.add(1);
-                success = true;
+                changes.push({type: "gain", amt: 1, res: "crops"});
                 break;
             case "harvest":
                 if (this.resources.crops.value.gte(1)) {
                     this.resources.crops.subtract(1);
                     this.resources.food.add(1);
-                    success = true;
+                    changes.push({type: "drain", amt: 1, res: "crops"});
+                    changes.push({type: "gain", amt: 1, res: "food"});
                 }
                 break;
         }
-        if (success) {
-            this.broadcast();
-        }
-        return success;
+        this.broadcast();
+        return changes;
     }
 
     canPerformTheurgy(theurgyType) {
@@ -149,7 +148,8 @@ export default class IndustryManager {
 
     getStatus() {
         return {
-            ...this, resources: Object.fromEntries(Object.entries(this.resources).filter(([, value]) => value.isDiscovered))
+            ...this,
+            resources: Object.fromEntries(Object.entries(this.resources).filter(([, value]) => value.isDiscovered))
         }
     }
 

@@ -26,7 +26,6 @@ export default class StoryPanel {
             }
         };
 
-        // watch for new nodes
         let scrollObserver = new MutationObserver(scrollNow);
         this.root._scrollObserver = scrollObserver;
         scrollObserver.observe(this.root, {

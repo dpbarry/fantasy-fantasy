@@ -37,6 +37,7 @@
 
 
         :root {
+            color-scheme: light dark;
             --boxGap: 7px;
             --leftWidth: minmax(24vw, 24vw);
             --rightWidth: minmax(22vw, min-content);
@@ -57,7 +58,11 @@
 
             --darkerAccent: color-mix(in hsl, var(--accent) 45%, var(--contrastColor));
             --darkAccent: color-mix(in hsl, var(--accent) 70%, var(--contrastColor));
+            --lightAccent: color-mix(in hsl, var(--accent) 80%, var(--baseColor));
             --accentFilter: invert(56%) sepia(98%) saturate(2737%) hue-rotate(153deg) brightness(101%) contrast(84%);
+
+            --gainColor: light-dark(hsl(165, 100%, 35%), hsl(165, 100%, 84%));
+            --drainColor: light-dark(hsl(0, 100%, 35%), hsl(-10, 100%, 84%));
         }
 
         :root.notransition * {
@@ -82,6 +87,31 @@
             &:focus {
                 outline: none;
             }
+        }
+
+        .theurgyParticle {
+            position: fixed;
+            pointer-events: none;
+            border-radius: 50%;
+            background: var(--lightAccent);
+            box-shadow: 0 0 1px var(--lightAccent), 0 0 4px var(--lightAccent);
+            will-change: transform, opacity;
+            z-index: 1000;
+        }
+
+
+        .resourceFloater {
+            position: fixed;
+            color: var(--baseColor);
+            user-select: none;
+            font-size: 0.9em;
+            font-weight: 410;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+            white-space: nowrap;
         }
 
 
@@ -749,6 +779,7 @@
             color: var(--accent);
             border: 1.5px solid var(--accent);
             font-weight: 600;
+            pointer-events: all;
             border-radius: 3px;
             cursor: pointer;
             font-size: 1em;
@@ -1424,6 +1455,28 @@
 
                 .resource-name {
                     text-align: left;
+                    position: relative;
+                    color: var(--baseColor);
+
+                    .resource-text {
+                        width: fit-content;
+                    }
+
+                    .letter {
+                        display: inline-block;
+                        transition: color 0.1s ease-out;
+                    }
+
+                    transition: filter 0.25s ease;
+
+                    &.gaining .letter {
+                        animation: letter-gained var(--animation-duration, 1.3s) linear infinite;
+                    }
+
+                    &.draining .letter {
+                        animation: letter-drained var(--animation-duration, 1.3s) linear infinite;
+                    }
+                    --animation-duration: 1.3s;
                 }
 
                 .resource-rate {
@@ -1440,11 +1493,13 @@
                     padding-right: 8px;
                     overflow: hidden;
                     white-space: nowrap;
+
                     &.positive {
-                        color: #2e9d3a;
+                        color: var(--gainColor);
                     }
+
                     &.negative {
-                        color: #c0392b;
+                        color: var(--drainColor);
                     }
                 }
 
@@ -1469,7 +1524,7 @@
                 gap: 0;
                 padding: 0;
             }
-            
+
             .chevron {
                 position: absolute;
                 right: 10px;
@@ -1507,6 +1562,43 @@
                 }
             }
         }
+
+        @keyframes letter-gained {
+
+            0%,
+            15% {
+                color: var(--baseColor);
+            }
+
+            25%,
+            75% {
+                color: var(--gainColor);
+            }
+
+            85%,
+            100% {
+                color: var(--baseColor);
+            }
+        }
+
+        @keyframes letter-drained {
+
+            0%,
+            15% {
+                color: var(--baseColor);
+            }
+
+            25%,
+            75% {
+                color: var(--drainColor);
+            }
+
+            85%,
+            100% {
+                color: var(--baseColor);
+            }
+        }
+
 
         /* DESKTOP VIEW */
         @media (width > 950px) {

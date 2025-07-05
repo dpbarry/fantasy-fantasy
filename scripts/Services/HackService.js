@@ -8,6 +8,21 @@ export default class HackService {
     static #isInitialized = false;
     static #ignoreClick = false;
 
+    static #clickListener = (e) => {
+        const rect = this.#consoleElement.getBoundingClientRect();
+
+        const clickedInDialog = (
+            rect.top <= e.clientY &&
+            e.clientY <= rect.top + rect.height &&
+            rect.left <= e.clientX &&
+            e.clientX <= rect.left + rect.width
+        );
+
+        if (!clickedInDialog && !this.#ignoreClick) {
+            this.hide();
+        }
+    }
+
     static initialize(core) {
         if (this.#isInitialized) return;
         this.#isInitialized = true;
@@ -26,6 +41,18 @@ export default class HackService {
 
         this.#consoleElement.appendChild(feedback);
 
+
+        const handleCommand = async (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                const command = input.textContent.trim();
+                if (feedback && feedback.classList.contains('visible')) {
+                    feedback.classList.remove('visible');
+                    await delay(150);
+                }
+                await this.executeCommand(command, core);
+            }
+        }
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
@@ -53,34 +80,7 @@ export default class HackService {
             }
         });
 
-        const handleCommand = async (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                const command = input.textContent.trim();
-                if (feedback && feedback.classList.contains('visible')) {
-                    feedback.classList.remove('visible');
-                    await delay(150);
-                }
-                await this.executeCommand(command, core);
-            }
-        }
-
-
         input.addEventListener('keydown', handleCommand);
-
-        document.addEventListener('click', (e) => {
-            const rect = this.#consoleElement.getBoundingClientRect();
-
-            const clickedInDialog = (
-                rect.top <= e.clientY &&
-                e.clientY <= rect.top + rect.height &&
-                rect.left <= e.clientX &&
-                e.clientX <= rect.left + rect.width
-            );
-
-            if (!clickedInDialog && !this.#ignoreClick) {
-               this.hide();
-            }});
     }
 
 
@@ -90,7 +90,9 @@ export default class HackService {
         }
 
         this.#ignoreClick = true;
-        setTimeout(() => {this.#ignoreClick = false;}, 100);
+        setTimeout(() => {
+            this.#ignoreClick = false;
+        }, 100);
         this.#consoleElement.show();
         this.#consoleElement.classList.add('visible');
 
@@ -103,19 +105,19 @@ export default class HackService {
         const feedback = this.#consoleElement.querySelector('.console-feedback');
 
         feedback.textContent = "";
-        
+
+        document.addEventListener('click', this.#clickListener);
     }
 
     static hide() {
-        if (this.#consoleElement) {
-            const feedback = this.#consoleElement.querySelector('.console-feedback');
-            const cueWrapper = this.#consoleElement.querySelector('div[style*="position: absolute"]');
-            feedback.classList.remove('visible');
-            if (cueWrapper) cueWrapper.remove();
+        document.removeEventListener("click", this.#clickListener);
+        const feedback = this.#consoleElement.querySelector('.console-feedback');
+        const cueWrapper = this.#consoleElement.querySelector('div[style*="position: absolute"]');
+        feedback.classList.remove('visible');
+        if (cueWrapper) cueWrapper.remove();
 
-            this.#consoleElement.classList.remove('visible');
-            this.#consoleElement.close();
-        }
+        this.#consoleElement.classList.remove('visible');
+        this.#consoleElement.close();
     }
 
 
@@ -192,7 +194,7 @@ export default class HackService {
                         feedback.textContent = `Usage: set <manager> <property> <value>`;
                         break;
                     }
-                    let setManager= core.managers[args[0]];
+                    let setManager = core.managers[args[0]];
                     if (!setManager) {
                         feedback.textContent = `Invalid manager: ${args[0]}`;
                         break;

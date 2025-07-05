@@ -127,6 +127,7 @@ export function applyTheme(core) {
 
 export function spawnRipple(mouseEvent, element) {
     if (element.disabled) return;
+    document.querySelectorAll(".ripple").forEach(el => {el.remove();})
     // Create a ripple element
     const rippleEl = document.createElement('div');
     rippleEl.classList.add('ripple');
@@ -148,8 +149,10 @@ export function spawnRipple(mouseEvent, element) {
         rippleEl.classList.add('run');
     });
 
+    let cleanup =     setTimeout(() => {rippleEl.remove();}, 750);
     // Remove ripple element when the transition is done
     rippleEl.addEventListener('transitionend', () => {
+        clearTimeout(cleanup);
         rippleEl.remove();
     });
 
