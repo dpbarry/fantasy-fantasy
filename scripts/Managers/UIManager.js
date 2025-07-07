@@ -19,7 +19,7 @@ export default class UIManager {
             "right": "settings"
         };
         this.visibleSection = "center";
-
+        this.renderLoops = [];
         this.initialize();
     }
 
@@ -140,6 +140,25 @@ export default class UIManager {
             let [loc, panel] = a;
             this.show(loc, panel);
         });
+    }
+
+    createRenderInterval(fn) {
+        const interval =  setInterval(() => {fn();}, this.core.settings.refreshUI);
+        this.renderLoops.push({interval: interval, fn: fn});
+        return interval;
+    }
+
+    destroyRenderInterval(interval) {
+        const i = this.renderLoops.findIndex(i => i.interval === interval);
+        clearInterval(interval);
+        this.renderLoops.splice(i, 1);
+    }
+
+    updateRenderIntervals() {
+        for (const pair of this.renderLoops) {
+           clearInterval(pair.interval);
+           pair.interval = setInterval(pair.fn, this.core.settings.refreshUI);
+        }
     }
 
     serialize() {

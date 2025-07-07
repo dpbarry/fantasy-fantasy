@@ -26,7 +26,8 @@ export default class SettingsManager {
 
     updateSetting(setting, value) {
         this.configs[setting] = value;
-        applyTheme(this.core);
+        if (setting === "background" || setting === "accent") applyTheme(this.core);
+        if (setting === "refreshUI") this.core.ui.updateRenderIntervals();
         this.broadcast();
     }
 

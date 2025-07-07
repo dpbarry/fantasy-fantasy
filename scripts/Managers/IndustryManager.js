@@ -118,10 +118,9 @@ export default class IndustryManager {
     updateLoops() {
         if (this.core.ui.activePanels.center === "industry" && !this.#loops.industry) {
            this.broadcast();
-            this.#loops.industry = setInterval(() => this.broadcast(),
-                parseInt(this.core.settings.refreshUI));
+            this.#loops.industry = this.core.ui.createRenderInterval(() => this.broadcast());
         } else if (this.core.ui.activePanels.center !== "industry") {
-            clearInterval(this.#loops.industry);
+            this.core.ui.destroyRenderInterval(this.#loops.industry);
             this.#loops.industry = null;
         }
     }
