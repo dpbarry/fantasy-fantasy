@@ -45,20 +45,20 @@
             --updates-height: 10.5vh;
 
             --contrastColor: #000;
-            --bgColor: color-mix(in hsl, var(--contrastColor), var(--accent) 2%);
+            --bgColor: color-mix(in oklab, var(--contrastColor), var(--accent) 2%);
             --baseColor: hsl(0, 0%, 90%);
             --baseFilter: invert(0.9);
-            --darkBaseColor: color-mix(in hsl, var(--contrastColor) 93%, var(--baseColor));
-            --darkerBaseColor: color-mix(in hsl, var(--contrastColor) 97%, var(--baseColor));
-            --midBaseColor: color-mix(in hsl, var(--contrastColor) 54%, var(--baseColor));
-            --lightBaseColor: color-mix(in hsl, var(--contrastColor) 20%, var(--baseColor));
+            --darkBaseColor: color-mix(in oklab, var(--contrastColor) 93%, var(--baseColor));
+            --darkerBaseColor: color-mix(in oklab, var(--contrastColor) 97%, var(--baseColor));
+            --midBaseColor: color-mix(in oklab, var(--contrastColor) 54%, var(--baseColor));
+            --lightBaseColor: color-mix(in oklab, var(--contrastColor) 20%, var(--baseColor));
             --boxColor: var(--baseColor);
             --accent: hsl(190, 82.5%, 45%);
             --alpha: 0.3;
 
-            --darkerAccent: color-mix(in hsl, var(--accent) 45%, var(--contrastColor));
-            --darkAccent: color-mix(in hsl, var(--accent) 70%, var(--contrastColor));
-            --lightAccent: color-mix(in hsl, var(--accent) 80%, var(--baseColor));
+            --darkerAccent: color-mix(in oklab, var(--accent) 45%, var(--contrastColor));
+            --darkAccent: color-mix(in oklab, var(--accent) 70%, var(--contrastColor));
+            --lightAccent: color-mix(in oklab, var(--accent) 80%, var(--baseColor));
             --accentFilter: invert(56%) sepia(98%) saturate(2737%) hue-rotate(153deg) brightness(101%) contrast(84%);
 
             --gainColor: light-dark(hsl(165, 100%, 35%), hsl(165, 100%, 84%));
@@ -81,7 +81,7 @@
             backface-visibility: hidden;
 
             &::selection {
-                background: color-mix(in hsl, transparent 30%, var(--darkerAccent));
+                background: color-mix(in oklab, transparent 30%, var(--darkerAccent));
             }
 
             &:focus {
@@ -303,6 +303,7 @@
             height: 100%;
             font-weight: 600;
             position: relative;
+            font-size: 0.865em;
             border: 0;
             font-family: SourceSerif;
             transition: filter 0.1s, scale 0.1s, opacity 0.2s;
@@ -789,10 +790,16 @@
             transition: transform 0.1s, background 0.1s, scale 0.1s;
             box-shadow: 0 0 6px transparent;
 
+            &:focus-visible {
+                outline: 2px solid var(--accent);
+                outline-offset: 2px;
+                z-index: 2;
+            }
+
             @media (hover: hover) and (pointer: fine) {
 
                 &:hover:not(:disabled) {
-                    background: color-mix(in hsl, var(--accent) 15%, transparent);
+                    background: color-mix(in oklab, var(--accent) 15%, transparent);
                 }
             }
         }
@@ -986,11 +993,11 @@
                 }
 
                 #dark {
-                    background-color: color-mix(in hsl, #000, var(--accent) 5%);
+                    background-color: color-mix(in oklab, #000, var(--accent) 5%);
                 }
 
                 #light {
-                    background-color: color-mix(in hsl, #fff, var(--accent) 5%);
+                    background-color: color-mix(in oklab, #fff, var(--accent) 5%);
                 }
 
                 #lightning {
@@ -1376,15 +1383,15 @@
             height: 100%;
         }
 
-        #industry:has(#industry-resources.transitioning) {
-            transition: grid-template-columns 0.32s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        #industry:has(#industry-resources.expanded) {
-            --industry-resources-width: 14em;
-        }
-
         #industry {
+
+            &:has(#industry-resources.animatingWidth) {
+                transition: grid-template-columns 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            &:has(#industry-resources.expanded) {
+                --industry-resources-width: 14em;
+            }
 
             /* Subboxes */
             #industry-theurgy {
@@ -1409,7 +1416,7 @@
 
                     @media (hover: hover) and (pointer: fine) {
                         &:not(:disabled):hover {
-                            background: color-mix(in hsl, var(--accent) 15%, transparent);
+                            background: color-mix(in oklab, var(--accent) 15%, transparent);
                         }
                     }
                 }
@@ -1424,6 +1431,11 @@
                 min-width: 0;
                 min-height: 0;
 
+
+                &.expanded .chevron::before {
+                    transform: translateX(6px) scaleX(-1) rotate(-45deg)
+                }
+
                 .resource-row {
                     display: grid;
                     grid-template-columns: 1fr 0 3.5em;
@@ -1433,8 +1445,18 @@
                     min-width: 0;
                 }
 
-                &.transitioning .resource-row {
-                    transition: grid-template-columns 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+                &.animatingWidth {
+                    .resource-row {
+                        transition: grid-template-columns 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+                    }
+
+                    .resource-row .resource-rate {
+                        transition:
+                            opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                            font-size 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+                            max-width 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+                            color 0.15s;
+                    }
                 }
 
                 &.expanded .resource-row {
@@ -1461,33 +1483,13 @@
                     .resource-text {
                         width: fit-content;
                     }
-
-                    .letter {
-                        display: inline-block;
-                        transition: color 0.1s ease-out;
-                    }
-
-                    transition: filter 0.25s ease;
-
-                    &.gaining .letter {
-                        animation: letter-gained var(--animation-duration, 1.3s) linear infinite;
-                    }
-
-                    &.draining .letter {
-                        animation: letter-drained var(--animation-duration, 1.3s) linear infinite;
-                    }
-                    --animation-duration: 1.3s;
                 }
 
                 .resource-rate {
                     opacity: 0;
                     font-size: 0;
                     max-width: 4em;
-                    transition:
-                        opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-                        font-size 0.32s cubic-bezier(0.4, 0, 0.2, 1),
-                        max-width 0.32s cubic-bezier(0.4, 0, 0.2, 1);
-                    will-change: opacity, font-size, max-width;
+                    transition: color 0.15s;
                     user-select: none;
                     text-align: right;
                     padding-right: 8px;
@@ -1517,13 +1519,118 @@
                 }
             }
 
-            #industry-workers {
-                grid-area: industry-workers;
+            #industry-prod {
+                grid-area: industry-prod;
                 display: flex;
                 flex-direction: column;
-                gap: 0;
-                padding: 0;
+                gap: var(--boxGap);
+
+                .worker-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 0.5em;
+                    border-bottom: 1px solid var(--midBaseColor);
+                    font-weight: 600;
+                }
+
+                .worker-total {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5em;
+                }
+
+                .worker-count {
+                    color: var(--accent);
+                    font-weight: 700;
+                }
+
+                .worker-total-info {
+                    color: var(--midBaseColor);
+                    font-size: 0.9em;
+                }
+
+                .buildings-container {
+                    display: flex;
+                    flex-direction: column;
+                    gap: var(--boxGap);
+                }
+
+                .building-row-container {
+                    width: 100%;
+                    margin-bottom: 0.5em;
+                }
+
+                .building-row {
+                    display: flex;
+                    width: 100%;
+                    border-radius: 0.7em;
+                    align-items: stretch;
+                    position: relative;
+                    overflow: visible;
+
+                    button:not(.building-main-btn) {
+                        max-width: 3em;
+                    }
+                }
+
+                .building-row button {
+                    position: relative;
+                    flex: 1 1 0;
+                    font-family: inherit;
+                    color: var(--baseColor);
+                    background: color-mix(in oklab, var(--bgColor) 85%, var(--accent) 15%);
+                    border: none;
+                    border-top: 0.5px solid var(--accent);
+                    border-right: 0.5px solid var(--accent);
+                    border-left: 0.5px solid transparent;
+                    box-shadow: 0 2.5px 0 var(--accent);
+                    cursor: pointer;
+                    transition:
+                        top 0.1s cubic-bezier(0.34, 1, 0.64, 1),
+                        box-shadow 0.1s cubic-bezier(0.34, 1, 0.64, 1),
+                        background 0.09s;
+                    border-radius: 0;
+                    z-index: 1;
+                    isolation: isolate;
+                    outline: none;
+                    min-width: 0;
+                    min-height: 2.5em;
+                    top: 0;
+                }
+
+                .building-row button:first-child {
+                    border-left: 1px solid var(--accent);
+                    border-top-left-radius: 0.55em;
+                    border-bottom-left-radius: 0.55em;
+                }
+
+                .building-row button:last-child {
+                    border-top-right-radius: 0.55em;
+                    border-bottom-right-radius: 0.55em;
+                }
+                
+
+                @media (hover: hover) and (pointer: fine) {
+                    .building-row button:hover:not(:disabled) {
+                        background: color-mix(in oklab, var(--bgColor) 77%, var(--accent));
+                    }
+                }
+
+                .building-row button:active:not(:disabled) {
+                    top: 2px;
+                    box-shadow: 0 1px 0 var(--accent);
+                    transition:
+                        top 0.05s cubic-bezier(0.75, 0, 0.25, 1),
+                        box-shadow 0.05s cubic-bezier(0.75, 0, 0.25, 1);
+                }
+
+                .building-row button:disabled {
+                    background: color-mix(in oklab, var(--bgColor) 92.5%, var(--accent));
+                    cursor: default;
+                }
             }
+
 
             .chevron {
                 position: absolute;
@@ -1552,53 +1659,12 @@
                 transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.18s;
             }
 
-            &:has(#industry-resources.expanded) .chevron::before {
-                transform: translateX(6px) scaleX(-1) rotate(-45deg)
-            }
-
             @media (hover: hover) and (pointer: fine) {
                 .chevron:hover::before {
                     border-color: var(--accent);
                 }
             }
         }
-
-        @keyframes letter-gained {
-
-            0%,
-            15% {
-                color: var(--baseColor);
-            }
-
-            25%,
-            75% {
-                color: var(--gainColor);
-            }
-
-            85%,
-            100% {
-                color: var(--baseColor);
-            }
-        }
-
-        @keyframes letter-drained {
-
-            0%,
-            15% {
-                color: var(--baseColor);
-            }
-
-            25%,
-            75% {
-                color: var(--drainColor);
-            }
-
-            85%,
-            100% {
-                color: var(--baseColor);
-            }
-        }
-
 
         /* DESKTOP VIEW */
         @media (width > 950px) {
@@ -1807,6 +1873,7 @@
                 transform: translate(-50%, -50%);
             }
         }
+
     </style>
     <!--  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
 </head>

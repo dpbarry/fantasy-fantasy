@@ -56,7 +56,7 @@ export default class IndustryPanel {
       
         const startX = event.clientX;
         const startY = event.clientY;
-        const count = 8 + Math.floor(Math.random() * 4);
+        const count = 5 + Math.floor(Math.random() * 3);
       
         for (let i = 0; i < count; i++) {
           const el = document.createElement('div');
@@ -186,22 +186,9 @@ export default class IndustryPanel {
         const nameText = document.createElement("span");
         nameText.classList.add("resource-text");
 
-        const displayName = resource.replace(/\w\S*/g, txt =>
+        nameText.textContent = resource.replace(/\w\S*/g, txt =>
             txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase()
         );
-
-        // Separated for animation purposes
-        for (let i = 0; i < displayName.length; i++) {
-            const letterSpan = document.createElement("span");
-            letterSpan.classList.add("letter");
-            letterSpan.textContent = displayName[i];
-            letterSpan.style.animationDelay = `${i * 0.1125}s`;
-            nameText.appendChild(letterSpan);
-        }
-
-        // Set animation duration based on text length
-        const totalDuration = (displayName.length * 0.1125) + 0.8; // 0.8s for the actual animation
-        nameText.style.setProperty('--animation-duration', `${totalDuration}s`);
 
         const rateSpan = document.createElement("span");
         rateSpan.classList.add("resource-rate");
@@ -221,60 +208,125 @@ export default class IndustryPanel {
 
     createProductionGrid() {
         this.prodBox = this.root.querySelector('#industry-prod');
-        this.prodBox.innerHTML = '';
         this.buildingCards = {};
+
+        const workerHeader = document.createElement('div');
+        workerHeader.className = 'worker-header';
+        workerHeader.innerHTML = `
+            <div class="worker-total">
+                <span class="worker-label">Available:</span>
+                <span class="worker-count" id="available-workers">0</span>
+                <span class="worker-total-info" id="total-workers">(0 total)</span>
+            </div>
+        `;
+        this.prodBox.appendChild(workerHeader);
+
+        const buildingsContainer = document.createElement('div');
+        buildingsContainer.className = 'buildings-container';
 
         for (const [type, b] of Object.entries(this.core.industry.buildings)) {
             const def = this.defs[type];
-            const card = document.createElement('div');
-            card.className = 'building-card';
-            // Name
-            const name = document.createElement('div');
-            name.className = 'building-name';
-            name.textContent = def ? def.name : type;
-            card.appendChild(name);
-            // Count
-            const count = document.createElement('div');
-            count.className = 'building-count';
-            count.textContent = `Built: ${b.count}`;
-            card.appendChild(count);
-            // Build button
-            const buildBtn = document.createElement('button');
-            buildBtn.className = 'building-build';
-            buildBtn.textContent = 'Build';
-            buildBtn.onclick = () => {
-                this.core.industry.buildBuilding(type);
-            };
-            // Show cost
-            const cost = document.createElement('span');
-            cost.className = 'building-cost';
-            cost.textContent = def ? ' (' + Object.entries(def.buildCost).map(([res, amt]) => `${amt} ${res}`).join(', ') + ')' : '';
-            buildBtn.appendChild(cost);
-            card.appendChild(buildBtn);
-            // Worker assign/unassign
-            const workerRow = document.createElement('div');
-            workerRow.className = 'building-workers';
-            const assignBtn = document.createElement('button');
-            assignBtn.textContent = '+';
-            assignBtn.onclick = () => this.core.industry.assignWorkerToBuilding(type);
-            const unassignBtn = document.createElement('button');
-            unassignBtn.textContent = '-';
-            unassignBtn.onclick = () => this.core.industry.unassignWorkerFromBuilding(type);
-            const workerCount = document.createElement('span');
-            workerCount.className = 'building-worker-count';
-            workerCount.textContent = b.workers;
-            workerRow.appendChild(assignBtn);
-            workerRow.appendChild(workerCount);
-            workerRow.appendChild(unassignBtn);
-            card.appendChild(workerRow);
-            // Production/drain rates
-            const prodRow = document.createElement('div');
-            prodRow.className = 'building-prod';
-            prodRow.textContent = this.getBuildingProdText(def, b);
-            card.appendChild(prodRow);
-            this.prodBox.appendChild(card);
-            this.buildingCards[type] = { card, count, workerCount, prodRow };
+            const card = this.createBuildingCard(type, b, def);
+            buildingsContainer.appendChild(card);
         }
+
+        this.prodBox.appendChild(buildingsContainer);
+    }
+
+    createBuildingCard(type, building, def) {
+        // Main row (keyboard-like 3D button)
+        const row = document.createElement('div');
+        row.className = 'building-row';
+
+        // Main button: name + count
+        const mainBtn = document.createElement('button');
+        mainBtn.className = 'building-main-btn';
+        mainBtn.innerHTML = `<span class="building-title">${def ? def.name : type} <span class="building-count">(${building.count})</span></span>`;
+        mainBtn.onclick = () => this.core.industry.buildBuilding(type);
+
+        // ↑ button: increase level (stub)
+        const plusBtn = document.createElement('button');
+        plusBtn.className = 'building-plus-btn';
+        plusBtn.textContent = '↑';
+        plusBtn.onclick = () => this.core.industry.levelUpBuilding(type); // stub, implement in manager
+        plusBtn.disabled = (building.count === 0);
+
+        // − button: sell building
+        const minusBtn = document.createElement('button');
+        minusBtn.className = 'building-minus-btn';
+        minusBtn.textContent = '−';
+        minusBtn.onclick = () => this.core.industry.sellBuilding(type);
+        minusBtn.disabled = (building.count === 0);
+
+        // Chevron button
+        const chevronBtn = document.createElement('button');
+        chevronBtn.className = 'building-chevron-btn';
+        chevronBtn.innerHTML = '<span class="chevron-icon">&#x25BC;</span>';
+
+        // Dropdown panel (hidden by default)
+        const dropdown = document.createElement('div');
+        dropdown.className = 'building-dropdown';
+        dropdown.style.height = '0';
+        dropdown.style.opacity = '0';
+        dropdown.style.overflow = 'hidden';
+        dropdown.style.transition = 'height 0.18s cubic-bezier(0.4,0,0.2,1), opacity 0.18s cubic-bezier(0.4,0,0.2,1)';
+        dropdown.style.pointerEvents = 'none';
+
+        // Fill dropdown with info and actions
+        dropdown.innerHTML = `
+            <div class="dropdown-content">
+                <div class="dropdown-title">${def ? def.name : type}</div>
+                <div class="dropdown-prod">${this.getBuildingProdText(def, building)}</div>
+                <div class="dropdown-cost">Cost: ${def ? Object.entries(def.buildCost).map(([res, amt]) => `${amt} ${res}`).join(', ') : ''}</div>
+                <button class="dropdown-sell-btn">Sell</button>
+            </div>
+        `;
+        // Sell button logic
+        dropdown.querySelector('.dropdown-sell-btn').onclick = () => this.core.industry.sellBuilding(type);
+
+        // Chevron logic
+        let open = false;
+        chevronBtn.onclick = () => {
+            open = !open;
+            if (open) {
+                dropdown.style.pointerEvents = 'auto';
+                dropdown.style.opacity = '1';
+                dropdown.style.height = dropdown.scrollHeight + 'px';
+                chevronBtn.querySelector('.chevron-icon').style.transform = 'rotate(180deg)';
+            } else {
+                dropdown.style.pointerEvents = 'none';
+                dropdown.style.opacity = '0';
+                dropdown.style.height = '0';
+                chevronBtn.querySelector('.chevron-icon').style.transform = '';
+            }
+        };
+
+        // Compose row
+        row.appendChild(mainBtn);
+        row.appendChild(minusBtn);
+        row.appendChild(plusBtn);
+        row.appendChild(chevronBtn);
+
+        // Container for row + dropdown
+        const container = document.createElement('div');
+        container.className = 'building-row-container';
+        container.appendChild(row);
+        container.appendChild(dropdown);
+
+        // Store references for updating
+        this.buildingCards[type] = {
+            container,
+            row,
+            mainBtn,
+            plusBtn,
+            minusBtn,
+            chevronBtn,
+            dropdown,
+            countSpan: mainBtn.querySelector('.building-count'),
+            prodRow: dropdown.querySelector('.dropdown-prod')
+        };
+
+        return container;
     }
 
     getBuildingProdText(def, b) {
@@ -301,14 +353,14 @@ export default class IndustryPanel {
         if (this.core.industry.configs) {
             this.core.industry.configs.resourceBoxExpanded = this.isExpanded;
         }
-        this.resourcebox.classList.add("transitioning");
+        this.resourcebox.classList.add("animatingWidth");
         if (this.isExpanded) {
             this.resourcebox.classList.add("expanded");
         } else {
             this.resourcebox.classList.remove("expanded");
         }
         setTimeout(() => {
-            this.resourcebox.classList.remove("transitioning");
+            this.resourcebox.classList.remove("animatingWidth");
         }, 320); // based on CSS transition duration
         if (this.isExpanded && this.core.industry) {
             this.render(this.core.industry.getStatus());
@@ -378,20 +430,73 @@ export default class IndustryPanel {
 
     render(data) {
         this.renderResources(data);
-
         this.updateTheurgyButtonStates();
+        this.updateWorkerTotals(data);
+        this.updateBuildingCards(data);
+    }
 
-        // Update production grid
-        if (this.buildingCards && data.buildings) {
-            for (const [type, b] of Object.entries(data.buildings)) {
-                const def = this.defs[type];
-                if (this.buildingCards[type]) {
-                    this.buildingCards[type].count.textContent = `Built: ${b.count}`;
-                    this.buildingCards[type].workerCount.textContent = b.workers;
-                    this.buildingCards[type].prodRow.textContent = this.getBuildingProdText(def, b);
-                }
+    updateWorkerTotals(data) {
+        const totalWorkers = data.resources.workers ? Math.floor(data.resources.workers.value.toNumber()) : 0;
+        const availableWorkers = this.core.industry.unassignedWorkers;
+        
+        const totalElement = this.prodBox.querySelector('#total-workers');
+        const availableElement = this.prodBox.querySelector('#available-workers');
+        
+        if (totalElement) totalElement.textContent = `(${totalWorkers} total)`;
+        if (availableElement) availableElement.textContent = availableWorkers;
+    }
+
+    updateBuildingCards(data) {
+        if (!this.buildingCards || !data.buildings) return;
+        
+        for (const [type, b] of Object.entries(data.buildings)) {
+            const def = this.defs[type];
+            if (this.buildingCards[type]) {
+                const card = this.buildingCards[type];
+                card.countSpan.textContent = `(${b.count})`;
+                card.prodRow.textContent = this.getBuildingProdText(def, b);
+                card.plusBtn.disabled = (b.count === 0);
+                card.minusBtn.disabled = (b.count === 0);
             }
         }
+    }
+
+    formatNumber(value, options = {}) {
+        const num = typeof value === 'number' ? value : value.toNumber();
+        
+        if (options.format === 'scientific') {
+            return num.toExponential(2);
+        }
+        
+        if (options.format === 'detailed') {
+            if (num < 1) {
+                return num.toFixed(2);
+            }
+            if (num < 1000) {
+                const intPart = Math.floor(num).toString();
+                const decPart = (num % 1).toFixed(2).slice(1);
+                return `${intPart}${decPart}`;
+            }
+            if (num < 1e6) {
+                return (num / 1e3).toFixed(2).replace(/\.00$/, '') + 'k';
+            }
+            if (num < 1e9) {
+                return (num / 1e6).toFixed(2).replace(/\.00$/, '') + 'M';
+            }
+            return num.toExponential(2);
+        }
+        
+        if (num < 1000) {
+            return Math.floor(num).toString();
+        }
+        if (num < 1e6) {
+            return (num / 1e3).toFixed(2).replace(/\.00$/, '') + 'k';
+        }
+        if (num < 1e9) {
+            return (num / 1e6).toFixed(2).replace(/\.00$/, '') + 'M';
+        }
+        
+        return num.toExponential(2);
     }
 
     updateVisibility(loc, panel) {

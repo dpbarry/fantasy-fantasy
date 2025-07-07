@@ -15,7 +15,7 @@ export default class IndustryManager {
             effects: {
                 trees: {base: {gain: 0.5}, worker: {drain: 0.5}},
                 food: {worker: {drain: 0.2}},
-                wood: {work: {gain: 0.5}}
+                wood: {worker: {gain: 0.5}}
             },
             buildCost: {trees: 25},
         }
@@ -117,6 +117,7 @@ export default class IndustryManager {
 
     updateLoops() {
         if (this.core.ui.activePanels.center === "industry" && !this.#loops.industry) {
+           this.broadcast();
             this.#loops.industry = setInterval(() => this.broadcast(),
                 parseInt(this.core.settings.refreshUI));
         } else if (this.core.ui.activePanels.center !== "industry") {
@@ -202,6 +203,7 @@ export default class IndustryManager {
     assignWorkerToBuilding(type) {
         const b = this.buildings[type];
         if (!b) return false;
+        if (b.count === 0) return false;
         if (this.unassignedWorkers <= 0) return false;
         b.workers++;
         this.broadcast();
@@ -214,6 +216,11 @@ export default class IndustryManager {
         b.workers--;
         this.broadcast();
         return true;
+    }
+
+    levelUpBuilding() {
+        // Stub for future implementation
+        return false;
     }
 }
 
