@@ -4,7 +4,6 @@ import setupGlobalBehavior, {spawnRipple} from "../Services/GlobalBehavior.js";
 import {verticalScroll} from "../Utils.js";
 import StoryPanel from "../UI/Panels/StoryPanel.js";
 import NewsPanel from "../UI/Panels/NewsPanel.js";
-import CityInfoPanel from "../UI/Panels/CityInfoPanel.js";
 import SettingsPanel from "../UI/Panels/SettingsPanel.js";
 import IndustryPanel from "../UI/Panels/IndustryPanel.js";
 
@@ -28,7 +27,6 @@ export default class UIManager {
         this.panels = {
             story: new StoryPanel(this.core),
             news: new NewsPanel(this.core),
-            cityinfo: new CityInfoPanel(this.core),
             settings: new SettingsPanel(this.core),
             industry: new IndustryPanel(this.core),
         }
@@ -41,7 +39,7 @@ export default class UIManager {
 
     initShortcuts() {
         this.story = document.getElementById("story");
-        this.news = document.getElementById("updates");
+        this.news = document.getElementById("news");
 
         this.left = document.getElementById("left");
         this.center = document.getElementById("center");
@@ -49,7 +47,6 @@ export default class UIManager {
 
         this.industry = document.getElementById("industry");
 
-        this.cityinfo = document.getElementById("cityinfo");
         this.settings = document.getElementById("settings");
     }
 

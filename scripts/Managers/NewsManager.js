@@ -35,7 +35,6 @@ export default class NewsManager {
 
     boot() {
         if (!this.logs.length) return;
-        this.core.ui.news.classList.add("shown");
         this.broadcast();
     }
 }

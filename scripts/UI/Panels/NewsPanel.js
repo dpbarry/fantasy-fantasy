@@ -5,7 +5,9 @@ export default class NewsPanel {
 
     constructor(core) {
         this.core = core;
-        this.root = core.ui.news.querySelector("#update-logs");
+        this.root = core.ui.news;
+
+        this.logs = this.root.querySelector("#update-logs");
     }
 
     render(data) {
@@ -22,15 +24,26 @@ export default class NewsPanel {
             msgEl.className = 'message';
             msgEl.textContent = message;
 
-            this.root.appendChild(timeEl);
-            this.root.appendChild(msgEl);
+            this.logs.appendChild(timeEl);
+            this.logs.appendChild(msgEl);
 
             lastMsg = timeEl;
         }
         if (lastMsg) {
-            this.root.scrollTop = this.root.scrollHeight;
+            this.logs.scrollTop = this.logs.scrollHeight;
             lastMsg.ontransitionend = () => {
-                verticalScroll(this.root, 2);
+                verticalScroll(this.logs, 2);
+            }
+        }
+    }
+
+    updateVisibility(loc, panel) {
+        this.core.industry.updateLoops();
+        if (loc === "right") {
+            if (panel === "news") {
+                this.root.classList.add("shown");
+            } else {
+                this.root.classList.remove("shown");
             }
         }
     }

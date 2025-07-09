@@ -1,10 +1,6 @@
 export default class CityManager {
     #loops = {};
 
-    cityInfoAccess = {
-        header: false
-    };
-
     ruler = {
         firstName: "",
         lastName: "",
@@ -30,7 +26,6 @@ export default class CityManager {
     }
 
     broadcast() {
-        this.core.ui.panels.cityinfo.render(this.getStatus());
     }
 
     getStatus() {
@@ -38,14 +33,7 @@ export default class CityManager {
     }
 
     updateLoops() {
-        if (this.core.ui.activePanels["right"] === "cityinfo" && !this.#loops.cityInfo) {
-            this.#loops.cityInfo = setInterval(() => {
-                this.broadcast();
-            }, parseInt(this.core.settings.configs.refreshUI));
-        } else if(this.core.ui.activePanels["right"] !== "cityinfo") {
-            clearTimeout(this.#loops.cityInfo);
-            this.#loops.cityInfo = null;
-        }
+
     }
 
     serialize() {

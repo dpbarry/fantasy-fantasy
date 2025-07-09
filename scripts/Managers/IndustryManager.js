@@ -33,7 +33,7 @@ export default class IndustryManager {
             gold: new Resource(0),
         };
         this.workersOnStrike = false;
-        this.configs = {resourceBoxExpanded: true};
+        this.configs = {resourceBoxExpanded: false};
         this.buildings = {};
         for (const type in IndustryManager.BUILDING_DEFS) {
             this.buildings[type] = {count: 0, workers: 0, upgrades: {}};

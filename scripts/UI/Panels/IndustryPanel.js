@@ -12,6 +12,7 @@ export default class IndustryPanel {
         this.createResourceRows();
         this.createProductionGrid();
 
+
         this.isExpanded = false;
     }
 
@@ -48,67 +49,67 @@ export default class IndustryPanel {
             harvest: harvestBtn
         };
     }
+
     createParticleExplosion(event) {
-        const GRAVITY = 0.05; 
+        const GRAVITY = 0.05;
         const DRAG = 0.97;
         const LIFESPAN = 70;
         const particles = [];
-      
+
         const startX = event.clientX;
         const startY = event.clientY;
         const count = 5 + Math.floor(Math.random() * 3);
-      
+
         for (let i = 0; i < count; i++) {
-          const el = document.createElement('div');
-          el.className = 'theurgyParticle';
-      
-          const size = 1.2 + Math.random() * 1.2;
-          el.style.width = `${size}px`;
-          el.style.height = `${size}px`;
-          el.style.left = `${startX}px`;
-          el.style.top = `${startY}px`;
-      
-          document.body.appendChild(el);
-      
-          // Stronger upward launch
-          const angle = Math.random() * 2 * Math.PI;
-          const speed = 1.2 + Math.random() * 1.8;
-          const vx = Math.cos(angle) * speed;
-          const vy = Math.sin(angle) * speed * 0.6
-                    - (0.8 + Math.random());
-      
-          particles.push({ el, x: 0, y: 0, vx, vy, age: 0 });
+            const el = document.createElement('div');
+            el.className = 'theurgyParticle';
+
+            const size = 1 + Math.random() * 1.6;
+            el.style.width = `${size}px`;
+            el.style.height = `${size}px`;
+            el.style.left = `${startX}px`;
+            el.style.top = `${startY}px`;
+
+            document.body.appendChild(el);
+
+            // Stronger upward launch
+            const angle = Math.random() * 2 * Math.PI;
+            const speed = 1.1 + Math.random() * 1.5;
+            const vx = Math.cos(angle) * speed;
+            const vy = Math.sin(angle) * speed * 0.6
+                - (0.8 + Math.random());
+
+            particles.push({el, x: 0, y: 0, vx, vy, age: 0});
         }
-      
+
         function animate() {
-          for (let i = particles.length - 1; i >= 0; i--) {
-            const p = particles[i];
-      
-            p.vx *= DRAG;
-            p.vy = p.vy * DRAG + GRAVITY;
-            p.x += p.vx;
-            p.y += p.vy;
-            p.age++;
-      
-            const t = p.age / LIFESPAN;
-            p.el.style.opacity = 1 - t;
-            p.el.style.transform = `translate(${p.x}px, ${p.y}px)`;
-      
-            if (p.age >= LIFESPAN) {
-              p.el.remove();
-              particles.splice(i, 1);
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+
+                p.vx *= DRAG;
+                p.vy = p.vy * DRAG + GRAVITY;
+                p.x += p.vx;
+                p.y += p.vy;
+                p.age++;
+
+                const t = p.age / LIFESPAN;
+                p.el.style.opacity = 1 - t;
+                p.el.style.transform = `translate(${p.x}px, ${p.y}px)`;
+
+                if (p.age >= LIFESPAN) {
+                    p.el.remove();
+                    particles.splice(i, 1);
+                }
             }
-          }
-      
-          if (particles.length > 0) {
-            requestAnimationFrame(animate);
-          }
+
+            if (particles.length > 0) {
+                requestAnimationFrame(animate);
+            }
         }
-      
+
         requestAnimationFrame(animate);
-      }
-      
-      
+    }
+
 
     addResourceFloater(resourceName, change) {
         const resourceRow = this.resourcebox._rows[resourceName];
@@ -147,7 +148,9 @@ export default class IndustryPanel {
         const changes = this.core.industry.performTheurgy(theurgyType);
         const button = this.theurgyButtons[theurgyType];
         button.classList.add("nudged");
-        setTimeout(() => { button.classList.remove("nudged") }, 100);
+        setTimeout(() => {
+            button.classList.remove("nudged")
+        }, 100);
 
         this.createParticleExplosion(event);
 
@@ -203,23 +206,12 @@ export default class IndustryPanel {
         row.appendChild(valueSpan);
 
         this.resourcebox.appendChild(row);
-        this.resourcebox._rows[resource] = { nameSpan, nameText, valueSpan, rateSpan };
+        this.resourcebox._rows[resource] = {nameSpan, nameText, valueSpan, rateSpan};
     }
 
     createProductionGrid() {
         this.prodBox = this.root.querySelector('#industry-prod');
         this.buildingCards = {};
-
-        const workerHeader = document.createElement('div');
-        workerHeader.className = 'worker-header';
-        workerHeader.innerHTML = `
-            <div class="worker-total">
-                <span class="worker-label">Available:</span>
-                <span class="worker-count" id="available-workers">0</span>
-                <span class="worker-total-info" id="total-workers">(0 total)</span>
-            </div>
-        `;
-        this.prodBox.appendChild(workerHeader);
 
         const buildingsContainer = document.createElement('div');
         buildingsContainer.className = 'buildings-container';
@@ -234,7 +226,6 @@ export default class IndustryPanel {
     }
 
     createBuildingCard(type, building, def) {
-        // Main row (keyboard-like 3D button)
         const row = document.createElement('div');
         row.className = 'building-row';
 
@@ -243,13 +234,6 @@ export default class IndustryPanel {
         mainBtn.className = 'building-main-btn';
         mainBtn.innerHTML = `<span class="building-title">${def ? def.name : type} <span class="building-count">(${building.count})</span></span>`;
         mainBtn.onclick = () => this.core.industry.buildBuilding(type);
-
-        // ↑ button: increase level (stub)
-        const plusBtn = document.createElement('button');
-        plusBtn.className = 'building-plus-btn';
-        plusBtn.textContent = '↑';
-        plusBtn.onclick = () => this.core.industry.levelUpBuilding(type); // stub, implement in manager
-        plusBtn.disabled = (building.count === 0);
 
         // − button: sell building
         const minusBtn = document.createElement('button');
@@ -266,50 +250,29 @@ export default class IndustryPanel {
         // Dropdown panel (hidden by default)
         const dropdown = document.createElement('div');
         dropdown.className = 'building-dropdown';
-        dropdown.style.height = '0';
-        dropdown.style.opacity = '0';
-        dropdown.style.overflow = 'hidden';
-        dropdown.style.transition = 'height 0.18s cubic-bezier(0.4,0,0.2,1), opacity 0.18s cubic-bezier(0.4,0,0.2,1)';
-        dropdown.style.pointerEvents = 'none';
 
         // Fill dropdown with info and actions
         dropdown.innerHTML = `
-            <div class="dropdown-content">
-                <div class="dropdown-title">${def ? def.name : type}</div>
+                <div class="dropdown-snippet"></div>
                 <div class="dropdown-prod">${this.getBuildingProdText(def, building)}</div>
                 <div class="dropdown-cost">Cost: ${def ? Object.entries(def.buildCost).map(([res, amt]) => `${amt} ${res}`).join(', ') : ''}</div>
-                <button class="dropdown-sell-btn">Sell</button>
-            </div>
         `;
-        // Sell button logic
-        dropdown.querySelector('.dropdown-sell-btn').onclick = () => this.core.industry.sellBuilding(type);
 
         // Chevron logic
-        let open = false;
         chevronBtn.onclick = () => {
-            open = !open;
-            if (open) {
-                dropdown.style.pointerEvents = 'auto';
-                dropdown.style.opacity = '1';
-                dropdown.style.height = dropdown.scrollHeight + 'px';
-                chevronBtn.querySelector('.chevron-icon').style.transform = 'rotate(180deg)';
-            } else {
-                dropdown.style.pointerEvents = 'none';
-                dropdown.style.opacity = '0';
-                dropdown.style.height = '0';
-                chevronBtn.querySelector('.chevron-icon').style.transform = '';
-            }
+            dropdown.style.height = dropdown.classList.contains("dropped") ? "" : dropdown.scrollHeight + "px";
+            dropdown.classList.toggle("dropped");
         };
+
+        const container = document.createElement('div');
+        container.className = 'building-container';
 
         // Compose row
         row.appendChild(mainBtn);
         row.appendChild(minusBtn);
-        row.appendChild(plusBtn);
         row.appendChild(chevronBtn);
 
         // Container for row + dropdown
-        const container = document.createElement('div');
-        container.className = 'building-row-container';
         container.appendChild(row);
         container.appendChild(dropdown);
 
@@ -318,7 +281,6 @@ export default class IndustryPanel {
             container,
             row,
             mainBtn,
-            plusBtn,
             minusBtn,
             chevronBtn,
             dropdown,
@@ -372,16 +334,16 @@ export default class IndustryPanel {
             let num = val.toNumber(); // val being Decimal
             if (num < 1) {
                 const decPart = num.toFixed(2).slice(1);
-                return { int: '0', dec: decPart };
+                return {int: '0', dec: decPart};
             }
             if (num < 1000) {
                 const intPart = Math.floor(num).toString();
                 const decPart = (num % 1).toFixed(2).slice(1);
-                return { int: intPart, dec: decPart };
+                return {int: intPart, dec: decPart};
             }
-            if (num < 1e6) return { int: (num / 1e3).toFixed(2).replace(/\.00$/, '') + 'k', dec: '' };
-            if (num < 1e9) return { int: (num / 1e6).toFixed(2).replace(/\.00$/, '') + 'M', dec: '' };
-            return { int: num.toExponential(2), dec: '' };
+            if (num < 1e6) return {int: (num / 1e3).toFixed(2).replace(/\.00$/, '') + 'k', dec: ''};
+            if (num < 1e9) return {int: (num / 1e6).toFixed(2).replace(/\.00$/, '') + 'M', dec: ''};
+            return {int: num.toExponential(2), dec: ''};
         }
 
         function formatRate(val) {
@@ -394,7 +356,7 @@ export default class IndustryPanel {
 
         Object.entries(data.resources).forEach(([k, v]) => {
             if (this.resourcebox._rows[k]) {
-                const { valueSpan, rateSpan } = this.resourcebox._rows[k];
+                const {valueSpan, rateSpan} = this.resourcebox._rows[k];
                 const parts = formatValueParts(v.value);
                 if (this.isExpanded) {
                     valueSpan.innerHTML = `${parts.int}<span style="opacity: 0.5;font-size:0.8em;">${parts.dec}</span>`;
@@ -410,7 +372,7 @@ export default class IndustryPanel {
 
                 if (v.rate !== undefined) {
                     let rateNum = v.rate.toNumber();
-                    const { nameSpan } = this.resourcebox._rows[k];
+                    const {nameSpan} = this.resourcebox._rows[k];
 
                     if (rateNum > 0) {
                         nameSpan.classList.remove('draining');
@@ -438,66 +400,28 @@ export default class IndustryPanel {
     updateWorkerTotals(data) {
         const totalWorkers = data.resources.workers ? Math.floor(data.resources.workers.value.toNumber()) : 0;
         const availableWorkers = this.core.industry.unassignedWorkers;
-        
+
         const totalElement = this.prodBox.querySelector('#total-workers');
         const availableElement = this.prodBox.querySelector('#available-workers');
-        
+
         if (totalElement) totalElement.textContent = `(${totalWorkers} total)`;
         if (availableElement) availableElement.textContent = availableWorkers;
     }
 
     updateBuildingCards(data) {
         if (!this.buildingCards || !data.buildings) return;
-        
+
         for (const [type, b] of Object.entries(data.buildings)) {
             const def = this.defs[type];
             if (this.buildingCards[type]) {
                 const card = this.buildingCards[type];
                 card.countSpan.textContent = `(${b.count})`;
                 card.prodRow.textContent = this.getBuildingProdText(def, b);
-                card.plusBtn.disabled = (b.count === 0);
                 card.minusBtn.disabled = (b.count === 0);
             }
         }
     }
 
-    formatNumber(value, options = {}) {
-        const num = typeof value === 'number' ? value : value.toNumber();
-        
-        if (options.format === 'scientific') {
-            return num.toExponential(2);
-        }
-        
-        if (options.format === 'detailed') {
-            if (num < 1) {
-                return num.toFixed(2);
-            }
-            if (num < 1000) {
-                const intPart = Math.floor(num).toString();
-                const decPart = (num % 1).toFixed(2).slice(1);
-                return `${intPart}${decPart}`;
-            }
-            if (num < 1e6) {
-                return (num / 1e3).toFixed(2).replace(/\.00$/, '') + 'k';
-            }
-            if (num < 1e9) {
-                return (num / 1e6).toFixed(2).replace(/\.00$/, '') + 'M';
-            }
-            return num.toExponential(2);
-        }
-        
-        if (num < 1000) {
-            return Math.floor(num).toString();
-        }
-        if (num < 1e6) {
-            return (num / 1e3).toFixed(2).replace(/\.00$/, '') + 'k';
-        }
-        if (num < 1e9) {
-            return (num / 1e6).toFixed(2).replace(/\.00$/, '') + 'M';
-        }
-        
-        return num.toExponential(2);
-    }
 
     updateVisibility(loc, panel) {
         this.core.industry.updateLoops();
