@@ -33,10 +33,10 @@ export default class IndustryManager {
             gold: new Resource(0),
         };
         this.workersOnStrike = false;
-        this.configs = {resourceBoxExpanded: false};
+        this.configs = {resourceBoxExpanded: true};
         this.buildings = {};
         for (const type in IndustryManager.BUILDING_DEFS) {
-            this.buildings[type] = {count: 0, workers: 0, upgrades: {}};
+            this.buildings[type] = {count: 0, workers: 0, upgrades: {}, dropped: false};
         }
     }
 
@@ -180,6 +180,7 @@ export default class IndustryManager {
         const def = IndustryManager.BUILDING_DEFS[type];
         const b = this.buildings[type];
         if (!def || !b) return false;
+        
         for (let res in def.buildCost) {
             if (!this.resources[res] || this.resources[res].value.lt(def.buildCost[res])) return false;
         }
@@ -194,6 +195,7 @@ export default class IndustryManager {
     sellBuilding(type) {
         const b = this.buildings[type];
         if (!b || b.count <= 0) return false;
+        
         b.count--;
         this.broadcast();
         return true;
@@ -215,11 +217,6 @@ export default class IndustryManager {
         b.workers--;
         this.broadcast();
         return true;
-    }
-
-    levelUpBuilding() {
-        // Stub for future implementation
-        return false;
     }
 }
 

@@ -48,6 +48,8 @@ export default class UIManager {
         this.industry = document.getElementById("industry");
 
         this.settings = document.getElementById("settings");
+        
+        this.canvas = this.newCanvas();
     }
 
     initialize() {
@@ -62,6 +64,27 @@ export default class UIManager {
         navButtons.forEach(b => {
             b.onpointerdown = () => this.show(b.dataset.loc, b.dataset.panel);
         });
+    }
+
+    newCanvas() {
+        const canvas = document.createElement('canvas');
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        canvas.style.pointerEvents = 'none';
+        canvas.style.zIndex = '1000';
+        document.body.appendChild(canvas);
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        return canvas;
     }
 
     initEventListeners() {

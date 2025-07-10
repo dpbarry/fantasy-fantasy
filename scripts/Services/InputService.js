@@ -36,7 +36,7 @@ export default class InputService {
             cb({data: "", target: input});
             let keyboardOpen = InputService.#center.classList.contains("alphaactive");
             InputService.#center.classList.add(type + "active");
-            if (!keyboardOpen && !window.matchMedia("(width > 950px)").matches) window.dispatchEvent(new Event("resize"));
+            if (!keyboardOpen && window.matchMedia("(width <= 950px)").matches) window.dispatchEvent(new Event("resize"));
             // Simulate key pushes
             const keydownHandler = (e) => {
                 if (document.activeElement.nodeName !== "INPUT") {

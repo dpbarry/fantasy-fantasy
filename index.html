@@ -1546,17 +1546,20 @@
                     border-bottom-right-radius: 6px;
                     border-top: none;
                     width: 95%;
-                    height: 0;
+                    height: fit-content;
+                    max-height: 0;
                     opacity: 0;
                     padding: var(--boxGap);
                     margin-bottom: calc(-1 * var(--boxGap));
                     position: relative;
                     overflow: hidden;
-                    transition: height 0.18s cubic-bezier(0.4,0,0.2,1), opacity 0.18s cubic-bezier(0.4,0,0.2,1), margin 0.04s;
+                    transition: max-height 0.18s cubic-bezier(0.4,0,0.2,1), opacity 0.18s cubic-bezier(0.4,0,0.2,1), margin 0.04s;
                     pointer-events: none;
+
                     &.dropped {
                         pointer-events: auto;
                         opacity: 1;
+                        max-height: 15em;
                         margin-bottom: 0;
                     }
                 }
@@ -1747,7 +1750,7 @@
             width: 100%;
             height: 100%;
             background-color: var(--bgColor);
-            z-index: 1000;
+            z-index: 999;
             display: flex;
             flex-direction: column;
             justify-content: center;

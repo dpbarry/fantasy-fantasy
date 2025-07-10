@@ -54,35 +54,39 @@ export default class IndustryPanel {
         const GRAVITY = 0.05;
         const DRAG = 0.97;
         const LIFESPAN = 70;
+
         const particles = [];
 
         const startX = event.clientX;
         const startY = event.clientY;
         const count = 5 + Math.floor(Math.random() * 3);
 
+        const canvas = this.core.ui.canvas;
+        const ctx = this.core.ui.canvas.getContext('2d');
+
         for (let i = 0; i < count; i++) {
-            const el = document.createElement('div');
-            el.className = 'theurgyParticle';
-
-            const size = 1 + Math.random() * 1.6;
-            el.style.width = `${size}px`;
-            el.style.height = `${size}px`;
-            el.style.left = `${startX}px`;
-            el.style.top = `${startY}px`;
-
-            document.body.appendChild(el);
-
-            // Stronger upward launch
+            const size = 0.8 + Math.random();
             const angle = Math.random() * 2 * Math.PI;
-            const speed = 1.1 + Math.random() * 1.5;
+            const speed = 1 + Math.random() * 1.5;
             const vx = Math.cos(angle) * speed;
-            const vy = Math.sin(angle) * speed * 0.6
-                - (0.8 + Math.random());
+            const vy = Math.sin(angle) * speed * 0.6 - (0.8 + Math.random());
 
-            particles.push({el, x: 0, y: 0, vx, vy, age: 0});
+            particles.push({
+                x: startX,
+                y: startY,
+                vx,
+                vy,
+                age: 0,
+                size,
+                lifespan: LIFESPAN
+            });
         }
 
+        const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+
         function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
             for (let i = particles.length - 1; i >= 0; i--) {
                 const p = particles[i];
 
@@ -92,12 +96,15 @@ export default class IndustryPanel {
                 p.y += p.vy;
                 p.age++;
 
-                const t = p.age / LIFESPAN;
-                p.el.style.opacity = 1 - t;
-                p.el.style.transform = `translate(${p.x}px, ${p.y}px)`;
+                const t = p.age / p.lifespan;
+                const alpha = 1 - t;
 
-                if (p.age >= LIFESPAN) {
-                    p.el.remove();
+                ctx.fillStyle = accent.replace('hsl', 'hsla').replace(')', `, ${alpha.toFixed(2)})`);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, 2 * Math.PI);
+                ctx.fill();
+
+                if (p.age >= p.lifespan) {
                     particles.splice(i, 1);
                 }
             }
@@ -220,6 +227,8 @@ export default class IndustryPanel {
             const def = this.defs[type];
             const card = this.createBuildingCard(type, b, def);
             buildingsContainer.appendChild(card);
+
+            if (b.dropped) card.classList.add('dropped');
         }
 
         this.prodBox.appendChild(buildingsContainer);
@@ -258,16 +267,16 @@ export default class IndustryPanel {
                 <div class="dropdown-cost">Cost: ${def ? Object.entries(def.buildCost).map(([res, amt]) => `${amt} ${res}`).join(', ') : ''}</div>
         `;
 
-        // Chevron logic
         chevronBtn.onclick = () => {
-            dropdown.style.height = dropdown.classList.contains("dropped") ? "" : dropdown.scrollHeight + "px";
-            dropdown.classList.toggle("dropped");
-        };
+            building.dropped = !building.dropped;
+            console.log(building);
+            console.log(localStorage.getItem("gameState"))
+            dropdown.classList.toggle('dropped');
+        }
 
         const container = document.createElement('div');
         container.className = 'building-container';
 
-        // Compose row
         row.appendChild(mainBtn);
         row.appendChild(minusBtn);
         row.appendChild(chevronBtn);
@@ -358,12 +367,12 @@ export default class IndustryPanel {
             if (this.resourcebox._rows[k]) {
                 const {valueSpan, rateSpan} = this.resourcebox._rows[k];
                 const parts = formatValueParts(v.value);
-                if (this.isExpanded) {
+                if (this.isExpanded || window.matchMedia('(width <= 950px)').matches) {
                     valueSpan.innerHTML = `${parts.int}<span style="opacity: 0.5;font-size:0.8em;">${parts.dec}</span>`;
                 } else {
                     valueSpan.textContent = parts.int;
                 }
-                if (this.isExpanded && v.rate !== undefined) {
+                if (v.rate !== undefined && (this.isExpanded || window.matchMedia('(width <= 950px)').matches)) {
                     let rateNum = v.rate.toNumber();
                     rateSpan.textContent = (rateNum >= 0 ? '+' : '') + formatRate(v.rate);
                     rateSpan.classList.toggle('positive', rateNum > 0);
