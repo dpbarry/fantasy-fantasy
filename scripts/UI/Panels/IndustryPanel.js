@@ -135,7 +135,7 @@ export default class IndustryPanel {
         const minDistance = availableSpace * 0.1;
         const randomX = textRect.right + minDistance + Math.random() * (availableSpace * 0.9)
         floatingText.style.left = `${randomX}px`;
-        floatingText.style.top = `${textRect.top + 4}px`;
+        floatingText.style.top = `${textRect.top + 5}px`;
 
         document.body.appendChild(floatingText);
 
@@ -148,7 +148,7 @@ export default class IndustryPanel {
             if (floatingText.parentNode) {
                 floatingText.parentNode.removeChild(floatingText);
             }
-        }, 800);
+        }, 600);
     }
 
     handleTheurgyClick(theurgyType, event) {

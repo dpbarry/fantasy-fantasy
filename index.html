@@ -59,8 +59,8 @@
             --lightAccent: color-mix(in oklab, var(--accent) 80%, var(--baseColor));
             --accentFilter: invert(56%) sepia(98%) saturate(2737%) hue-rotate(153deg) brightness(101%) contrast(84%);
 
-            --gainColor: light-dark(hsl(165, 100%, 35%), hsl(165, 100%, 84%));
-            --drainColor: light-dark(hsl(0, 100%, 35%), hsl(-10, 100%, 84%));
+            --gainColor: light-dark(hsl(125, 100%, 25%), hsl(125, 100%, 85%));
+            --drainColor: light-dark(hsl(0, 100%, 25%), hsl(0, 100%, 85%));
         }
 
         :root.notransition * {
@@ -103,12 +103,12 @@
             color: var(--baseColor);
             user-select: none;
             font-size: 0.9em;
-            font-weight: 410;
+            font-weight: 200;
             pointer-events: none;
             z-index: 1000;
             opacity: 1;
             transform: translateY(0);
-            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
             white-space: nowrap;
         }
 
@@ -125,7 +125,6 @@
             grid-area: center;
             display: flex;
             flex-direction: column;
-            height: 100%;
             row-gap: var(--boxGap);
             min-height: 0;
             overflow: visible;
@@ -140,31 +139,17 @@
         }
 
         #left-section {
-            display: grid;
             grid-area: left-section;
-
-            grid-template-rows: min-content auto;
-
-            grid-template-areas:
-                "herobar"
-                "left";
-            gap: var(--boxGap);
         }
 
-        #center-section {
-            display: grid;
-            grid-template-rows: min-content auto;
-            grid-template-areas: 'mainbar' 'center';
+        #right-section, #left-section, #center-section {
+            display: flex;
+            flex-direction: column;
+            max-height: 100%;
             gap: var(--boxGap);
-        }
-
-        #right-section {
-            display: grid;
-            grid-template-rows: min-content auto;
-            grid-template-areas:
-                "citybar"
-                "right";
-            gap: var(--boxGap);
+            .navbar {
+                height: min-content;
+            }
         }
 
 
@@ -180,6 +165,7 @@
         .panel:not(.box).shown {
             display: contents;
         }
+
 
         html,
         body {
@@ -234,7 +220,7 @@
             margin: 0;
         }
 
-        .wrapper {
+        .panel-wrapper {
             width: 100%;
             height: 100%;
             align-items: center;
@@ -278,12 +264,9 @@
             row-gap: var(--boxGap);
         }
 
-        #mainbar,
-        #herobar,
-        #citybar {
+        .navbar {
             display: flex;
             gap: var(--boxGap);
-            overflow-x: auto;
             justify-content: space-around;
             flex-direction: row;
             align-items: center;
@@ -304,7 +287,7 @@
             font-size: 0.865em;
             border: 0;
             font-family: SourceSerif;
-            transition: filter 0.1s, scale 0.1s, opacity 0.2s;
+            transition: scale 0.1s, opacity 0.2s;
             white-space: nowrap;
             cursor: pointer;
 
@@ -329,7 +312,7 @@
 
         @media (pointer: fine) and (hover: hover) {
             .navbutton:not(.locked, .nudged):hover img {
-                scale: 1.06;
+                scale: 1.05;
             }
         }
 
@@ -850,15 +833,11 @@
 
 
         .box {
-            transition: opacity 0.1s, scale 0.15s ease-out;
             top: 0;
             height: 100%;
             width: 100%;
-            scale: 100%;
+            opacity: 1;
             position: relative;
-            @starting-style {
-                scale: 95%;
-            }
         }
 
         h2 {
@@ -1858,7 +1837,7 @@
             <button class="nudge navbutton locked hastip" data-loc="left" data-panel="upgrade" data-tip="upgradenav"
                     id="upgradenav"><img alt="Upgrade" src="assets/TREE.svg"></button>
         </div>
-        <div class="wrapper sidebar" id="left">
+        <div class="panel-wrapper sidebar" id="left">
             <h1 class="lock"> LOCKED </h1>
         </div>
     </section>
@@ -1880,7 +1859,7 @@
                     data-tip="tournamentnav" id="tournamentnav"><img alt="Tournament"
                                                                      src="assets/TOURNAMENT.svg"></button>
         </div>
-        <div class="wrapper" id="center">
+        <div class="panel-wrapper" id="center">
             <div class="box panel" id="story-wrap">
                 <div data-masksize="28" id="story"></div>
             </div>
@@ -1958,7 +1937,7 @@
             <button class="nudge navbutton hastip" data-loc="right" data-panel="settings" data-tip="settingsnav"
                     id="settingsnav"><img alt="Settings" src="assets/COG.svg"></button>
         </div>
-        <div class="wrapper sidebar" id="right">
+        <div class="panel-wrapper sidebar" id="right">
             <div class="box panel" id="news">
                 <div data-masksize="20" id="update-logs"></div>
             </div>
