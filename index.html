@@ -102,7 +102,7 @@
             position: fixed;
             color: var(--baseColor);
             user-select: none;
-            font-size: 0.9em;
+            font-size: 0.75em;
             font-weight: 200;
             pointer-events: none;
             z-index: 1000;
@@ -731,6 +731,17 @@
             }
         }
 
+        .rate-indicator {
+            position: fixed;
+            font-size: 0.9em;
+            font-weight: 300;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 1;
+            transition: opacity 0.45s ease-out, top 0.45s ease-out;
+            line-height: 1;
+        }
+
         .ripples {
             overflow: hidden;
             position: relative;
@@ -921,6 +932,8 @@
             #about-header {
                 margin-top: auto;
             }
+
+            select {padding-top: 3px;}
 
             #about {
                 text-align: justify;
@@ -1350,6 +1363,7 @@
                 min-width: 0;
                 min-height: 0;
 
+
                 .chevron {
                     display: none;
                 }
@@ -1460,9 +1474,31 @@
                     position: relative;
                     overflow: visible;
 
-                    button:not(.building-main-btn) {
+                    button:not(.building-main-btn):not(.building-worker-btn) {
                         max-width: 3em;
                     }
+
+                    .building-worker-btn {
+                        max-width: 3.85em;
+                        min-width: 3em;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 0.3em 0.5em;
+                        position: relative;
+                    }
+
+                    .worker-btn-count {
+                        font-size: 0.95em;
+                        font-weight: 600;
+                        line-height: 1;
+                        color: var(--baseColor);
+                        
+                        &.on-strike {
+                            color: var(--drainColor);
+                        }
+                    }
+
                 }
 
                 .building-row button {
@@ -1520,27 +1556,419 @@
                 }
 
                 .building-dropdown {
-                    border: 1px solid var(--midBaseColor);
-                    border-bottom-left-radius: 6px;
-                    border-bottom-right-radius: 6px;
+                    border: 1px solid var(--darkerAccent);
                     border-top: none;
-                    width: 95%;
-                    height: fit-content;
+                    border-bottom-left-radius: 0.7em;
+                    border-bottom-right-radius: 0.7em;
+                    width: 100%;
                     max-height: 0;
                     opacity: 0;
-                    padding: var(--boxGap);
-                    margin-bottom: calc(-1 * var(--boxGap));
+                    padding-top: 2em;
+                    margin-top: -2em;
                     position: relative;
-                    overflow: hidden;
-                    transition: max-height 0.18s cubic-bezier(0.4,0,0.2,1), opacity 0.18s cubic-bezier(0.4,0,0.2,1), margin 0.04s;
+                    overflow: visible;
+                    background: color-mix(in oklab, var(--bgColor) 95%, var(--accent));
+                    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                                opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+                                margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                     pointer-events: none;
+                    margin-bottom: var(--boxGap);
 
                     &.dropped {
                         pointer-events: auto;
                         opacity: 1;
-                        max-height: 15em;
-                        margin-bottom: 0;
+                        max-height: 50em;
+                        margin-bottom: var(--boxGap);
                     }
+
+                    .dropdown-content {
+                        padding: 0.75em;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.6em;
+                        overflow: visible;
+                    }
+
+                    .dropdown-section {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.4em;
+                    }
+
+                    .dropdown-section-header {
+                        font-weight: 600;
+                        font-size: 0.85em;
+                        text-transform: uppercase;
+                        letter-spacing: 0.05em;
+                        color: var(--accent);
+                        padding-bottom: 0.2em;
+                        border-bottom: 1px solid var(--accent);
+                        margin-bottom: 0.2em;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        gap: 0.5em;
+
+                        .header-effects {
+                            font-size: 1em;
+                            text-transform: none;
+                            letter-spacing: 0;
+                            font-weight: 500;
+                            display: flex;
+                            align-items: center;
+                            flex-wrap: wrap;
+                            justify-content: flex-end;
+                        }
+                    }
+
+                    .dropdown-section-body {
+                        font-size: 0.9em;
+                        line-height: 1.4;
+                        color: var(--baseColor);
+                        overflow: visible;
+                    }
+
+                    .action-buttons {
+                        display: flex;
+                        flex-direction: row;
+                        gap: 0.5em;
+                        overflow: visible;
+
+                        button {
+                            padding: 0.4em 0.8em;
+                            border-radius: 0.3em;
+                            font-weight: 600;
+                            font-size: 0.9em;
+                            cursor: pointer;
+                            transition: background 0.15s, border-color 0.15s;
+                            border: 1px solid;
+                            border-bottom-width: 2px;
+                            flex: 1;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            text-align: center;
+                            position: relative;
+                            min-height: 2.5em;
+
+                            .button-label {
+                                display: block;
+                                line-height: 1.2;
+                                width: 100%;
+                                text-align: center;
+                                flex-shrink: 0;
+                            }
+
+                            &.dropdown-add-building-btn,
+                            &.dropdown-add-worker-btn {
+                                background: color-mix(in oklab, var(--bgColor) 80%, var(--accent) 20%);
+                                border-color: color-mix(in oklab, var(--accent) 70%, transparent);
+                                color: var(--accent);
+                                max-height: 1em;
+
+                                &:hover:not(:disabled) {
+                                    background: color-mix(in oklab, var(--bgColor) 70%, var(--accent) 30%);
+                                    border-color: var(--accent);
+                                }
+                            }
+                        }
+
+                        .button-with-info {
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            gap: 0.4em;
+                            flex: 1;
+
+                            .button-info-box {
+                                border: 1px solid var(--darkerAccent);
+                            
+                                border-top: none;
+                                width: 100%;
+                                border-bottom-left-radius: 0.3em;
+                                border-bottom-right-radius: 0.3em;
+                                padding: 0.6em 0.5em 0.5em 0.5em;
+                                display: flex;
+                                flex-direction: column;
+                                gap: 0.25em;
+                                margin-top: -0.7em;
+
+                                .info-costs,
+                                .info-effects {
+                                    display: flex;
+                                    flex-wrap: wrap;
+                                    gap: 0.3em;
+                                    align-items: center;
+                                }
+
+                                .info-cost {
+                                    color: var(--drainColor);
+                                    font-size: 0.85em;
+                                }
+
+                                .info-effect {
+                                    font-size: 0.85em;
+                                    
+                                    &.effect-gain {
+                                        color: var(--gainColor);
+                                    }
+
+                                    &.effect-drain {
+                                        color: var(--drainColor);
+                                    }
+                                }
+                            }
+                        }
+
+                        button {
+                            width: 100%;
+                            &.dropdown-remove-worker-btn,
+                            &.dropdown-sell-btn {
+                                background: color-mix(in oklab, var(--bgColor) 80%, var(--midBaseColor));
+                                border-color: color-mix(in oklab, var(--midBaseColor) 70%, transparent);
+                                color: var(--lightBaseColor);
+                                max-height: 1em;
+
+                                & ~ .button-info-box {
+                                    border-color: color-mix(in oklab, var(--midBaseColor) 70%, transparent);
+                                }
+
+
+                                &:hover:not(:disabled) {
+                                    background: color-mix(in oklab, var(--bgColor) 70%, var(--midBaseColor));
+                                    border-color: var(--midBaseColor);
+                                }
+
+                                &:disabled {
+                                    opacity: 0.45;
+                                    cursor: default;
+                                }
+                            }
+                        }
+                    }
+
+                    .compact-row {
+                        display: flex;
+                        flex-direction: row;
+                        align-items: flex-start;
+                        gap: 0.5em;
+                        margin-top: 0.4em;
+
+                        .compact-label {
+                            font-weight: 600;
+                            color: var(--midBaseColor);
+                            min-width: 2.5em;
+                            flex-shrink: 0;
+                        }
+
+                        .compact-content {
+                            flex: 1;
+                            display: inline-flex;
+                            flex-wrap: wrap;
+                            gap: 0.3em;
+                            align-items: center;
+                        }
+                    }
+
+                    .dropdown-description .dropdown-section-body {
+                        font-style: italic;
+                        opacity: 0.85;
+                    }
+
+                    .detail-item {
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5em;
+                        margin-bottom: 0.5em;
+
+                        .detail-label {
+                            font-weight: 600;
+                            color: var(--midBaseColor);
+                            min-width: 4em;
+                        }
+
+                        .detail-cost {
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 0.3em;
+                            color: var(--baseColor);
+
+                            &.insufficient {
+                                color: var(--drainColor);
+                            }
+                        }
+
+                        .detail-needed {
+                            font-size: 0.85em;
+                            opacity: 0.8;
+                        }
+
+                        .detail-amount {
+                            font-weight: 600;
+                            color: var(--accent);
+                        }
+
+                        .detail-resource {
+                            text-transform: capitalize;
+                            opacity: 0.9;
+                        }
+
+                        .detail-time {
+                            color: var(--accent);
+                            font-weight: 500;
+                        }
+                    }
+
+                    .worker-controls {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 0.8em;
+                        margin-bottom: 0.8em;
+
+                        button {
+                            width: 2em;
+                            height: 2em;
+                            border: 1px solid var(--midBaseColor);
+                            background: color-mix(in oklab, var(--bgColor) 90%, var(--accent) 10%);
+                            color: var(--baseColor);
+                            border-radius: 0.3em;
+                            cursor: pointer;
+                            font-size: 1.1em;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            transition: background 0.15s, border-color 0.15s;
+
+                            &:hover:not(:disabled) {
+                                background: color-mix(in oklab, var(--bgColor) 80%, var(--accent) 20%);
+                                border-color: var(--accent);
+                            }
+
+                            &:disabled {
+                                opacity: 0.4;
+                                cursor: default;
+                            }
+                        }
+                    }
+
+                    .worker-count {
+                        font-weight: 600;
+                        color: var(--baseColor);
+                        min-width: 4em;
+                        text-align: center;
+                    }
+
+                    .worker-strike {
+                        margin-top: 0.5em;
+                        padding: 0.4em 0.6em;
+                        background: color-mix(in oklab, var(--bgColor) 85%, var(--drainColor) 15%);
+                        border: 1px solid color-mix(in oklab, var(--drainColor) 40%, transparent);
+                        border-radius: 0.3em;
+                        color: var(--drainColor);
+                        font-size: 0.85em;
+                        font-weight: 500;
+                    }
+
+                    .worker-effects {
+                        margin-top: 0.5em;
+
+                        &.empty {
+                            opacity: 0.5;
+                            font-style: italic;
+                            font-size: 0.9em;
+                        }
+                    }
+
+                    .effect-empty {
+                        opacity: 0.5;
+                        font-style: italic;
+                        font-size: 0.9em;
+                    }
+
+                    .effect-group {
+                        display: flex;
+                        flex-wrap: wrap;
+                        align-items: center;
+                        margin-bottom: 0.5em;
+
+                        .effect-resource {
+                            font-weight: 600;
+                            color: var(--accent);
+                            text-transform: capitalize;
+                            min-width: 4em;
+                        }
+
+                        .effect-value {
+                            color: var(--baseColor);
+                            font-size: 0.9em;
+
+                            &.effect-gain {
+                                color: var(--gainColor);
+                            }
+
+                            &.effect-drain {
+                                color: var(--drainColor);
+                            }
+                        }
+                    }
+
+                    .next-info {
+                        margin-top: 0.5em;
+                        display: flex;
+                        align-items: center;
+                        flex-wrap: wrap;
+                        gap: 0.3em;
+
+                        .next-label {
+                            font-weight: 600;
+                            color: var(--midBaseColor);
+                            margin-right: 0.2em;
+                        }
+                    }
+
+                    .cost-tag {
+                        display: inline-block;
+                        padding: 0.2em 0.5em;
+                        border-radius: 0.25em;
+                        font-size: 0.85em;
+                        font-weight: 600;
+                        white-space: nowrap;
+                        background: color-mix(in oklab, var(--bgColor) 90%, var(--accent) 10%);
+                        border: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
+                        color: var(--accent);
+                    }
+
+                    .effect-tag {
+                        display: inline-block;
+                        padding: 0.2em 0.5em;
+                        border-radius: 0.25em;
+                        font-size: 0.85em;
+                        font-weight: 600;
+                        white-space: nowrap;
+                        border: 1px solid transparent;
+
+                        &.effect-gain {
+                            background: color-mix(in oklab, var(--bgColor) 85%, var(--gainColor) 15%);
+                            border: 1px solid color-mix(in oklab, var(--gainColor) 50%, transparent);
+                            color: var(--gainColor);
+                        }
+
+                        &.effect-drain {
+                            background: color-mix(in oklab, var(--bgColor) 85%, var(--drainColor) 15%);
+                            border: 1px solid color-mix(in oklab, var(--drainColor) 50%, transparent);
+                            color: var(--drainColor);
+                        }
+                    }
+                }
+
+                .building-chevron-btn .chevron-icon {
+                    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    display: inline-block;
+                }
+
+                .building-container:has(.building-dropdown.dropped) .building-chevron-btn .chevron-icon {
+                    transform: rotate(180deg);
                 }
             }
 

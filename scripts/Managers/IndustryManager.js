@@ -9,6 +9,7 @@ export default class IndustryManager {
                 food: {worker: {gain: 0.5, drain: 0.2}},
             },
             buildCost: {crops: 10},
+            sellReward: {crops: 5},
         },
         treePlantation: {
             name: "Tree Plantation",
@@ -35,9 +36,17 @@ export default class IndustryManager {
         this.workersOnStrike = false;
         this.configs = {resourceBoxExpanded: true};
         this.buildings = {};
+        this.initializeBuildings();
+    }
+
+    initializeBuildings() {
         for (const type in IndustryManager.BUILDING_DEFS) {
-            this.buildings[type] = {count: 0, workers: 0, upgrades: {}, dropped: false};
+            this.buildings[type] = this.createBuildingData();
         }
+    }
+
+    createBuildingData() {
+        return {count: 0, workers: 0, upgrades: {}, dropped: false};
     }
 
     setupGrowthFns() {
@@ -162,10 +171,20 @@ export default class IndustryManager {
     }
 
     deserialize(data) {
-        const {resources, ...rest} = data;
+        const {resources, buildings, ...rest} = data;
         if (resources) {
             for (let [k, rd] of Object.entries(resources)) {
                 this.resources[k] = Resource.deserialize(rd);
+            }
+        }
+        if (buildings) {
+            // Merge buildings data to preserve structure and dropped state
+            for (const [type, bData] of Object.entries(buildings)) {
+                if (this.buildings[type]) {
+                    Object.assign(this.buildings[type], bData);
+                } else {
+                    this.buildings[type] = {...this.createBuildingData(), ...bData};
+                }
             }
         }
         Object.assign(this, rest);
@@ -193,8 +212,17 @@ export default class IndustryManager {
     }
 
     sellBuilding(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
         const b = this.buildings[type];
         if (!b || b.count <= 0) return false;
+        
+        if (def && def.sellReward) {
+            for (let res in def.sellReward) {
+                if (this.resources[res]) {
+                    this.resources[res].add(def.sellReward[res]);
+                }
+            }
+        }
         
         b.count--;
         this.broadcast();
@@ -217,6 +245,100 @@ export default class IndustryManager {
         b.workers--;
         this.broadcast();
         return true;
+    }
+
+    getBuildEffects(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        if (!def) return null;
+
+        const costs = [];
+        if (def.buildCost) {
+            Object.entries(def.buildCost).forEach(([res, amt]) => {
+                costs.push({res, amt: amt.toNumber ? amt.toNumber() : amt});
+            });
+        }
+
+        const effects = {};
+        if (def.effects) {
+            for (const [res, eff] of Object.entries(def.effects)) {
+                if (!eff.base) continue;
+                let net = 0;
+                if (eff.base.gain) net += eff.base.gain.toNumber ? eff.base.gain.toNumber() : eff.base.gain;
+                if (eff.base.drain) net -= eff.base.drain.toNumber ? eff.base.drain.toNumber() : eff.base.drain;
+                if (net !== 0) {
+                    effects[res] = net;
+                }
+            }
+        }
+
+        if (costs.length === 0 && Object.keys(effects).length === 0) return null;
+        return {costs, effects};
+    }
+
+    getDemolishEffects(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        if (!def) return null;
+
+        const rewards = [];
+        if (def.sellReward) {
+            Object.entries(def.sellReward).forEach(([res, amt]) => {
+                rewards.push({res, amt: amt.toNumber ? amt.toNumber() : amt});
+            });
+        }
+
+        const effects = {};
+        if (def.effects) {
+            for (const [res, eff] of Object.entries(def.effects)) {
+                if (!eff.base) continue;
+                let net = 0;
+                if (eff.base.gain) net -= eff.base.gain;
+                if (eff.base.drain) net += eff.base.drain;
+                if (net !== 0) {
+                    effects[res] = net;
+                }
+            }
+        }
+
+        if (rewards.length === 0 && Object.keys(effects).length === 0) return null;
+        return {rewards, effects};
+    }
+
+    getHireWorkerEffects(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        if (!def || !def.effects) return null;
+
+        const effects = {};
+        for (const [res, eff] of Object.entries(def.effects)) {
+            if (!eff.worker) continue;
+            let net = 0;
+            if (eff.worker.gain) net += eff.worker.gain.toNumber ? eff.worker.gain.toNumber() : eff.worker.gain;
+            if (eff.worker.drain) net -= eff.worker.drain.toNumber ? eff.worker.drain.toNumber() : eff.worker.drain;
+            if (net !== 0) {
+                effects[res] = net;
+            }
+        }
+
+        if (Object.keys(effects).length === 0) return null;
+        return {effects};
+    }
+
+    getFurloughWorkerEffects(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        if (!def || !def.effects) return null;
+
+        const effects = {};
+        for (const [res, eff] of Object.entries(def.effects)) {
+            if (!eff.worker) continue;
+            let net = 0;
+            if (eff.worker.gain) net -= eff.worker.gain;
+            if (eff.worker.drain) net += eff.worker.drain;
+            if (net !== 0) {
+                effects[res] = net;
+            }
+        }
+
+        if (Object.keys(effects).length === 0) return null;
+        return {effects};
     }
 }
 
