@@ -1453,12 +1453,18 @@
                 display: flex;
                 flex-direction: column;
                 gap: var(--boxGap);
+                min-height: 0;
 
                 .buildings-container {
-                    display: flex;
-                    flex-direction: column;
+                    display: grid;
+                    grid-template-columns: 1fr;
+                    grid-auto-rows: min-content;
                     gap: var(--boxGap);
                     padding-top: var(--boxGap);
+                    padding-bottom: var(--boxGap);
+                    overflow-y: auto;
+                    flex: 1;
+                    min-height: 0;
                 }
                 .building-container {
                     display: flex;
@@ -1569,10 +1575,10 @@
                     overflow: visible;
                     background: color-mix(in oklab, var(--bgColor) 95%, var(--accent));
                     transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-                                opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
-                                margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                                opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                                margin-bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                     pointer-events: none;
-                    margin-bottom: var(--boxGap);
+                    margin-bottom: 0;
 
                     &.dropped {
                         pointer-events: auto;
@@ -1596,9 +1602,8 @@
                     }
 
                     .dropdown-section-header {
-                        font-weight: 600;
+                        font-weight: 700;
                         font-size: 0.85em;
-                        text-transform: uppercase;
                         letter-spacing: 0.05em;
                         color: var(--accent);
                         padding-bottom: 0.2em;
@@ -1611,10 +1616,8 @@
 
                         .header-effects {
                             font-size: 1em;
-                            text-transform: none;
                             letter-spacing: 0;
                             font-weight: 500;
-                            display: flex;
                             align-items: center;
                             flex-wrap: wrap;
                             justify-content: flex-end;
@@ -1640,7 +1643,7 @@
                             font-weight: 600;
                             font-size: 0.9em;
                             cursor: pointer;
-                            transition: background 0.15s, border-color 0.15s;
+                            transition: background 0.15s, border-color 0.15s, transform 0.1s, border-bottom-width 0.1s;
                             border: 1px solid;
                             border-bottom-width: 2px;
                             flex: 1;
@@ -1650,6 +1653,11 @@
                             text-align: center;
                             position: relative;
                             min-height: 2.5em;
+
+                            &:active:not(:disabled) {
+                                transform: translateY(1px);
+                                border-bottom-width: 1px;
+                            }
 
                             .button-label {
                                 display: block;
@@ -1666,9 +1674,11 @@
                                 color: var(--accent);
                                 max-height: 1em;
 
-                                &:hover:not(:disabled) {
-                                    background: color-mix(in oklab, var(--bgColor) 70%, var(--accent) 30%);
-                                    border-color: var(--accent);
+                                @media (hover: hover) and (pointer: fine) {
+                                    &:hover:not(:disabled) {
+                                        background: color-mix(in oklab, var(--bgColor) 70%, var(--accent) 30%);
+                                        border-color: var(--accent);
+                                    }
                                 }
                             }
                         }
@@ -1687,28 +1697,30 @@
                                 width: 100%;
                                 border-bottom-left-radius: 0.3em;
                                 border-bottom-right-radius: 0.3em;
-                                padding: 0.6em 0.5em 0.5em 0.5em;
+                                padding: 0.7em 0.4em;
+                                padding-bottom: 0.3em;
                                 display: flex;
-                                flex-direction: column;
-                                gap: 0.25em;
-                                margin-top: -0.7em;
+                                flex-direction: row;
+                                flex-wrap: wrap;
+                                gap: 0.3em;
+                                align-items: center;
+                                margin-top: -0.8em;
+                                font-size: 0.8em;
+                                font-weight: 400;
 
-                                .info-costs,
-                                .info-effects {
-                                    display: flex;
-                                    flex-wrap: wrap;
-                                    gap: 0.3em;
-                                    align-items: center;
+                                .info-cost,
+                                .info-effect {
+                                    &:not(:last-child)::after {
+                                        content: ',';
+                                        margin-left: 0.1em;
+                                    }
                                 }
 
                                 .info-cost {
                                     color: var(--drainColor);
-                                    font-size: 0.85em;
                                 }
 
-                                .info-effect {
-                                    font-size: 0.85em;
-                                    
+                                .info-effect {                                    
                                     &.effect-gain {
                                         color: var(--gainColor);
                                     }
@@ -1733,10 +1745,11 @@
                                     border-color: color-mix(in oklab, var(--midBaseColor) 70%, transparent);
                                 }
 
-
-                                &:hover:not(:disabled) {
-                                    background: color-mix(in oklab, var(--bgColor) 70%, var(--midBaseColor));
-                                    border-color: var(--midBaseColor);
+                                @media (hover: hover) and (pointer: fine) {
+                                    &:hover:not(:disabled) {
+                                        background: color-mix(in oklab, var(--bgColor) 70%, var(--midBaseColor));
+                                        border-color: var(--midBaseColor);
+                                    }
                                 }
 
                                 &:disabled {
@@ -1840,9 +1853,11 @@
                             justify-content: center;
                             transition: background 0.15s, border-color 0.15s;
 
-                            &:hover:not(:disabled) {
-                                background: color-mix(in oklab, var(--bgColor) 80%, var(--accent) 20%);
-                                border-color: var(--accent);
+                            @media (hover: hover) and (pointer: fine) {
+                                &:hover:not(:disabled) {
+                                    background: color-mix(in oklab, var(--bgColor) 80%, var(--accent) 20%);
+                                    border-color: var(--accent);
+                                }
                             }
 
                             &:disabled {

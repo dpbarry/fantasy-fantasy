@@ -402,8 +402,7 @@ export default class IndustryPanel {
         return `
             <div class="dropdown-section dropdown-building">
                 <div class="dropdown-section-header">
-                    <span>Building</span>
-                    <span class="header-effects">${aggregateEffects}</span>
+                    <span>BUILDING${aggregateEffects ? ` (${aggregateEffects})` : ''}</span>
                 </div>
                 <div class="dropdown-section-body">
                     <div class="action-buttons">
@@ -431,8 +430,7 @@ export default class IndustryPanel {
         return `
             <div class="dropdown-section dropdown-workers">
                 <div class="dropdown-section-header">
-                    <span>Workers</span>
-                    <span class="header-effects">${aggregateWorkerEffects}</span>
+                    <span>WORKERS${aggregateWorkerEffects ? ` (${aggregateWorkerEffects})` : ''}</span>
                 </div>
                 <div class="dropdown-section-body">
                     <div class="action-buttons">
@@ -503,41 +501,60 @@ export default class IndustryPanel {
     renderButtonInfoBox(details) {
         if (!details) return '';
         
-        const negativeItems = [];
-        const positiveItems = [];
+        const itemMap = new Map();
         
         if (details.costs) {
             details.costs.forEach(c => {
                 if (c.amt !== undefined) {
-                    negativeItems.push(`<span class="info-effect effect-drain">-${c.amt} ${c.res}</span>`);
+                    const key = `cost_${c.res}_amt`;
+                    itemMap.set(key, (itemMap.get(key) || 0) + c.amt);
                 } else if (c.val !== undefined && c.res) {
-                    negativeItems.push(`<span class="info-effect effect-drain">-${c.val.toFixed(2)} ${c.res}/s</span>`);
+                    const key = `cost_${c.res}_val`;
+                    itemMap.set(key, (itemMap.get(key) || 0) + c.val);
                 }
             });
         }
         
         if (details.rewards) {
             details.rewards.forEach(r => {
-                positiveItems.push(`<span class="info-effect effect-gain">+${r.amt} ${r.res}</span>`);
+                const key = `reward_${r.res}_amt`;
+                itemMap.set(key, (itemMap.get(key) || 0) + r.amt);
             });
         }
         
         if (details.effects) {
             details.effects.forEach(e => {
-                if (e.type === 'drain') {
-                    negativeItems.push(`<span class="info-effect effect-drain">-${e.val.toFixed(2)} ${e.res}/s</span>`);
-                } else {
-                    positiveItems.push(`<span class="info-effect effect-gain">+${e.val.toFixed(2)} ${e.res}/s</span>`);
-                }
+                const key = `effect_${e.res}_${e.type}`;
+                itemMap.set(key, (itemMap.get(key) || 0) + e.val);
             });
         }
         
-        if (negativeItems.length === 0 && positiveItems.length === 0) return '';
+        const negativeItems = [];
+        const positiveItems = [];
         
-        return `
-            ${negativeItems.length > 0 ? `<div class="info-costs">${negativeItems.join('')}</div>` : ''}
-            ${positiveItems.length > 0 ? `<div class="info-effects">${positiveItems.join('')}</div>` : ''}
-        `;
+        for (const [key, total] of itemMap.entries()) {
+            const parts = key.split('_');
+            if (key.startsWith('cost_')) {
+                if (parts[2] === 'amt') {
+                    negativeItems.push(`<span class="info-cost">-${total} ${parts[1]}</span>`);
+                } else {
+                    negativeItems.push(`<span class="info-cost">-${total.toFixed(2)} ${parts[1]}/s</span>`);
+                }
+            } else if (key.startsWith('reward_')) {
+                positiveItems.push(`<span class="info-effect effect-gain">+${total} ${parts[1]}</span>`);
+            } else if (key.startsWith('effect_')) {
+                if (parts[2] === 'drain') {
+                    negativeItems.push(`<span class="info-effect effect-drain">-${total.toFixed(2)} ${parts[1]}/s</span>`);
+                } else {
+                    positiveItems.push(`<span class="info-effect effect-gain">+${total.toFixed(2)} ${parts[1]}/s</span>`);
+                }
+            }
+        }
+        
+        const allItems = [...negativeItems, ...positiveItems];
+        if (allItems.length === 0) return '';
+        
+        return allItems.join('');
     }
 
     updateButtonInfoBox(buttonElement, details) {
@@ -600,10 +617,10 @@ export default class IndustryPanel {
     }
 
     getAggregateBuildingEffects(type, def) {
-        if (!def || !def.effects) return '<span>No effects</span>';
+        if (!def || !def.effects) return null;
         
         const b = this.core.industry.buildings[type];
-        if (!b || b.count === 0) return '<span>No buildings</span>';
+        if (!b || b.count === 0) return null;
         
         const negativeItems = [];
         const positiveItems = [];
@@ -623,7 +640,7 @@ export default class IndustryPanel {
         }
         
         const allItems = [...negativeItems, ...positiveItems];
-        return allItems.length > 0 ? allItems.join(',&nbsp;') : '<span>No effects</span>';
+        return allItems.length > 0 ? allItems.join(',&nbsp;') : null;
     }
 
     getWorkerButtonDetails(type) {
@@ -645,11 +662,11 @@ export default class IndustryPanel {
     }
 
     getAggregateWorkerEffects(type, def) {
-        if (!def || !def.effects) return '<span>No effects</span>';
+        if (!def || !def.effects) return null;
         
         const b = this.core.industry.buildings[type];
-        if (!b || !b.workers || b.workers === 0) return '<span>No workers</span>';
-        
+        if (!b || !b.workers || b.workers === 0) return null;
+            
         const netEffects = {};
         for (const [res, eff] of Object.entries(def.effects)) {
             if (!eff.worker) continue;
@@ -685,7 +702,7 @@ export default class IndustryPanel {
         }
         
         const allItems = [...negativeItems, ...positiveItems];
-        return allItems.length > 0 ? allItems.join(',&nbsp;') : '<span>No effects</span>';
+        return allItems.length > 0 ? allItems.join(',&nbsp;') : null;
     }
 
     getTimeUntilNextBuilding(type, def) {
@@ -887,14 +904,16 @@ export default class IndustryPanel {
                 this.updateHireButton(card, type, def, b);
                 this.updateFurloughButton(card, type, def, b);
                 
-                const buildingHeaderEffects = card.dropdown?.querySelector('.dropdown-building .header-effects');
-                if (buildingHeaderEffects) {
-                    buildingHeaderEffects.innerHTML = this.getAggregateBuildingEffects(type, def);
+                const buildingHeader = card.dropdown?.querySelector('.dropdown-building .dropdown-section-header span');
+                if (buildingHeader) {
+                    const aggregateEffects = this.getAggregateBuildingEffects(type, def);
+                    buildingHeader.innerHTML = `BUILDING${aggregateEffects ? ` (<span class="header-effects">${aggregateEffects}</span>)` : ''}`;
                 }
                 
-                const workerHeaderEffects = card.dropdown?.querySelector('.dropdown-workers .header-effects');
-                if (workerHeaderEffects) {
-                    workerHeaderEffects.innerHTML = this.getAggregateWorkerEffects(type, def);
+                const workerHeader = card.dropdown?.querySelector('.dropdown-workers .dropdown-section-header span');
+                if (workerHeader) {
+                    const aggregateWorkerEffects = this.getAggregateWorkerEffects(type, def);
+                    workerHeader.innerHTML = `WORKERS${aggregateWorkerEffects ? ` (<span class="header-effects">${aggregateWorkerEffects}</span>)` : ''}`;
                 }
                 
                 // Update strike indicator in dropdown
