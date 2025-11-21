@@ -793,7 +793,7 @@ export default class IndustryPanel {
             if (progress <= 0 || progress >= 1) {
                 progressFill.style.borderRight = 'none';
             } else {
-                progressFill.style.borderRight = '1px solid var(--accent)';
+                progressFill.style.borderRight = '1px solid color-mix(in oklab, var(--bgColor) 30%, var(--accent))';
             }
             
             progressFill.dataset.prevWidth = newWidth.toString();
@@ -845,8 +845,8 @@ export default class IndustryPanel {
             if (progress <= 0 || progress >= 1) {
                 progressFill.style.borderRight = 'none';
             } else {
-                progressFill.style.borderRight = '1px solid var(--accent)';
-            }
+                progressFill.style.borderRight = '1px solid color-mix(in oklab, var(--bgColor) 30%, var(--accent))';
+            }       
             
             progressFill.dataset.prevWidth = newWidth.toString();
         }

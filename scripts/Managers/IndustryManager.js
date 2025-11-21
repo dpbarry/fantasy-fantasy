@@ -300,7 +300,7 @@ export default class IndustryManager {
         return rest;
     }
 
-    deserialize(data) {
+    deserialize(data, savedTimestamp) {
         const {resources, buildings, ...rest} = data;
         if (resources) {
             for (let [k, rd] of Object.entries(resources)) {
@@ -318,6 +318,14 @@ export default class IndustryManager {
         }
         Object.assign(this, rest);
         this.setupGrowthFns();
+        
+        if (savedTimestamp && this.core.settings.configs.offlineprogress === "on") {
+            const offlineTime = Math.min((Date.now() - savedTimestamp) / 1000, 86400);
+            if (offlineTime > 0) {
+                this.tick(offlineTime);
+            }
+        }
+        
         this.broadcast();
     }
 

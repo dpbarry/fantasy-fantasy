@@ -140,7 +140,7 @@ export default class HackService {
                     core.clock.resume();
                     break;
                 case 'forcestop':
-                    feedback.textContent = core.isRunning ? "Game is already stopped" : "Force stopped game";
+                    feedback.textContent = ! core.isRunning ? "Game is already stopped" : "Force stopped game";
                     core.pause();
                     break;
                 case 'restart':

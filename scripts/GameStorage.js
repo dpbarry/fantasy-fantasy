@@ -118,7 +118,9 @@ export default class GameStorage {
             }
             for (const [key, component] of core.saveableComponents) {
                 if (snapshot.data[key]) {
-                    component.deserialize(snapshot.data[key]);
+                    if (typeof component.deserialize === 'function') {
+                        component.deserialize(snapshot.data[key], snapshot.timestamp);
+                    }
                 } else {
                     console.warn(`No saved data found for component: ${key}`);
                 }

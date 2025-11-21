@@ -5,6 +5,7 @@ export default class SettingsManager {
         background: "dark",
         accent: "lightning",
         refreshUI: "30",
+        offlineprogress: "on",
     }
 
 

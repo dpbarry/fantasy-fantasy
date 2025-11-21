@@ -1575,7 +1575,7 @@
 
                 @media (hover: hover) and (pointer: fine) {
                     .building-row button:hover:not(:disabled) {
-                        background: color-mix(in oklab, var(--bgColor) 77%, var(--accent));
+                        background: color-mix(in oklab, var(--bgColor) 70%, var(--accent) 30%);
                     }
                 }
 
@@ -1587,12 +1587,7 @@
                 }
 
                 .building-row button:disabled {
-                    background: color-mix(in oklab, var(--bgColor) 85%, var(--accent) 15%);
                     cursor: default;
-                }
-
-                .building-row button.building-main-btn:disabled {
-                    background: color-mix(in oklab, var(--bgColor) 85%, var(--accent) 15%);
                 }
 
                 .build-progress-fill {
@@ -1601,8 +1596,7 @@
                     top: 0;
                     bottom: 0;
                     width: 0%;
-                    background: color-mix(in oklab, var(--bgColor) 75%, var(--accent));
-                    opacity: 0.6;
+                    background: color-mix(in oklab, var(--bgColor) 60%, var(--accent));
                     transition: width 0.05s linear;
                     pointer-events: none;
                     z-index: 0;
@@ -1736,33 +1730,39 @@
 
                             &.dropdown-add-building-btn,
                             &.dropdown-add-worker-btn {
-                                background: color-mix(in oklab, var(--bgColor) 85%, var(--accent));
-                                border-color: color-mix(in oklab, var(--accent) 75%, transparent);
+                                border-color: color-mix(in oklab, var(--accent) 70%, transparent);
                                 color: var(--baseColor);
                                 max-height: 1em;
 
                                 @media (hover: hover) and (pointer: fine) {
                                     &:hover:not(:disabled) {
-                                        background: color-mix(in oklab, var(--bgColor) 80%, var(--accent));
                                         border-color: var(--accent);
                                     }
                                 }
                             }
 
+                            &.dropdown-add-building-btn {
+                                background: color-mix(in oklab, var(--bgColor) 85%, var(--accent));
+                            }
+
+                            &.dropdown-add-worker-btn {
+                                background: color-mix(in oklab, var(--bgColor) 70%, var(--accent));
+                            }
+
                             &.dropdown-remove-worker-btn,
                             &.dropdown-sell-btn {
-                                background: color-mix(in oklab, var(--bgColor) 85%, var(--midBaseColor));
-                                border-color: color-mix(in oklab, var(--midBaseColor) 65%, transparent);
+                                background: color-mix(in oklab, var(--bgColor) 85%, var(--midBaseColor) 15%);
+                                border-color: color-mix(in oklab, var(--midBaseColor) 60%, transparent);
                                 color: var(--lightBaseColor);
                                 max-height: 1em;
 
                                 & ~ .button-info-box {
-                                    border-color: color-mix(in oklab, var(--midBaseColor) 75%, transparent);
+                                    border-color: color-mix(in oklab, var(--midBaseColor) 70%, transparent);
                                 }
 
                                 @media (hover: hover) and (pointer: fine) {
                                     &:hover:not(:disabled) {
-                                        background: color-mix(in oklab, var(--bgColor) 75%, var(--midBaseColor));
+                                        background: color-mix(in oklab, var(--bgColor) 75%, var(--midBaseColor) 25%);
                                         border-color: var(--midBaseColor);
                                     }
                                 }
@@ -1778,8 +1778,7 @@
                                 top: 0;
                                 bottom: 0;
                                 width: 0%;
-                                background: color-mix(in oklab, var(--bgColor) 75%, var(--accent));
-                                opacity: 0.5;
+                                background: color-mix(in oklab, var(--bgColor) 70%, var(--accent) 40%);
                                 transition: width 0.05s linear;
                                 pointer-events: none;
                                 z-index: 0;
