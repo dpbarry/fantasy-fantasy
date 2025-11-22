@@ -35,6 +35,9 @@ export default class UIManager {
     boot() {
         setupGlobalBehavior(this.core);
         this.showPanels();
+        if (this.updateMobileNavArrows) {
+            this.updateMobileNavArrows();
+        }
     }
 
     initShortcuts() {
@@ -57,6 +60,7 @@ export default class UIManager {
         this.initNavbar();
         this.initShortcuts();
         this.initEventListeners();
+        this.initMobileNavigation();
     }
 
     initNavbar() {
@@ -188,5 +192,93 @@ export default class UIManager {
     deserialize(data) {
         this.activePanels = data.activePanels;
         this.visibleSection = data.visibleSection;
+        if (this.updateMobileNavArrows) {
+            this.updateMobileNavArrows();
+        }
+    }
+
+    initMobileNavigation() {
+        const sectionsWrapper = document.getElementById("sections-wrapper");
+        if (!sectionsWrapper) return;
+
+        const sectionOrder = ["left", "center", "right"];
+        
+        const navigateSection = (direction) => {
+            const currentIndex = sectionOrder.indexOf(this.visibleSection);
+            if (currentIndex === -1) return;
+
+            let targetIndex;
+            if (direction === "left") {
+                targetIndex = currentIndex - 1;
+            } else {
+                targetIndex = currentIndex + 1;
+            }
+
+            if (targetIndex < 0 || targetIndex >= sectionOrder.length) return;
+
+            const targetSection = sectionOrder[targetIndex];
+            const sections = sectionsWrapper.querySelectorAll("section");
+            if (sections[targetIndex]) {
+                sectionsWrapper.scrollTo({
+                    left: sections[targetIndex].offsetLeft,
+                    behavior: "smooth"
+                });
+                this.visibleSection = targetSection;
+                this.updateMobileNavArrows();
+            }
+        };
+
+        const leftArrows = [
+            document.getElementById("nav-arrow-left"),
+            document.getElementById("nav-arrow-center-from-right"),
+            document.getElementById("nav-arrow-right-from-left")
+        ];
+
+        const rightArrows = [
+            document.getElementById("nav-arrow-center-from-left"),
+            document.getElementById("nav-arrow-right-from-center"),
+            document.getElementById("nav-arrow-right")
+        ];
+
+        leftArrows.forEach(arrow => {
+            if (arrow) arrow.addEventListener("click", () => navigateSection("left"));
+        });
+
+        rightArrows.forEach(arrow => {
+            if (arrow) arrow.addEventListener("click", () => navigateSection("right"));
+        });
+
+        this.updateMobileNavArrows();
+        
+        const checkMobileNav = () => {
+            const isMobile = window.matchMedia("(width <= 950px)").matches;
+            if (isMobile) {
+                this.updateMobileNavArrows();
+            }
+        };
+
+        window.addEventListener("resize", checkMobileNav);
+    }
+
+    updateMobileNavArrows() {
+        const sectionOrder = ["left", "center", "right"];
+        const currentIndex = sectionOrder.indexOf(this.visibleSection);
+        if (currentIndex === -1) return;
+
+        const leftArrowLeft = document.getElementById("nav-arrow-left");
+        const leftArrowCenter = document.getElementById("nav-arrow-center-from-right");
+        const leftArrowRight = document.getElementById("nav-arrow-right-from-left");
+
+        const rightArrowLeft = document.getElementById("nav-arrow-center-from-left");
+        const rightArrowCenter = document.getElementById("nav-arrow-right-from-center");
+        const rightArrowRight = document.getElementById("nav-arrow-right");
+
+        if (leftArrowLeft) leftArrowLeft.disabled = currentIndex === 0;
+        if (leftArrowCenter) leftArrowCenter.disabled = currentIndex !== 1;
+        if (leftArrowRight) leftArrowRight.disabled = currentIndex !== 2;
+
+        if (rightArrowLeft) rightArrowLeft.disabled = currentIndex !== 0;
+        if (rightArrowCenter) rightArrowCenter.disabled = currentIndex !== 1;
+        if (rightArrowRight) rightArrowRight.disabled = currentIndex === 2;
     }
 }

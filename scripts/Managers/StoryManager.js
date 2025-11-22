@@ -2,6 +2,7 @@ import InputService from "../Services/InputService.js";
 import TypingService from "../Services/TypingService.js";
 import {delay} from "../Utils.js";
 import createHintBox from "../UI/Components/HintBox.js";
+import createInfoBox from "../UI/Components/InfoBox.js";
 
 export default class StoryManager {
     #running = false;
@@ -11,6 +12,7 @@ export default class StoryManager {
         this.progress = 0;
         this.snapshots = "";
         this.choices = {};
+        this.dismissedInfoBoxes = new Set();
     }
 
     checkpoint(phase) {
@@ -228,8 +230,68 @@ export default class StoryManager {
             await delay(200);
             this.core.industry.access.basic = true;
             document.querySelector("#industrynav").classList.remove("locked");
-            this.core.ui.show("center", "industry")
+            this.core.ui.show("center", "industry");
+            this.showProductionInfoBoxes();
         }));
+    }
+
+    showProductionInfoBoxes() {
+        const tryShowTheurgy = () => {
+            if (this.dismissedInfoBoxes.has('theurgy-plant')) return;
+            const plantBtn = document.querySelector("#theurgy-plant");
+            if (plantBtn) {
+                this.showInfoBox('theurgy-plant', plantBtn, "As a trifle of your divine power, you can will resources into existence.");
+            } else {
+                setTimeout(tryShowTheurgy, 50);
+            }
+        };
+
+        const tryShowFarmPlot = () => {
+            if (this.dismissedInfoBoxes.has('farm-plot')) return;
+            const mainBtn = document.querySelector('[data-building-type="farmPlot"].building-main-btn');
+            if (mainBtn) {
+                this.showInfoBox('farm-plot', mainBtn, "Once you gather 10 crops, you can build a farm plot to passively collect crops.");
+            } else {
+                setTimeout(tryShowFarmPlot, 50);
+            }
+        };
+
+        requestAnimationFrame(() => {
+            tryShowTheurgy();
+            tryShowFarmPlot();
+        });
+    }
+
+    showInfoBox(id, element, message) {
+        if (this.dismissedInfoBoxes.has(id)) return;
+        if (!element) return;
+
+        const box = createInfoBox(element, `<p>${message}</p>`, {
+            onDismiss: () => {
+                this.dismissedInfoBoxes.add(id);
+                this.core.storage.saveFullGame(this.core);
+            }
+        });
+    }
+
+    checkFarmPlotWorkerInfo() {
+        if (this.dismissedInfoBoxes.has('farm-plot-worker')) return;
+        
+        const farmPlot = this.core.industry.buildings.farmPlot;
+        if (farmPlot && farmPlot.count > 0) {
+            const tryShowWorker = () => {
+                const farmPlotRow = document.querySelector('[data-building-type="farmPlot"].building-main-btn')?.closest('.building-row');
+                if (farmPlotRow) {
+                    const workerBtn = farmPlotRow.querySelector('.building-worker-btn');
+                    if (workerBtn && !this.dismissedInfoBoxes.has('farm-plot-worker')) {
+                        this.showInfoBox('farm-plot-worker', workerBtn, "This button assign workers to the farm to refine crops into food.");
+                    }
+                } else {
+                    setTimeout(tryShowWorker, 100);
+                }
+            };
+            setTimeout(tryShowWorker, 300);
+        }
     }
 
     async runFrom(phase) {
@@ -258,6 +320,15 @@ export default class StoryManager {
         }
     }
 
+    boot() {
+        if (this.core.industry.access.basic && this.core.ui.activePanels["center"] === "industry") {
+            requestAnimationFrame(() => {
+                this.showProductionInfoBoxes();
+                this.checkFarmPlotWorkerInfo();
+            });
+        }
+    }
+
     updateRunning() {
         if (this.core.ui.activePanels["center"] !== "story") {
             this.#running = false;
@@ -273,10 +344,18 @@ export default class StoryManager {
 
     serialize() {
         const {core, ...rest} = this;
-        return rest;
+        return {
+            ...rest,
+            dismissedInfoBoxes: Array.from(this.dismissedInfoBoxes)
+        };
     }
 
     deserialize(data) {
         Object.assign(this, data);
+        if (data.dismissedInfoBoxes) {
+            this.dismissedInfoBoxes = new Set(data.dismissedInfoBoxes);
+        } else {
+            this.dismissedInfoBoxes = new Set();
+        }
     }
 } 

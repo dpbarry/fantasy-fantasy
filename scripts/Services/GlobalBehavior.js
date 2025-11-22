@@ -21,38 +21,24 @@ export default function setupGlobalBehavior(core) {
         "right": 2
     };
 
-    function scrollToVisibleSection() {
+    function scrollToVisibleSection(smooth = false) {
         if (!isMobile || !sectionsWrapper) return;
         
         const sectionIndex = sectionMap[core.ui.visibleSection];
-        if (sectionIndex !== undefined) {
-            const sections = sectionsWrapper.querySelectorAll("section");
-            if (sections[sectionIndex]) {
-                sectionsWrapper.scrollTo({
-                    left: sections[sectionIndex].offsetLeft,
-                    behavior: "auto"
-                });
-            }
-        }
-    }
-
-    function updateVisibleSectionFromScroll() {
-        if (!isMobile || !sectionsWrapper) return;
+        if (sectionIndex === undefined) return;
         
         const sections = sectionsWrapper.querySelectorAll("section");
-        const scrollLeft = sectionsWrapper.scrollLeft;
-        const wrapperWidth = sectionsWrapper.offsetWidth;
+        if (!sections[sectionIndex]) return;
         
-        for (let i = 0; i < sections.length; i++) {
-            const section = sections[i];
-            const sectionLeft = section.offsetLeft;
-            const sectionRight = sectionLeft + section.offsetWidth;
-            
-            if (scrollLeft >= sectionLeft - wrapperWidth / 2 && scrollLeft < sectionRight - wrapperWidth / 2) {
-                const sectionNames = ["left", "center", "right"];
-                core.ui.visibleSection = sectionNames[i];
-                break;
-            }
+        const targetLeft = sections[sectionIndex].offsetLeft;
+        
+        if (smooth) {
+            sectionsWrapper.scrollTo({
+                left: targetLeft,
+                behavior: "smooth"
+            });
+        } else {
+            sectionsWrapper.scrollLeft = targetLeft;
         }
     }
 
@@ -64,19 +50,64 @@ export default function setupGlobalBehavior(core) {
         }
     });
 
+    let resizeTimeout = null;
+    let resizeAnimationFrame = null;
+    let isResizing = false;
+    
+    const lockScrollPosition = () => {
+        if (!isMobile || !sectionsWrapper || !isResizing) return;
+        
+        const sectionIndex = sectionMap[core.ui.visibleSection];
+        if (sectionIndex === undefined) return;
+        
+        const sections = sectionsWrapper.querySelectorAll("section");
+        if (!sections[sectionIndex]) return;
+        
+        const targetLeft = sections[sectionIndex].offsetLeft;
+        sectionsWrapper.scrollLeft = targetLeft;
+        
+        resizeAnimationFrame = requestAnimationFrame(lockScrollPosition);
+    };
+    
     const resizeHandler = () => {
+        const wasMobile = isMobile;
         isMobile = window.matchMedia("(width <= 950px)").matches;
-        scrollToVisibleSection();
+        
+        if (isMobile && sectionsWrapper) {
+            if (!isResizing) {
+                isResizing = true;
+                resizeAnimationFrame = requestAnimationFrame(lockScrollPosition);
+            }
+            
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                isResizing = false;
+                if (resizeAnimationFrame) {
+                    cancelAnimationFrame(resizeAnimationFrame);
+                    resizeAnimationFrame = null;
+                }
+                scrollToVisibleSection(false);
+                if (core.ui.updateMobileNavArrows) {
+                    core.ui.updateMobileNavArrows();
+                }
+            }, 150);
+        } else if (!isMobile && wasMobile) {
+            isResizing = false;
+            if (resizeAnimationFrame) {
+                cancelAnimationFrame(resizeAnimationFrame);
+                resizeAnimationFrame = null;
+            }
+            if (core.ui.updateMobileNavArrows) {
+                core.ui.updateMobileNavArrows();
+            }
+        }
     };
 
-    const scrollHandler = () => {
-        updateVisibleSectionFromScroll();
-    };
+    window.addEventListener("resize", resizeHandler, { passive: true });
 
-    window.addEventListener("resize", resizeHandler);
-    sectionsWrapper.addEventListener("scroll", scrollHandler);
-
-    scrollToVisibleSection();
+    if (isMobile) {
+        scrollToVisibleSection(false);
+    }
 }
 
 export function applyTheme(core) {

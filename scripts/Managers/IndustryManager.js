@@ -4,7 +4,7 @@ export default class IndustryManager {
     static BUILDING_DEFS = {
         farmPlot: {
             name: "Farm Plot",
-            lore: "Patch of land waiting for its next sowing",
+            lore: "An arable patch of land",
             workersPerBuilding: 2,
             effects: {
                 crops: {base: {gain: 0.5}, worker: {drain: 0.5}},
@@ -12,10 +12,11 @@ export default class IndustryManager {
             },
             buildCost: {crops: 10},
             sellReward: {crops: 5},
+            capIncrease: {crops: 150},
         },
         treePlantation: {
             name: "Tree Plantation",
-            lore: "Grove of hale and hearty trees",
+            lore: "A thicket of hearty trees",
             workersPerBuilding: 3,
             effects: {
                 trees: {base: {gain: 0.5}, worker: {drain: 0.5}},
@@ -241,6 +242,25 @@ export default class IndustryManager {
         return rawRate.times(scale);
     }
 
+    getEffectiveCap(resName) {
+        const resource = this.resources[resName];
+        if (!resource) return undefined;
+        
+        const baseCap = resource.cap;
+        if (baseCap === undefined) return undefined;
+        
+        let capIncrease = new Decimal(0);
+        for (const [type, b] of Object.entries(this.buildings)) {
+            const def = IndustryManager.BUILDING_DEFS[type];
+            if (!def || !def.capIncrease || !def.capIncrease[resName]) continue;
+            const increase = def.capIncrease[resName];
+            const increaseValue = increase && typeof increase.toNumber === 'function' ? increase : new Decimal(increase || 0);
+            capIncrease = capIncrease.plus(increaseValue.times(b.count));
+        }
+        
+        return baseCap.plus(capIncrease);
+    }
+
     setupGrowthFns() {
         for (const resName in this.resources) {
             const resource = this.resources[resName];
@@ -248,6 +268,9 @@ export default class IndustryManager {
             resource.growthFns = {};
             resource.addGrowthFn('buildingBase', () => this.getBaseRate(resName));
             resource.addGrowthFn('buildingWorker', () => this.getEffectiveWorkerRate(resName));
+            if (resource.cap !== undefined) {
+                resource.capFn = () => this.getEffectiveCap(resName);
+            }
         }
     }
 
@@ -571,6 +594,7 @@ class Resource {
         this.value = new Decimal(initialValue);
         this.cap = options.cap !== undefined ? new Decimal(options.cap) : undefined;
         this.growthFns = {}; // { key: () => Decimal }
+        this.capFn = null; // () => Decimal
         this.isDiscovered = options.isDiscovered || false;
     }
 
@@ -590,11 +614,19 @@ class Resource {
         return rate;
     }
 
+    get effectiveCap() {
+        if (this.capFn) {
+            return this.capFn();
+        }
+        return this.cap;
+    }
+
     update(dt) {
         const growth = this.netGrowthRate.times(dt);
         this.value = this.value.plus(growth);
-        if (this.cap !== undefined && this.value.gt(this.cap)) {
-            this.value = this.cap;
+        const cap = this.effectiveCap;
+        if (cap !== undefined && this.value.gt(cap)) {
+            this.value = cap;
         }
         if (this.value.lt(0)) {
             this.value = new Decimal(0);
@@ -603,8 +635,9 @@ class Resource {
 
     add(v) {
         this.value = this.value.plus(v);
-        if (this.cap !== undefined && this.value.gt(this.cap)) {
-            this.value = this.cap;
+        const cap = this.effectiveCap;
+        if (cap !== undefined && this.value.gt(cap)) {
+            this.value = cap;
         }
     }
 

@@ -153,7 +153,8 @@ export default class IndustryPanel {
         if (!resourceRow) return;
 
         const res = this.core.industry.resources[resourceName];
-        const atCap = res && res.cap && res.value.toNumber() >= res.cap.toNumber();
+        const cap = res && res.effectiveCap;
+        const atCap = cap && res.value.toNumber() >= cap.toNumber();
 
         const floatingText = document.createElement("div");
         floatingText.textContent = `${change.type === "gain" ? "+" : "-"}${change.amt}`;
@@ -401,6 +402,9 @@ export default class IndustryPanel {
                     this.addResourceFloater(res, {type: "drain", amt: total, res});
                 }
             });
+        }
+        if (built > 0 && type === 'farmPlot' && this.core.story) {
+            this.core.story.checkFarmPlotWorkerInfo();
         }
     }
 
@@ -1181,9 +1185,10 @@ export default class IndustryPanel {
                     valueSpan.textContent = parts.int;
                 }
 
-                if (v.cap !== undefined) {
+                const cap = v.effectiveCap;
+                if (cap !== undefined) {
                     const currentVal = v.value.toNumber();
-                    const capVal = v.cap.toNumber();
+                    const capVal = cap.toNumber();
                     const percent = Math.min(100, (currentVal / capVal) * 100);
                     row.style.setProperty('--cap-percent', `${percent}%`);
                     row.classList.add('has-cap');

@@ -138,8 +138,9 @@ export default function createTooltipService() {
             let productionHtml = '';
             
             // Add cap info if available
-            if (resObj.cap !== undefined) {
-                const capVal = resObj.cap.toNumber();
+            const cap = resObj.effectiveCap;
+            if (cap !== undefined) {
+                const capVal = cap.toNumber();
                 const currentVal = resObj.value.toNumber();
                 const percent = ((currentVal / capVal) * 100).toFixed(1);
                 
@@ -345,14 +346,14 @@ export default function createTooltipService() {
                 if (eff.base.gain) {
                     const val = (eff.base.gain.toNumber ? eff.base.gain.toNumber() : eff.base.gain);
                     const total = b.count * val;
-                    sections.push(`<p style="color: var(--gainColor); font-weight: 500">+${val.toFixed(2)} ${res}/s/${buildingName}</p>`);
+                    sections.push(`<p style="font-weight: 500">+${val.toFixed(2)} ${res}/s/${buildingName}</p>`);
                     sections.push(`<p style="opacity: 0.7">× ${b.count} ${buildingName}${b.count !== 1 ? 's' : ''}</p>`);
                     sections.push(`<p style="color: var(--gainColor); font-weight: 600; margin-bottom: 0.5em">= +${total.toFixed(2)} ${res}/s</p>`);
                 }
                 if (eff.base.drain) {
                     const val = (eff.base.drain.toNumber ? eff.base.drain.toNumber() : eff.base.drain);
                     const total = b.count * val;
-                    sections.push(`<p style="color: var(--drainColor); font-weight: 500">-${val.toFixed(2)} ${res}/s/${buildingName}</p>`);
+                    sections.push(`<p style="font-weight: 500">-${val.toFixed(2)} ${res}/s/${buildingName}</p>`);
                     sections.push(`<p style="opacity: 0.7">× ${b.count} ${buildingName}${b.count !== 1 ? 's' : ''}</p>`);
                     sections.push(`<p style="color: var(--drainColor); font-weight: 600; margin-bottom: 0.5em">= -${total.toFixed(2)} ${res}/s</p>`);
                 }
@@ -370,28 +371,51 @@ export default function createTooltipService() {
             if (!def || !b || !b.workers || b.workers === 0) return '';
             
             const scale = core.industry.getWorkerScalingFactor();
-            let perWorkerLines = [];
-            let totalLines = [];
+            const perWorkerNet = {};
+            const totalNet = {};
             
-            // Collect all effects
+            // Collect and combine effects by resource
             for (const [res, eff] of Object.entries(def.effects)) {
                 if (!eff.worker) continue;
                 
+                if (!perWorkerNet[res]) {
+                    perWorkerNet[res] = 0;
+                    totalNet[res] = 0;
+                }
+                
                 if (eff.worker.gain) {
                     const val = (eff.worker.gain.toNumber ? eff.worker.gain.toNumber() : eff.worker.gain);
-                    const total = b.workers * val * scale;
-                    perWorkerLines.push(`<span style="color: var(--gainColor)">+${val.toFixed(2)} ${res}/s</span>`);
-                    totalLines.push(`<span style="color: var(--gainColor)">+${total.toFixed(2)} ${res}/s</span>`);
+                    perWorkerNet[res] += val;
+                    totalNet[res] += b.workers * val * scale;
                 }
                 if (eff.worker.drain) {
                     const val = (eff.worker.drain.toNumber ? eff.worker.drain.toNumber() : eff.worker.drain);
-                    const total = b.workers * val * scale;
-                    perWorkerLines.push(`<span style="color: var(--drainColor)">-${val.toFixed(2)} ${res}/s</span>`);
-                    totalLines.push(`<span style="color: var(--drainColor)">-${total.toFixed(2)} ${res}/s</span>`);
+                    perWorkerNet[res] -= val;
+                    totalNet[res] -= b.workers * val * scale;
                 }
             }
             
-            let html = `<p style="font-weight: 500">(${perWorkerLines.join(', ')}) /worker</p>`;
+            const perWorkerLines = [];
+            const totalLines = [];
+            
+            for (const [res, net] of Object.entries(perWorkerNet)) {
+                if (net !== 0) {
+                    const sign = net > 0 ? '+' : '-';
+                    perWorkerLines.push(`${sign}${Math.abs(net).toFixed(2)} ${res}/s`);
+                }
+            }
+            
+            for (const [res, net] of Object.entries(totalNet)) {
+                if (net !== 0) {
+                    const isGain = net > 0;
+                    const sign = isGain ? '+' : '-';
+                    totalLines.push(`<span style="color: var(--${isGain ? 'gain' : 'drain'}Color)">${sign}${Math.abs(net).toFixed(2)} ${res}/s</span>`);
+                }
+            }
+            
+            if (perWorkerLines.length === 0) return '';
+            
+            let html = `<p style="font-weight: 500">(${perWorkerLines.join(', ')})/worker</p>`;
             html += `<p style="opacity: 0.7">× ${b.workers} worker${b.workers !== 1 ? 's' : ''}`;
             if (scale < 1) {
                 const bottlenecks = core.industry.getBottleneckResources();
@@ -568,7 +592,7 @@ export default function createTooltipService() {
             return tipBox;
         });
 
-        const PADDING = 8, MARGIN = 3, MULTI_GAP = 8;
+        const PADDING = 8, MARGIN = 3, MULTI_GAP = 4;
         const r = el.getBoundingClientRect();
         const vw = window.innerWidth, vh = window.innerHeight;
 
@@ -848,7 +872,7 @@ export default function createTooltipService() {
     function repositionTooltips(el, tipBoxes) {
         if (!el || !tipBoxes || tipBoxes.length === 0) return;
         
-        const PADDING = 8, MARGIN = 3, MULTI_GAP = 8;
+        const PADDING = 8, MARGIN = 3, MULTI_GAP = 3;
         const r = el.getBoundingClientRect();
         const vw = window.innerWidth, vh = window.innerHeight;
 
