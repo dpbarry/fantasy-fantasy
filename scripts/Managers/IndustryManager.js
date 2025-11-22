@@ -4,15 +4,19 @@ export default class IndustryManager {
     static BUILDING_DEFS = {
         farmPlot: {
             name: "Farm Plot",
+            lore: "Patch of land waiting for its next sowing",
+            workersPerBuilding: 2,
             effects: {
                 crops: {base: {gain: 0.5}, worker: {drain: 0.5}},
-                food: {worker: {gain: 0.5, drain: 0.2}},
+                food: {worker: {gain: 0.6, drain: 0.2}},
             },
             buildCost: {crops: 10},
             sellReward: {crops: 5},
         },
         treePlantation: {
             name: "Tree Plantation",
+            lore: "Grove of hale and hearty trees",
+            workersPerBuilding: 3,
             effects: {
                 trees: {base: {gain: 0.5}, worker: {drain: 0.5}},
                 food: {worker: {drain: 0.2}},
@@ -29,9 +33,9 @@ export default class IndustryManager {
         this.core = core;
         this.access = {basic: false};
         this.resources = {
-            workers: new Resource(10, {cap: 20, isDiscovered: true}),
-            crops: new Resource(0, {isDiscovered: true}),
-            food: new Resource(0, {isDiscovered: true}),
+            workers: new Resource(10, {cap: 15, isDiscovered: true}),
+            crops: new Resource(0, {cap: 500, isDiscovered: true}),
+            food: new Resource(0, {cap: 1000, isDiscovered: true}),
             trees: new Resource(0),
             wood: new Resource(0),
             gold: new Resource(0),
@@ -97,7 +101,10 @@ export default class IndustryManager {
                 return b ? b.count : 0;
             case 'hire':
                 if (!b || b.count === 0) return 0;
-                return this.unassignedWorkers;
+                const maxWorkers = this.getMaxWorkers(type);
+                const currentWorkers = b.workers || 0;
+                const availableSlots = maxWorkers - currentWorkers;
+                return Math.min(this.unassignedWorkers, availableSlots);
             case 'furlough':
                 return b && b.workers ? b.workers : 0;
             default:
@@ -121,6 +128,14 @@ export default class IndustryManager {
         if (max === Infinity) return Number.MAX_SAFE_INTEGER;
         if (!Number.isFinite(max) || max < 0) return 0;
         return max;
+    }
+
+    getMaxWorkers(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        const b = this.buildings[type];
+        if (!def || !b) return 0;
+        const perBuilding = def.workersPerBuilding || 0;
+        return perBuilding * b.count;
     }
 
     static multiplyValue(value, amount) {
@@ -186,6 +201,35 @@ export default class IndustryManager {
             }
         }
         return Math.max(0, Math.min(1, minScale));
+    }
+
+    getBottleneckResources() {
+        if (this.workersOnStrike) return [];
+        
+        const scale = this.getWorkerScalingFactor();
+        if (scale >= 1) return [];
+        
+        const bottlenecks = [];
+        for (const resName in this.resources) {
+            const workerRate = this.getRawWorkerRate(resName);
+            if (workerRate.lt(0)) {
+                const desiredDrain = Math.abs(workerRate.toNumber());
+                if (desiredDrain === 0) continue;
+                
+                const currentValue = this.resources[resName].value.toNumber();
+                if (currentValue > 0) continue;
+                
+                const baseRate = this.getBaseRate(resName);
+                const baseProduction = baseRate.toNumber();
+                const resourceScale = baseProduction / desiredDrain;
+                
+                // Resource is a bottleneck if its scale matches or is close to the minimum
+                if (Math.abs(resourceScale - scale) < 0.001) {
+                    bottlenecks.push(resName);
+                }
+            }
+        }
+        return bottlenecks;
     }
 
     getEffectiveWorkerRate(resName) {
@@ -383,6 +427,13 @@ export default class IndustryManager {
 
         b.count -= amount;
         if (b.count < 0) b.count = 0;
+        
+        // Auto-furlough workers if they exceed new limit
+        const maxWorkers = this.getMaxWorkers(type);
+        if (b.workers > maxWorkers) {
+            b.workers = maxWorkers;
+        }
+        
         this.broadcast();
         return amount;
     }
@@ -552,6 +603,9 @@ class Resource {
 
     add(v) {
         this.value = this.value.plus(v);
+        if (this.cap !== undefined && this.value.gt(this.cap)) {
+            this.value = this.cap;
+        }
     }
 
     subtract(v) {

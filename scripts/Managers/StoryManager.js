@@ -77,7 +77,7 @@ export default class StoryManager {
         const finishGetName = async () => {
             this.core.city.setRulerName(inputFirst.value, inputSecond.value);
             this.core.clock.resume();
-            this.core.ui.news.classList.add("shown");
+            this.core.ui.show("right", "news");
             this.core.news.update("You woke up from a strange dream.");
             let n = 0;
 

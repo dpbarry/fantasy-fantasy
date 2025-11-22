@@ -1149,7 +1149,7 @@
             border: 1.5px solid var(--baseColor);
             padding: 0.3rem 0.3rem;
             width: fit-content;
-            max-width: 16.5rem;
+            max-width: 20rem;
             border-radius: 3px;
             color: var(--baseColor);
             font-size: 0.75em;
@@ -1165,7 +1165,7 @@
             z-index: 1000;
 
             p + p {
-                margin-top: 0.35em;
+                margin-top: 0.2em;
             }
         }
 
@@ -1211,6 +1211,10 @@
             border-top: 5px solid transparent;
             border-bottom: 5px solid transparent;
             border-right: 5px solid currentColor;
+        }
+
+        .tooltip-no-arrow::before {
+            display: none;
         }
 
         .hintbox {
@@ -1360,7 +1364,6 @@
                 grid-auto-rows: fit-content(100%);
                 column-gap: 0.8em;
                 position: relative;
-                row-gap: 0.2em;
                 min-width: 0;
                 min-height: 0;
 
@@ -1379,7 +1382,7 @@
                     grid-template-columns: 1fr 4.5em 5em;
                     align-items: center;
                     height: fit-content;
-                    padding: 0 3px;
+                    padding: 0.1em 0.2em;
                     border-bottom: 1px solid var(--midBaseColor);
                     min-width: 0;
                 }
@@ -1407,6 +1410,37 @@
                     min-width: 0;
                     overflow: hidden;
                     text-overflow: ellipsis;
+                }
+
+                .resource-value {
+                    text-align: right;
+                    white-space: nowrap;
+                }
+
+                .resource-row.has-cap {
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                .resource-row.has-cap::before {
+                    content: '';
+                    position: absolute;
+                    inset: 0;
+                    z-index: -1;
+                    width: var(--cap-percent);
+                    background: color-mix(in oklab, var(--accent) 10%, transparent);
+                    transition: width 0.3s ease-out;
+                    pointer-events: none;
+                }
+
+                .resource-row.has-cap:first-of-type::before {
+                    border-top-left-radius: 0.2em;
+                    border-top-right-radius: 0.2em;
+                }
+
+                .resource-row.has-cap:last-of-type::before {
+                    border-bottom-left-radius: 0.2em;
+                    border-bottom-right-radius: 0.2em;
                 }
 
                 .resource-name {
@@ -1440,12 +1474,6 @@
                 .resource-rate {
                     opacity: 0.7;
                     font-size: 0.85em;
-                }
-
-                .resource-value {
-                    text-align: right;
-                    display: inline-block;
-                    white-space: nowrap;
                 }
             }
 
@@ -1677,7 +1705,7 @@
                             justify-content: flex-end;
                         }
 
-                        .header-time {
+                        .header-time, .header-limit {
                             font-size: 0.75em;
                             color: var(--baseColor);
                             font-weight: 400;
@@ -1747,6 +1775,9 @@
 
                             &.dropdown-add-worker-btn {
                                 background: color-mix(in oklab, var(--bgColor) 70%, var(--accent));
+                                &:disabled {
+                                    background: color-mix(in oklab, var(--bgColor) 85%, var(--accent));
+                                }
                             }
 
                             &.dropdown-remove-worker-btn,
@@ -1838,6 +1869,10 @@
                                         color: var(--drainColor);
                                     }
                                 }
+                            }
+
+                            &:has(button:disabled) .button-info-box {
+                                opacity: 0.5;
                             }
                         }
                     }

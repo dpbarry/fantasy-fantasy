@@ -125,6 +125,15 @@ export default class GameStorage {
                     console.warn(`No saved data found for component: ${key}`);
                 }
             }
+            
+            if (snapshot.isDev) {
+                core.city.name = "Beliard";
+                core.city.ruler.firstName = "Al";
+                core.city.ruler.lastName = "Green";
+                core.city.ruler.gender = "M";
+                core.city.ruler.wisdom = 10;
+            }
+            
             return true;
         } catch (error) {
             console.error('Load failed:', error);
@@ -134,54 +143,30 @@ export default class GameStorage {
 
     get devSave() {
         try {
+            // Minimal save - just skip prologue and unlock industry
             const baseSave = {
                 version: this.core.currentVersion,
                 timestamp: Date.now(),
-                data: {}
-            };
-
-            for (const [key, component] of this.core.saveableComponents) {
-                baseSave.data[key] = component.serialize();
-            }
-
-            baseSave.data.story.progress = { Prologue: 6 };
-            baseSave.data.story.choices = { 2: 2 };
-            baseSave.data.story.currentEpisode = null;
-
-            baseSave.data.city.ruler = {
-                firstName: "Al",
-                lastName: "Green",
-                gender: "M",
-                savvy: 0,
-                valor: 0,
-                wisdom: 10
-            };
-
-            baseSave.data.city.name = "Beliard";
-
-            baseSave.data.industry.access = { basic: true };
-            baseSave.data.industry.resources.crops.value = "0";
-            baseSave.data.industry.resources.food.value = "0";
-            baseSave.data.industry.resources.gold.value = "0";
-            baseSave.data.industry.resources.workers.value = "10";
-            baseSave.data.industry.resources.workers.cap = "20";
-            
-            baseSave.data.news.logs = [{timestamp: "07:22", message: "You woke up from a strange dream."}];
-
-            baseSave.data.ui.activePanels = {
-                left: "",
-                center: "industry",
-                right: "settings"
-            };
-            baseSave.data.ui.visibleSection = "center";
-
-            if (baseSave.data.industry.buildings) {
-                for (const k in baseSave.data.industry.buildings) {
-                    baseSave.data.industry.buildings[k].count = 0;
-                    baseSave.data.industry.buildings[k].workers = 0;
-                    baseSave.data.industry.buildings[k].upgrades = {};
+                isDev: true, // Flag to trigger dev overrides
+                data: {
+                    story: {
+                        progress: { Prologue: 6 },
+                        choices: { 2: 2 },
+                        currentEpisode: null
+                    },
+                    industry: {
+                        access: { basic: true }
+                    },
+                    ui: {
+                        activePanels: {
+                            left: "",
+                            center: "industry",
+                            right: "settings"
+                        },
+                        visibleSection: "center"
+                    }
                 }
-            }
+            };
 
             return baseSave;
         } catch (error) {
