@@ -205,6 +205,10 @@ export default class IndustryPanel {
         })
 
         this.updateTheurgyButtonStates();
+        
+        if (theurgyType === 'plant' && this.core.story) {
+            this.core.story.dismissInfoBox('theurgy-plant');
+        }
     }
 
     updateTheurgyButtonStates() {
@@ -403,8 +407,11 @@ export default class IndustryPanel {
                 }
             });
         }
-        if (built > 0 && type === 'farmPlot' && this.core.story) {
-            this.core.story.checkFarmPlotWorkerInfo();
+        if (built > 0 && this.core.story) {
+            if (type === 'farmPlot') {
+                this.core.story.dismissInfoBox('farm-plot');
+                this.core.story.checkFarmPlotWorkerInfo();
+            }
         }
     }
 
@@ -429,9 +436,11 @@ export default class IndustryPanel {
         mainBtn.dataset.tip = 'building-lore';
         mainBtn.dataset.buildingType = type;
         mainBtn.style.position = 'relative';
+        const hasBuildCost = def && def.buildCost && Object.keys(def.buildCost).length > 0;
         mainBtn.innerHTML = `
             <div class="build-progress-fill"></div>
             <span class="building-title">${def ? def.name : type} <span class="building-count">(${building.count})</span></span>
+            <span class="resource-progress-indicator" style="display: ${hasBuildCost ? '' : 'none'}"></span>
         `;
         mainBtn.onclick = () => this.handleBuildAction(type, def);
 
@@ -453,6 +462,9 @@ export default class IndustryPanel {
         workerBtn.onclick = (e) => {
             e.stopPropagation();
             this.core.industry.assignWorkerToBuilding(type);
+            if (type === 'farmPlot' && this.core.story) {
+                this.core.story.dismissInfoBox('farm-plot-worker');
+            }
         };
 
         // Chevron button
@@ -507,6 +519,9 @@ export default class IndustryPanel {
         if (addWorkerBtn) {
             addWorkerBtn.onclick = () => {
                 this.core.industry.assignWorkerToBuilding(type);
+                if (type === 'farmPlot' && this.core.story) {
+                    this.core.story.dismissInfoBox('farm-plot-worker');
+                }
             };
         }
 
@@ -550,7 +565,7 @@ export default class IndustryPanel {
                 <div class="dropdown-section-body">
                     <div class="action-buttons">
                         <div class="button-with-info">
-                            <button class="dropdown-add-building-btn ${!canBuild ? 'hastip' : ''}" ${!canBuild ? `disabled data-tip="build-disabled" data-building-type="${type}"` : ''} style="position: relative;">
+                            <button class="dropdown-add-building-btn" ${!canBuild ? 'disabled' : ''} style="position: relative;">
                                 <div class="build-progress-fill"></div>
                                 Build
                             </button>
@@ -701,6 +716,54 @@ export default class IndustryPanel {
             }
         }
         return minProgress;
+    }
+
+    getResourceProgressText(type, def) {
+        if (!def || !def.buildCost) return '';
+        const target = this.getPlanTarget('build', type);
+        const displayTarget = target > 0 ? target : 1;
+        
+        let limitingRes = null;
+        let minProgress = 1;
+        let current = 0;
+        let required = 0;
+        let firstRes = null;
+        let firstCurrent = 0;
+        let firstRequired = 0;
+        
+        for (const [res, cost] of Object.entries(def.buildCost)) {
+            const resource = this.core.industry.resources[res];
+            if (!resource) continue;
+            const costNum = this.getValueNumber(cost);
+            if (costNum <= 0) continue;
+            
+            const currentVal = resource.value.toNumber();
+            const requiredVal = costNum * displayTarget;
+            const progress = requiredVal > 0 ? Math.min(1, Math.max(0, currentVal / requiredVal)) : 1;
+            
+            if (!firstRes) {
+                firstRes = res;
+                firstCurrent = Math.floor(currentVal);
+                firstRequired = Math.ceil(requiredVal);
+            }
+            
+            if (progress < minProgress) {
+                minProgress = progress;
+                limitingRes = res;
+                current = Math.floor(currentVal);
+                required = Math.ceil(requiredVal);
+            }
+        }
+        
+        if (limitingRes) {
+            const displayCurrent = Math.min(current, required);
+            return `${displayCurrent}/${required}`;
+        }
+        if (firstRes) {
+            const displayFirstCurrent = Math.min(firstCurrent, firstRequired);
+            return `${displayFirstCurrent}/${firstRequired}`;
+        }
+        return '';
     }
 
     getBuildingButtonDetails(type) {
@@ -966,6 +1029,13 @@ export default class IndustryPanel {
             }       
             
             progressFill.dataset.prevWidth = newWidth.toString();
+        }
+        
+        const resourceProgressIndicator = button.querySelector('.resource-progress-indicator');
+        if (resourceProgressIndicator && def && def.buildCost) {
+            const progressText = this.getResourceProgressText(type, def);
+            resourceProgressIndicator.textContent = progressText || '';
+            resourceProgressIndicator.style.display = progressText ? 'inline' : 'none';
         }
     }
 
@@ -1284,19 +1354,24 @@ export default class IndustryPanel {
 
                 if (card.workerBtn) {
                     const workerCount = b.workers || 0;
+                    const maxWorkers = this.core.industry.getMaxWorkers(type);
                     const onStrike = this.core.industry.workersOnStrike;
                     const isScaled = this.areWorkersScaled();
+                    const atLimit = workerCount >= maxWorkers && maxWorkers > 0;
                     
                     if (card.workerBtnCount) {
                         card.workerBtnCount.textContent = workerCount;
                         if (onStrike && workerCount > 0) {
                             card.workerBtnCount.classList.add('on-strike');
-                            card.workerBtnCount.classList.remove('limited');
+                            card.workerBtnCount.classList.remove('limited', 'at-limit');
                         } else if (isScaled && workerCount > 0) {
                             card.workerBtnCount.classList.add('limited');
-                            card.workerBtnCount.classList.remove('on-strike');
-                        } else {
+                            card.workerBtnCount.classList.remove('on-strike', 'at-limit');
+                        } else if (atLimit) {
+                            card.workerBtnCount.classList.add('at-limit');
                             card.workerBtnCount.classList.remove('on-strike', 'limited');
+                        } else {
+                            card.workerBtnCount.classList.remove('on-strike', 'limited', 'at-limit');
                         }
                     }
                     const canHire = hirePlan.actual > 0;
@@ -1315,24 +1390,10 @@ export default class IndustryPanel {
                 const canBuild = buildPlan.actual > 0;
                 if (card.addBuildingBtn) {
                     card.addBuildingBtn.disabled = !canBuild;
-                    if (!canBuild) {
-                        card.addBuildingBtn.classList.add('hastip');
-                        card.addBuildingBtn.dataset.tip = 'build-disabled';
-                        card.addBuildingBtn.dataset.buildingType = type;
-                    } else {
-                        card.addBuildingBtn.classList.remove('hastip');
-                        delete card.addBuildingBtn.dataset.tip;
-                        delete card.addBuildingBtn.dataset.buildingType;
-                    }
                 }
                 
                 if (card.mainBtn && def && def.buildCost) {
                     card.mainBtn.disabled = !canBuild;
-                    if (!canBuild) {
-                        card.mainBtn.dataset.tip2 = 'build-disabled';
-                    } else {
-                        delete card.mainBtn.dataset.tip2;
-                    }
                 }
                 
                 if (card.sellBtn) {
@@ -1434,6 +1495,8 @@ export default class IndustryPanel {
                     }
                     
                     const maxWorkers = this.core.industry.getMaxWorkers(type);
+                    const workerCount = b.workers || 0;
+                    const atLimit = workerCount >= maxWorkers && maxWorkers > 0;
                     let limitSpan = workerHeader.querySelector('.header-limit');
                     if (!limitSpan) {
                         limitSpan = document.createElement('span');
@@ -1443,6 +1506,11 @@ export default class IndustryPanel {
                         workerHeader.appendChild(limitSpan);
                     }
                     limitSpan.textContent = `Limit: ${maxWorkers}`;
+                    if (atLimit) {
+                        limitSpan.classList.add('at-limit');
+                    } else {
+                        limitSpan.classList.remove('at-limit');
+                    }
                 }
                 
                 const onStrike = this.core.industry.workersOnStrike;

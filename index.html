@@ -855,7 +855,6 @@
             font-weight: 300;
             pointer-events: none;
             z-index: 100;
-            opacity: 1;
             transition: opacity 0.45s ease-out, top 0.45s ease-out;
             line-height: 1;
         }
@@ -1746,6 +1745,10 @@
                         &.limited {
                             color: var(--warningColor);
                         }
+                        
+                        &.at-limit {
+                            color: var(--accent);
+                        }
                     }
 
                 }
@@ -1811,9 +1814,24 @@
                     white-space: nowrap;
                 }
 
+                .resource-progress-indicator {
+                    position: absolute;
+                    bottom: 3px;
+                    right: 5px;
+                    font-size: 0.7em;
+                    font-weight: 500;
+                    color: var(--baseColor);
+                    z-index: 2;
+                    pointer-events: none;
+                    line-height: 1;
+                }
+
                 @media (hover: hover) and (pointer: fine) {
                     .building-row button:hover:not(:disabled) {
-                        background: color-mix(in oklab, var(--bgColor) 70%, var(--accent) 30%);
+                        background: color-mix(in oklab, var(--bgColor) 60%, var(--accent));
+                        .build-progress-fill {
+                            background: color-mix(in oklab, var(--bgColor) 60%, var(--accent));
+                        }
                     }
                 }
 
@@ -1834,7 +1852,7 @@
                     top: 0;
                     bottom: 0;
                     width: 0%;
-                    background: color-mix(in oklab, var(--bgColor) 60%, var(--accent));
+                    background: color-mix(in oklab, var(--bgColor) 70%, var(--accent));
                     transition: width 0.05s linear;
                     pointer-events: none;
                     z-index: 0;
@@ -1920,6 +1938,10 @@
                             color: var(--baseColor);
                             font-weight: 400;
                         }
+                        
+                        .header-limit.at-limit {
+                            color: var(--accent);
+                        }
                     }
 
                     .dropdown-section-body {
@@ -1941,7 +1963,7 @@
                             font-weight: 600;
                             font-size: 0.9em;
                             cursor: pointer;
-                            transition: background 0.15s, border-color 0.15s, transform 0.1s, border-bottom-width 0.1s;
+                            transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s, border-bottom-width 0.1s;
                             border: 1px solid;
                             border-bottom-width: 2px;
                             flex: 1;
@@ -1975,6 +1997,13 @@
                                 @media (hover: hover) and (pointer: fine) {
                                     &:hover:not(:disabled) {
                                         border-color: var(--accent);
+                                        background: color-mix(in oklab, var(--bgColor) 60%, var(--accent));
+                                        .build-progress-fill {
+                                            background: color-mix(in oklab, var(--bgColor) 60%, var(--accent));
+                                        }
+                                    }
+                                    &:disabled {
+                                        border-color: color-mix(in oklab, var(--accent) 50%, transparent);
                                     }
                                 }
                             }
@@ -1992,9 +2021,9 @@
 
                             &.dropdown-remove-worker-btn,
                             &.dropdown-sell-btn {
-                                background: color-mix(in oklab, var(--bgColor) 85%, var(--midBaseColor) 15%);
+                                background: color-mix(in oklab, var(--bgColor) 85%, var(--midBaseColor));
                                 border-color: color-mix(in oklab, var(--midBaseColor) 60%, transparent);
-                                color: var(--lightBaseColor);
+                                color: var(--baseColor);
                                 max-height: 1em;
 
                                 & ~ .button-info-box {
@@ -2003,14 +2032,19 @@
 
                                 @media (hover: hover) and (pointer: fine) {
                                     &:hover:not(:disabled) {
-                                        background: color-mix(in oklab, var(--bgColor) 75%, var(--midBaseColor) 25%);
+                                        background: color-mix(in oklab, var(--bgColor) 75%, var(--midBaseColor));
                                         border-color: var(--midBaseColor);
+                                    }
+                                    &:disabled { 
+                                        border-color: color-mix(in oklab, var(--midBaseColor) 40%, transparent);
+                                        background: color-mix(in oklab, var(--bgColor) 90%, var(--midBaseColor));
                                     }
                                 }
                             }
                             
                             &:disabled {
-                                    cursor: default;                               
+                                    cursor: default;   
+                                    color: var(--lightBaseColor);                            
                                 }
 
                             .build-progress-fill {
@@ -2019,7 +2053,7 @@
                                 top: 0;
                                 bottom: 0;
                                 width: 0%;
-                                background: color-mix(in oklab, var(--bgColor) 70%, var(--accent) 40%);
+                                background: color-mix(in oklab, var(--bgColor) 70%, var(--accent));
                                 transition: width 0.05s linear;
                                 pointer-events: none;
                                 z-index: 0;

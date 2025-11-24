@@ -1,10 +1,12 @@
-export default function createTooltipService() {
+export default function createTooltipService(core, uiManager) {
     const tooltips = new Map();
     const pointerDismissHandlers = new WeakMap();
     let observer = null;
     let activeElement = null;
     let activeTooltip = null;
     let tooltipLocked = false; // Prevent premature cleanup during creation
+    const createRenderInterval = uiManager.createRenderInterval.bind(uiManager);
+    const destroyRenderInterval = uiManager.destroyRenderInterval.bind(uiManager);
 
     // Global mousemove to catch edge cases where mouseleave doesn't fire
     document.addEventListener('mousemove', (e) => {
@@ -87,7 +89,8 @@ export default function createTooltipService() {
         return tips;
     }
 
-    function initialize(core) {
+    // Initialize tooltips immediately
+    (function initialize() {
         registerTip('savvy', () => `
       <p><i>Measures economic know-how.</i></p>
       <p>Each point of <span class="savvyWord term">Savvy</span> grants a +1% boost to all Production profits.</p>
@@ -546,7 +549,7 @@ export default function createTooltipService() {
         });
 
         observeTooltips();
-    }
+    })();
 
 
     function showTooltip(el) {
@@ -559,7 +562,12 @@ export default function createTooltipService() {
         // Clean up any existing tooltip
         if (activeTooltip) {
             if (activeTooltip._updateInterval) {
-                clearInterval(activeTooltip._updateInterval);
+                const isIncrement = activeElement?.dataset.tip?.includes('increment-amount');
+                if (isIncrement) {
+                    clearInterval(activeTooltip._updateInterval);
+                } else {
+                    core?.ui?.destroyRenderInterval(activeTooltip._updateInterval);
+                }
                 activeTooltip._updateInterval = null;
             }
             activeTooltip.remove();
@@ -606,15 +614,19 @@ export default function createTooltipService() {
             const space = {
                 above: r.top, below: vh - r.bottom, left: r.left, right: vw - r.right,
             };
+            const horizontalBuffer = Math.max(0, (tb.width - r.width) / 2);
+            const canCenterHorizontally =
+                (r.left - horizontalBuffer) >= PADDING &&
+                (r.right + horizontalBuffer) <= (vw - PADDING);
 
             let pos;
-            if (space.above >= tb.height + PADDING && space.left + r.width >= tb.width) {
+            if (space.above >= tb.height + PADDING && canCenterHorizontally) {
                 pos = 'above';
-            } else if (space.below >= tb.height + PADDING && space.left + r.width >= tb.width) {
+            } else if (space.below >= tb.height + PADDING && canCenterHorizontally) {
                 pos = 'below';
-            } else if (space.left >= tb.width + PADDING) {
+            } else if ((r.left - tb.width - MARGIN) >= PADDING) {
                 pos = 'left';
-            } else if (space.right >= tb.width + PADDING) {
+            } else if ((r.right + tb.width + MARGIN) <= vw - PADDING) {
                 pos = 'right';
             } else {
                 pos = 'above';
@@ -783,14 +795,14 @@ export default function createTooltipService() {
             el.dataset.tip2.includes('disabled')
         );
         
-        // Fast update for increment button (50ms), slower for others (250ms)
-        const updateInterval = el.dataset.tip?.includes('increment-amount') ? 50 : 250;
-        
         if (needsUpdate) {
-            const updater = setInterval(() => {
+            const updaterFn = () => {
                 try {
                     if (!document.body.contains(activeTooltip) || activeElement !== el) {
-                        clearInterval(updater);
+                        if (activeTooltip._updateInterval) {
+                            destroyRenderInterval(activeTooltip._updateInterval);
+                            activeTooltip._updateInterval = null;
+                        }
                         return;
                     }
                     
@@ -807,7 +819,10 @@ export default function createTooltipService() {
                         // If a tooltip disappeared (e.g., button is no longer disabled)
                         if (haveCount < hadCount) {
                             // Clean up old tooltips
-                            clearInterval(updater);
+                            if (activeTooltip._updateInterval) {
+                                destroyRenderInterval(activeTooltip._updateInterval);
+                                activeTooltip._updateInterval = null;
+                            }
                             tipBoxes.forEach(box => {
                                 if (document.body.contains(box)) {
                                     box.remove();
@@ -861,11 +876,15 @@ export default function createTooltipService() {
                         });
                     }
                 } catch {
-                    clearInterval(updater);
+                    if (activeTooltip._updateInterval) {
+                        destroyRenderInterval(activeTooltip._updateInterval);
+                        activeTooltip._updateInterval = null;
+                    }
                 }
-            }, updateInterval);
+            };
             
-            activeTooltip._updateInterval = updater;
+            // All tooltips update on the UI render interval
+            activeTooltip._updateInterval = createRenderInterval(updaterFn);
         }
     }
 
@@ -1035,8 +1054,9 @@ export default function createTooltipService() {
         document.querySelectorAll('.hastip').forEach(attach);
     }
 
+
     return {
-        initialize, registerTip, showTooltip, destroyTooltip, observeTooltips,
+        registerTip, showTooltip, destroyTooltip, observeTooltips,
     };
 }
 

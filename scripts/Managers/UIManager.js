@@ -11,7 +11,7 @@ export default class UIManager {
     constructor(core) {
         this.core = core;
 
-        this.tooltipService = createTooltipService(core);
+        this.tooltipService = createTooltipService(core, this);
         this.activePanels = {
             "left": "",
             "center": "story",
@@ -56,7 +56,6 @@ export default class UIManager {
     }
 
     initialize() {
-        this.tooltipService.initialize(this.core);
         this.initNavbar();
         this.initShortcuts();
         this.initEventListeners();

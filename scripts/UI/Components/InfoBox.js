@@ -1,6 +1,9 @@
 export default function createInfoBox(targetElement, message, options = {}) {
     const box = document.createElement('div');
     box.className = 'infobox';
+    if (options.id) {
+        box.dataset.infoboxId = options.id;
+    }
     box.style.opacity = '0';
     
     const content = document.createElement('div');
@@ -32,19 +35,34 @@ export default function createInfoBox(targetElement, message, options = {}) {
             left: targetRect.left,
             right: vw - targetRect.right,
         };
+        const horizontalBuffer = Math.max(0, (boxRect.width - targetRect.width) / 2);
+        const canCenterHorizontally =
+            (targetRect.left - horizontalBuffer) >= PADDING &&
+            (targetRect.right + horizontalBuffer) <= (vw - PADDING);
         
-        let pos;
-        if (space.above >= boxRect.height + PADDING && space.left + targetRect.width >= boxRect.width) {
-            pos = 'above';
-        } else if (space.below >= boxRect.height + PADDING && space.left + targetRect.width >= boxRect.width) {
-            pos = 'below';
-        } else if (space.left >= boxRect.width + PADDING) {
-            pos = 'left';
-        } else if (space.right >= boxRect.width + PADDING) {
-            pos = 'right';
-        } else {
-            pos = 'above';
-        }
+        const order = (() => {
+            const base = ['above', 'below', 'left', 'right'];
+            if (!options.preferredPosition) return base;
+            return [options.preferredPosition, ...base.filter(p => p !== options.preferredPosition)];
+        })();
+        
+        const fits = (pos) => {
+            switch (pos) {
+                case 'above':
+                    return space.above >= boxRect.height + PADDING && canCenterHorizontally;
+                case 'below':
+                    return space.below >= boxRect.height + PADDING && canCenterHorizontally;
+                case 'left':
+                    return (targetRect.left - boxRect.width - MARGIN) >= PADDING;
+                case 'right':
+                    return (targetRect.right + boxRect.width + MARGIN) <= (vw - PADDING);
+                default:
+                    return false;
+            }
+        };
+        
+        let pos = order.find(fits);
+        if (!pos) pos = 'above';
         
         if (currentPos !== pos) {
             if (currentPos !== null) {
@@ -101,10 +119,50 @@ export default function createInfoBox(targetElement, message, options = {}) {
     window.addEventListener('resize', scrollHandler);
     
     let dismissed = false;
+    let updateInterval = null;
+    
+    if (options.updateFn) {
+        box._updateFn = options.updateFn;
+        box._positionBox = positionBox;
+        const updaterFn = () => {
+            if (dismissed || !box.parentElement) {
+                if (updateInterval && options.destroyRenderInterval) {
+                    options.destroyRenderInterval(updateInterval);
+                } else if (updateInterval) {
+                    clearInterval(updateInterval);
+                }
+                return;
+            }
+            const newMessage = options.updateFn();
+            if (newMessage) {
+                const oldContent = content.innerHTML;
+                content.innerHTML = newMessage;
+                if (oldContent !== newMessage) {
+                    positionBox();
+                }
+            }
+        };
+        
+        if (options.createRenderInterval) {
+            updateInterval = options.createRenderInterval(updaterFn);
+        } else {
+            updateInterval = setInterval(updaterFn, 250);
+        }
+        box._updateInterval = updateInterval;
+    }
     
     const dismiss = () => {
         if (dismissed) return;
         dismissed = true;
+        
+        if (updateInterval) {
+            if (options.destroyRenderInterval) {
+                options.destroyRenderInterval(updateInterval);
+            } else {
+                clearInterval(updateInterval);
+            }
+            updateInterval = null;
+        }
         
         resizeObserver.disconnect();
         window.removeEventListener('scroll', scrollHandler, true);
@@ -126,9 +184,17 @@ export default function createInfoBox(targetElement, message, options = {}) {
     };
     
     box.addEventListener('click', dismiss);
+    box._dismiss = dismiss;
+    
+    const updateMessage = (newMessage) => {
+        content.innerHTML = newMessage;
+        positionBox();
+    };
+    box._updateMessage = updateMessage;
     
     return {
         dismiss,
+        updateMessage,
         element: box
     };
 }

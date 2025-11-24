@@ -250,7 +250,11 @@ export default class StoryManager {
             if (this.dismissedInfoBoxes.has('farm-plot')) return;
             const mainBtn = document.querySelector('[data-building-type="farmPlot"].building-main-btn');
             if (mainBtn) {
-                this.showInfoBox('farm-plot', mainBtn, "Once you gather 10 crops, you can build a farm plot to passively collect crops.");
+                const message = this.getFarmPlotMessage();
+                this.showInfoBox('farm-plot', mainBtn, message, { 
+                    preferredPosition: 'below',
+                    updateFn: () => `<p>${this.getFarmPlotMessage()}</p>`
+                });
             } else {
                 setTimeout(tryShowFarmPlot, 50);
             }
@@ -262,11 +266,17 @@ export default class StoryManager {
         });
     }
 
-    showInfoBox(id, element, message) {
+    showInfoBox(id, element, message, options = {}) {
         if (this.dismissedInfoBoxes.has(id)) return;
         if (!element) return;
+        if (document.querySelector(`[data-infobox-id="${id}"]`)) return;
 
         const box = createInfoBox(element, `<p>${message}</p>`, {
+            id: id,
+            preferredPosition: options.preferredPosition,
+            updateFn: options.updateFn,
+            createRenderInterval: this.core.ui.createRenderInterval.bind(this.core.ui),
+            destroyRenderInterval: this.core.ui.destroyRenderInterval.bind(this.core.ui),
             onDismiss: () => {
                 this.dismissedInfoBoxes.add(id);
                 this.core.storage.saveFullGame(this.core);
@@ -274,8 +284,26 @@ export default class StoryManager {
         });
     }
 
+    dismissInfoBox(id) {
+        const box = document.querySelector(`[data-infobox-id="${id}"]`);
+        if (box && box._dismiss) {
+            box._dismiss();
+        }
+    }
+
+    getFarmPlotMessage() {
+        const crops = this.core.industry.resources.crops.value.toNumber();
+        const needed = 10 - crops;
+        if (needed <= 0) {
+            return "You have enough crops to build your first farm plot to passively gain crops every second";
+        } else {
+            return `Gather ${needed} more crop${needed > 1 ? 's' : ''} to be able to build your first farm plot to passively gain crops every second`;
+        }
+    }
+
     checkFarmPlotWorkerInfo() {
         if (this.dismissedInfoBoxes.has('farm-plot-worker')) return;
+        if (document.querySelector(`[data-infobox-id="farm-plot-worker"]`)) return;
         
         const farmPlot = this.core.industry.buildings.farmPlot;
         if (farmPlot && farmPlot.count > 0) {
@@ -283,7 +311,7 @@ export default class StoryManager {
                 const farmPlotRow = document.querySelector('[data-building-type="farmPlot"].building-main-btn')?.closest('.building-row');
                 if (farmPlotRow) {
                     const workerBtn = farmPlotRow.querySelector('.building-worker-btn');
-                    if (workerBtn && !this.dismissedInfoBoxes.has('farm-plot-worker')) {
+                    if (workerBtn && !this.dismissedInfoBoxes.has('farm-plot-worker') && !document.querySelector(`[data-infobox-id="farm-plot-worker"]`)) {
                         this.showInfoBox('farm-plot-worker', workerBtn, "This button assign workers to the farm to refine crops into food.");
                     }
                 } else {
