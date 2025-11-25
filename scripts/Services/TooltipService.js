@@ -312,6 +312,15 @@ export default function createTooltipService(core, uiManager) {
             return reason ? `<p>${reason}</p>` : '';
         });
 
+        registerTip('demolish-warning', (el) => {
+            const type = el.dataset.buildingType;
+            if (!type) return '';
+            const panel = core.ui.panels.industry;
+            if (!panel || typeof panel.getDemolishWorkerWarning !== 'function') return '';
+            const warning = panel.getDemolishWorkerWarning(type);
+            return warning ? `<p style="color: var(--warningColor);">${warning}</p>` : '';
+        });
+
         registerTip('hire-disabled', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
@@ -484,6 +493,14 @@ export default function createTooltipService(core, uiManager) {
             let html = `<p style="font-weight: 500">${perBuilding} worker${perBuilding !== 1 ? 's' : ''}/${buildingName}</p>`;
             html += `<p style="opacity: 0.7">× ${b.count} ${buildingName}${b.count !== 1 ? 's' : ''}</p>`;
             html += `<p style="color: var(--accent); font-weight: 600">= ${total} worker${total !== 1 ? 's' : ''}</p>`;
+            
+            const panel = core.ui.panels.industry;
+            if (panel && typeof panel.getDemolishWorkerWarning === 'function') {
+                const warning = panel.getDemolishWorkerWarning(type);
+                if (warning) {
+                    html += `<p style="margin-top: 0.5em; padding-top: 0.5em; border-top: 1px solid var(--midBaseColor); color: var(--warningColor); font-size: 0.9em">${warning}</p>`;
+                }
+            }
             
             return html;
         });

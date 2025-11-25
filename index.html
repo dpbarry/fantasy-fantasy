@@ -1699,7 +1699,7 @@
                     grid-auto-rows: min-content;
                     gap: var(--boxGap);
                     padding-top: var(--boxGap);
-                    padding-bottom: var(--boxGap);
+                    padding-bottom: 0;
                     overflow-y: auto;
                     flex: 1;
                     min-height: 0;
@@ -1751,6 +1751,10 @@
                         }
                     }
 
+                    .building-worker-btn:disabled .worker-btn-count:not(.at-limit):not(.on-strike):not(.limited) {
+                        color: var(--lightBaseColor);
+                    }
+
                 }
 
                 .building-row button {
@@ -1790,9 +1794,22 @@
 
                 .prod-footer {
                     display: flex;
-                    justify-content: flex-end;
+                    justify-content: space-between;
                     align-items: center;
                     gap: 0.4em;
+                    flex-shrink: 0;
+                    padding: 0 var(--boxGap);
+                    margin-top: auto;
+                    margin-left: calc(var(--boxGap) * -1);
+                    margin-right: calc(var(--boxGap) * -1);
+                    margin-bottom: calc(var(--boxGap) * -0.5);
+                }
+
+                .prod-free-workers {
+                    font-size: 0.9em;
+                    color: var(--baseColor);
+                    opacity: 0.8;
+                    padding: 0.2em 0.3em;
                 }
 
                 .prod-increment {
@@ -1826,6 +1843,10 @@
                     line-height: 1;
                 }
 
+                .building-main-btn:disabled .resource-progress-indicator {
+                    color: var(--lightBaseColor);
+                }
+
                 @media (hover: hover) and (pointer: fine) {
                     .building-row button:hover:not(:disabled) {
                         background: color-mix(in oklab, var(--bgColor) 60%, var(--accent));
@@ -1844,6 +1865,7 @@
 
                 .building-row button:disabled {
                     cursor: default;
+                    color: var(--lightBaseColor);
                 }
 
                 .build-progress-fill {
@@ -2255,6 +2277,18 @@
                         color: var(--warningColor);
                         font-size: 0.85em;
                         font-weight: 500;
+                    }
+
+                    .worker-drain-warning {
+                        margin-top: 0.5em;
+                        padding: 0.4em 0.6em;
+                        background: color-mix(in oklab, var(--bgColor) 85%, var(--baseColor) 15%);
+                        border: 1px solid color-mix(in oklab, var(--baseColor) 40%, transparent);
+                        border-radius: 0.3em;
+                        color: var(--baseColor);
+                        font-size: 0.85em;
+                        font-weight: 500;
+                        opacity: 0.7;
                     }
 
                     .worker-effects {

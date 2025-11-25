@@ -8,6 +8,7 @@ export default class IndustryPanel {
         this.resourcebox = this.root.querySelector("#industry-resources");
         this.resourcebox._rows = {};
         this.previousRates = {};
+        this.previousLimits = {};
         this.previousBuildingState = {};
         this.incrementBtn = null;
         this.setupChevron();
@@ -283,6 +284,12 @@ export default class IndustryPanel {
         const footer = document.createElement('div');
         footer.className = 'prod-footer';
 
+        const freeWorkersSpan = document.createElement('span');
+        freeWorkersSpan.className = 'prod-free-workers';
+        freeWorkersSpan.textContent = 'Free: 0';
+        footer.appendChild(freeWorkersSpan);
+        this.freeWorkersSpan = freeWorkersSpan;
+
         const incrementBtn = document.createElement('button');
         incrementBtn.type = 'button';
         incrementBtn.className = 'prod-increment hastip';
@@ -439,7 +446,7 @@ export default class IndustryPanel {
         const hasBuildCost = def && def.buildCost && Object.keys(def.buildCost).length > 0;
         mainBtn.innerHTML = `
             <div class="build-progress-fill"></div>
-            <span class="building-title">${def ? def.name : type} <span class="building-count">(${building.count})</span></span>
+            <span class="building-title">${def ? def.name : type} <span class="building-count">[${building.count}]</span></span>
             <span class="resource-progress-indicator" style="display: ${hasBuildCost ? '' : 'none'}"></span>
         `;
         mainBtn.onclick = () => this.handleBuildAction(type, def);
@@ -623,6 +630,27 @@ export default class IndustryPanel {
         return bottlenecks.length > 0 ? bottlenecks.join(', ') : 'input';
     }
 
+    getDrainExceedsGainResources(type, def) {
+        if (!def || !def.effects) return [];
+        
+        const b = this.core.industry.buildings[type];
+        if (!b || !b.workers || b.workers === 0) return [];
+        
+        const resources = [];
+        for (const [res, eff] of Object.entries(def.effects)) {
+            if (!eff.worker || !eff.worker.drain) continue;
+            
+            const resource = this.core.industry.resources[res];
+            if (!resource) continue;
+            
+            const netRate = resource.netGrowthRate.toNumber();
+            if (netRate < 0) {
+                resources.push(res);
+            }
+        }
+        return resources;
+    }
+
     canBuildBuilding(type, def) {
         if (this.core.industry && typeof this.core.industry.getActionPlan === 'function') {
             return this.core.industry.getActionPlan('build', type).actual > 0;
@@ -788,6 +816,24 @@ export default class IndustryPanel {
         return {costs, effects};
     }
 
+    getDemolishWorkerWarning(type) {
+        const b = this.core.industry.buildings[type];
+        const def = this.core.industry.constructor.BUILDING_DEFS[type];
+        if (!b || !def || !def.workersPerBuilding) return null;
+        
+        const plan = this.getActionPlanDetails('sell', type);
+        const multiplier = plan.selected === 'max' ? plan.actual : plan.target;
+        const currentWorkers = b.workers || 0;
+        const currentLimit = this.core.industry.getMaxWorkers(type);
+        const newLimit = Math.max(0, currentLimit - (multiplier * def.workersPerBuilding));
+        const newWorkers = Math.min(currentWorkers, newLimit);
+        
+        if (currentWorkers > newLimit) {
+            return `Employees: ${currentWorkers} → ${newWorkers} (new limit)`;
+        }
+        return null;
+    }
+
     getDemolishButtonDetails(type) {
         const result = this.core.industry.getDemolishEffects(type);
         if (!result) return null;
@@ -807,22 +853,7 @@ export default class IndustryPanel {
             effects.push({res, val: Math.abs(val) * multiplier, type: val > 0 ? 'gain' : 'drain'});
         }
         
-        // Check if workers will be auto-furloughed
-        let workerWarning = null;
-        const b = this.core.industry.buildings[type];
-        const def = this.core.industry.constructor.BUILDING_DEFS[type];
-        if (b && def && def.workersPerBuilding) {
-            const currentWorkers = b.workers || 0;
-            const currentLimit = this.core.industry.getMaxWorkers(type);
-            const newLimit = Math.max(0, currentLimit - (multiplier * def.workersPerBuilding));
-            const newWorkers = Math.min(currentWorkers, newLimit);
-            
-            if (currentWorkers > newLimit) {
-                workerWarning = `Employees: ${currentWorkers} → ${newWorkers} (new limit)`;
-            }
-        }
-        
-        return {rewards, effects, workerWarning};
+        return {rewards, effects};
     }
 
     getFurloughButtonDetails(type) {
@@ -895,14 +926,9 @@ export default class IndustryPanel {
         
         const allItems = [...negativeItems, ...positiveItems];
         
-        // Add worker warning if present
-        if (details.workerWarning) {
-            allItems.push(`<span style="display: block; margin-top: 0.3em; color: var(--baseColor); opacity: 0.85; font-size: 0.9em">${details.workerWarning}</span>`);
-        }
-        
         if (allItems.length === 0) return '';
         
-        return allItems.join('');
+        return `<span class="info-items">${allItems.join('')}</span>`;
     }
 
     updateButtonInfoBox(buttonElement, details) {
@@ -1047,6 +1073,17 @@ export default class IndustryPanel {
         const details = this.getDemolishButtonDetails(type);
         const sellPlan = this.getActionPlanDetails('sell', type);
         this.updateButtonInfoBox(button, sellPlan.actual > 0 ? details : null);
+        
+        const warning = this.getDemolishWorkerWarning(type);
+        if (warning && sellPlan.actual > 0) {
+            button.classList.add('hastip');
+            button.dataset.tip = 'demolish-warning';
+            button.dataset.buildingType = type;
+        } else {
+            button.classList.remove('hastip');
+            delete button.dataset.tip;
+            delete button.dataset.buildingType;
+        }
     }
 
     updateHireButton(card, type, def) {
@@ -1309,11 +1346,20 @@ export default class IndustryPanel {
         this.updateTheurgyButtonStates();
         this.updateIncrementControl();
         this.updateBuildingCards(data);
+        this.updateFreeWorkers();
+    }
+
+    updateFreeWorkers() {
+        if (this.freeWorkersSpan) {
+            const freeWorkers = this.core.industry.unassignedWorkers;
+            this.freeWorkersSpan.textContent = `Free: ${Math.floor(freeWorkers).toFixed(0)}`;
+        }
     }
 
     updateBuildingCards(data) {
         if (!this.buildingCards || !data.buildings) return;
 
+        const buildingStateChanged = this.hasBuildingStateChanged(data);
         const buildingsContainer = this.prodBox.querySelector('.buildings-container');
         if (!buildingsContainer) return;
 
@@ -1336,8 +1382,8 @@ export default class IndustryPanel {
             }
             
             if (this.buildingCards[type]) {
-                const card = this.buildingCards[type];
-                card.countSpan.textContent = `(${b.count})`;
+                const card = this.buildingCards[type];  
+                card.countSpan.textContent = `[${b.count}]`;
                 
                 if (card.dropdown) {
                     if (b.dropped === true) {
@@ -1505,7 +1551,22 @@ export default class IndustryPanel {
                         limitSpan.dataset.buildingType = type;
                         workerHeader.appendChild(limitSpan);
                     }
-                    limitSpan.textContent = `Limit: ${maxWorkers}`;
+                    
+                    const prevLimit = this.previousLimits[type];
+                    if (prevLimit === undefined) {
+                        this.previousLimits[type] = maxWorkers;
+                    } else if (maxWorkers < prevLimit) {
+                        this.createRateIndicator(limitSpan, false);
+                        this.previousLimits[type] = maxWorkers;
+                    } else if (maxWorkers !== prevLimit) {
+                        this.previousLimits[type] = maxWorkers;
+                    }
+                    
+                    const limitText = `Limit: ${maxWorkers}`;
+                    if (limitSpan.textContent !== limitText) {
+                        limitSpan.textContent = limitText;
+                    }
+                    
                     if (atLimit) {
                         limitSpan.classList.add('at-limit');
                     } else {
@@ -1515,12 +1576,14 @@ export default class IndustryPanel {
                 
                 const onStrike = this.core.industry.workersOnStrike;
                 const isScaled = this.areWorkersScaled();
+                const drainExceedsGain = this.getDrainExceedsGainResources(type, def);
                 const workersSection = card.dropdown?.querySelector('.dropdown-workers');
                 if (workersSection) {
                     const sectionBody = workersSection.querySelector('.dropdown-section-body');
                     if (sectionBody) {
                         const strikeDiv = sectionBody.querySelector('.worker-strike');
                         const limitedDiv = sectionBody.querySelector('.worker-limited');
+                        const drainWarningDiv = sectionBody.querySelector('.worker-drain-warning');
                         
                         if (onStrike) {
                             if (!strikeDiv) {
@@ -1530,21 +1593,36 @@ export default class IndustryPanel {
                                 sectionBody.appendChild(strikeElement);
                             }
                             if (limitedDiv) limitedDiv.remove();
+                            if (drainWarningDiv) drainWarningDiv.remove();
                         } else if (isScaled) {
                             if (!limitedDiv) {
                                 const limitedElement = document.createElement('div');
                                 limitedElement.className = 'worker-limited hastip';
                                 limitedElement.dataset.tip = 'worker-limited';
                                 limitedElement.dataset.buildingType = type;
-                                limitedElement.textContent = `⚠ Worker output limited by ${this.getBottleneckText()}`;
+                                limitedElement.textContent = `⚠ Worker output throttled by ${this.getBottleneckText()} supply`;
                                 sectionBody.appendChild(limitedElement);
                             } else {
-                                limitedDiv.textContent = `⚠ Worker output limited by ${this.getBottleneckText()}`;
+                                limitedDiv.textContent = `⚠ Worker output throttled by ${this.getBottleneckText()} supply`;
                             }
                             if (strikeDiv) strikeDiv.remove();
+                            if (drainWarningDiv) drainWarningDiv.remove();
+                        } else if (drainExceedsGain.length > 0) {
+                            const resourceText = drainExceedsGain.join(', ');
+                            if (!drainWarningDiv) {
+                                const drainWarningElement = document.createElement('div');
+                                drainWarningElement.className = 'worker-drain-warning';
+                                drainWarningElement.textContent = `⚠ Input ${resourceText} is at a deficit.`;
+                                sectionBody.appendChild(drainWarningElement);
+                            } else {
+                                drainWarningDiv.textContent = `⚠ Input ${resourceText} is at a deficit.`;
+                            }
+                            if (strikeDiv) strikeDiv.remove();
+                            if (limitedDiv) limitedDiv.remove();
                         } else {
                             if (strikeDiv) strikeDiv.remove();
                             if (limitedDiv) limitedDiv.remove();
+                            if (drainWarningDiv) drainWarningDiv.remove();
                         }
                     }
                 }
