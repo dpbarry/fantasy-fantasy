@@ -366,7 +366,7 @@ export default class IndustryPanel {
             }
         }
         
-        for (const [type, prev] of Object.entries(prevState)) {
+        for (const [type] of Object.entries(prevState)) {
             if (!currentState[type]) {
                 changed = true;
                 break;
@@ -444,7 +444,7 @@ export default class IndustryPanel {
         const hasBuildCost = def && def.buildCost && Object.keys(def.buildCost).length > 0;
         mainBtn.innerHTML = `
             <div class="build-progress-fill"></div>
-            <span class="building-title">${def ? def.name : type} <span class="building-count">[${building.count}]</span></span>
+            <span class="building-title">${def ? def.name : type} <span class="building-count">(${building.count})</span></span>
             <span class="resource-progress-indicator" style="display: ${hasBuildCost ? '' : 'none'}"></span>
         `;
         const titleSpan = mainBtn.querySelector('.building-title');
@@ -590,8 +590,7 @@ export default class IndustryPanel {
         `;
     }
 
-    getWorkersSection(type, def, b) {
-        const workerCount = b.workers || 0;
+    getWorkersSection(type, def) {
         const hirePlan = this.getActionPlanDetails('hire', type);
         const furloughPlan = this.getActionPlanDetails('furlough', type);
         const canAdd = hirePlan.actual > 0;
@@ -691,7 +690,7 @@ export default class IndustryPanel {
         return missing.length > 0 ? `Not enough: ${missing.join(', ')}` : 'Cannot build';
     }
 
-    getDemolishDisabledReason(type, def) {
+    getDemolishDisabledReason(type) {
         const plan = this.getActionPlanDetails('sell', type);
         if (plan.actual > 0) return '';
         const b = this.core.industry.buildings[type];
@@ -699,7 +698,7 @@ export default class IndustryPanel {
         return 'Cannot demolish';
     }
 
-    getHireDisabledReason(type, def) {
+    getHireDisabledReason(type) {
         const plan = this.getActionPlanDetails('hire', type);
         if (plan.actual > 0) return '';
         
@@ -721,7 +720,7 @@ export default class IndustryPanel {
         return 'Cannot hire';
     }
 
-    getFurloughDisabledReason(type, def) {
+    getFurloughDisabledReason(type) {
         const plan = this.getActionPlanDetails('furlough', type);
         if (plan.actual > 0) return '';
         const b = this.core.industry.buildings[type];
@@ -1069,7 +1068,7 @@ export default class IndustryPanel {
         }
     }
 
-    updateDemolishButton(card, type, def, b) {
+    updateDemolishButton(card, type) {
         const button = card.dropdown?.querySelector('.dropdown-building .dropdown-sell-btn');
         if (!button) return;
         
@@ -1099,7 +1098,7 @@ export default class IndustryPanel {
         this.updateButtonInfoBox(button, details);
     }
 
-    updateFurloughButton(card, type, def, b) {
+    updateFurloughButton(card, type) {
         const button = card.dropdown?.querySelector('.dropdown-workers .dropdown-remove-worker-btn');
         if (!button) return;
         
@@ -1363,7 +1362,6 @@ export default class IndustryPanel {
     updateBuildingCards(data) {
         if (!this.buildingCards || !data.buildings) return;
 
-        const buildingStateChanged = this.hasBuildingStateChanged(data);
         const buildingsContainer = this.prodBox.querySelector('.buildings-container');
         if (!buildingsContainer) return;
 
@@ -1387,7 +1385,7 @@ export default class IndustryPanel {
             
             if (this.buildingCards[type]) {
                 const card = this.buildingCards[type];  
-                card.countSpan.textContent = `[${b.count}]`;
+                card.countSpan.textContent = `(${b.count})`;
                 
                 if (card.dropdown) {
                     if (b.dropped === true) {
