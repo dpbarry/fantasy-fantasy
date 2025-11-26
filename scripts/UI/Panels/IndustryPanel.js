@@ -439,9 +439,7 @@ export default class IndustryPanel {
         row.className = 'building-row';
 
         const mainBtn = document.createElement('button');
-        mainBtn.className = 'building-main-btn hastip';
-        mainBtn.dataset.tip = 'building-lore';
-        mainBtn.dataset.buildingType = type;
+        mainBtn.className = 'building-main-btn';
         mainBtn.style.position = 'relative';
         const hasBuildCost = def && def.buildCost && Object.keys(def.buildCost).length > 0;
         mainBtn.innerHTML = `
@@ -449,6 +447,12 @@ export default class IndustryPanel {
             <span class="building-title">${def ? def.name : type} <span class="building-count">[${building.count}]</span></span>
             <span class="resource-progress-indicator" style="display: ${hasBuildCost ? '' : 'none'}"></span>
         `;
+        const titleSpan = mainBtn.querySelector('.building-title');
+        if (titleSpan) {
+            titleSpan.classList.add('hastip');
+            titleSpan.dataset.tip = 'building-lore';
+            titleSpan.dataset.buildingType = type;
+        }
         mainBtn.onclick = () => this.handleBuildAction(type, def);
 
         const workerBtn = document.createElement('button');
