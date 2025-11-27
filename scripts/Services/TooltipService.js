@@ -307,8 +307,7 @@ export default function createTooltipService(core, uiManager) {
             if (!type) return '';
             const panel = core.ui.panels.industry;
             if (!panel || typeof panel.getDemolishDisabledReason !== 'function') return '';
-            const def = core.industry.constructor.BUILDING_DEFS[type];
-            const reason = panel.getDemolishDisabledReason(type, def);
+            const reason = panel.getDemolishDisabledReason(type);
             return reason ? `<p>${reason}</p>` : '';
         });
 
@@ -326,8 +325,7 @@ export default function createTooltipService(core, uiManager) {
             if (!type) return '';
             const panel = core.ui.panels.industry;
             if (!panel || typeof panel.getHireDisabledReason !== 'function') return '';
-            const def = core.industry.constructor.BUILDING_DEFS[type];
-            const reason = panel.getHireDisabledReason(type, def);
+            const reason = panel.getHireDisabledReason(type);
             return reason ? `<p>${reason}</p>` : '';
         });
 
@@ -336,8 +334,7 @@ export default function createTooltipService(core, uiManager) {
             if (!type) return '';
             const panel = core.ui.panels.industry;
             if (!panel || typeof panel.getFurloughDisabledReason !== 'function') return '';
-            const def = core.industry.constructor.BUILDING_DEFS[type];
-            const reason = panel.getFurloughDisabledReason(type, def);
+            const reason = panel.getFurloughDisabledReason(type);
             return reason ? `<p>${reason}</p>` : '';
         });
 
@@ -908,7 +905,7 @@ export default function createTooltipService(core, uiManager) {
     function repositionTooltips(el, tipBoxes) {
         if (!el || !tipBoxes || tipBoxes.length === 0) return;
         
-        const PADDING = 8, MARGIN = 3, MULTI_GAP = 3;
+        const PADDING = 8, MARGIN = 3;
         const r = el.getBoundingClientRect();
         const vw = window.innerWidth, vh = window.innerHeight;
 

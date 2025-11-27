@@ -366,7 +366,7 @@ export default class IndustryPanel {
             }
         }
         
-        for (const [type] of Object.entries(prevState)) {
+        for (const [type,] of Object.entries(prevState)) {
             if (!currentState[type]) {
                 changed = true;
                 break;
@@ -439,9 +439,7 @@ export default class IndustryPanel {
         row.className = 'building-row';
 
         const mainBtn = document.createElement('button');
-        mainBtn.className = 'building-main-btn hastip';
-        mainBtn.dataset.tip = 'building-lore';
-        mainBtn.dataset.buildingType = type;
+        mainBtn.className = 'building-main-btn';
         mainBtn.style.position = 'relative';
         const hasBuildCost = def && def.buildCost && Object.keys(def.buildCost).length > 0;
         mainBtn.innerHTML = `
@@ -449,6 +447,12 @@ export default class IndustryPanel {
             <span class="building-title">${def ? def.name : type} <span class="building-count">(${building.count})</span></span>
             <span class="resource-progress-indicator" style="display: ${hasBuildCost ? '' : 'none'}"></span>
         `;
+        const titleSpan = mainBtn.querySelector('.building-title');
+        if (titleSpan) {
+            titleSpan.classList.add('hastip');
+            titleSpan.dataset.tip = 'building-lore';
+            titleSpan.dataset.buildingType = type;
+        }
         mainBtn.onclick = () => this.handleBuildAction(type, def);
 
         const workerBtn = document.createElement('button');
@@ -586,7 +590,8 @@ export default class IndustryPanel {
         `;
     }
 
-    getWorkersSection(type, def) {
+    getWorkersSection(type, def, b) {
+        const workerCount = b.workers || 0;
         const hirePlan = this.getActionPlanDetails('hire', type);
         const furloughPlan = this.getActionPlanDetails('furlough', type);
         const canAdd = hirePlan.actual > 0;
@@ -1094,7 +1099,7 @@ export default class IndustryPanel {
         this.updateButtonInfoBox(button, details);
     }
 
-    updateFurloughButton(card, type) {
+    updateFurloughButton(card, type, def) {
         const button = card.dropdown?.querySelector('.dropdown-workers .dropdown-remove-worker-btn');
         if (!button) return;
         
@@ -1484,7 +1489,7 @@ export default class IndustryPanel {
                 
                 this.updateBuildButton(card, type, def);
                 this.updateMainButton(card, type, def);
-                this.updateDemolishButton(card, type, def, b);
+                this.updateDemolishButton(card, type);
                 this.updateHireButton(card, type, def, b);
                 this.updateFurloughButton(card, type, def, b);
                 
