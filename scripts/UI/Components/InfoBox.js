@@ -1,4 +1,10 @@
 export default function createInfoBox(targetElement, message, options = {}) {
+    const processMessage = (msg) => {
+        if (!msg) return msg;
+        const str = String(msg);
+        return str.replace(/^(<p[^>]*>)/, '$1<span class="info-glyph">ⓘ</span> ');
+    };
+    
     const box = document.createElement('div');
     box.className = 'infobox';
     if (options.id) {
@@ -8,7 +14,7 @@ export default function createInfoBox(targetElement, message, options = {}) {
     
     const content = document.createElement('div');
     content.className = 'infobox-content';
-    content.innerHTML = message;
+    content.innerHTML = processMessage(message);
     
     const dismissNote = document.createElement('div');
     dismissNote.className = 'infobox-dismiss';
@@ -135,9 +141,9 @@ export default function createInfoBox(targetElement, message, options = {}) {
             }
             const newMessage = options.updateFn();
             if (newMessage) {
-                const oldContent = content.innerHTML;
-                content.innerHTML = newMessage;
-                if (oldContent !== newMessage) {
+                const processed = processMessage(newMessage);
+                if (content.innerHTML !== processed) {
+                    content.innerHTML = processed;
                     positionBox();
                 }
             }
@@ -187,7 +193,7 @@ export default function createInfoBox(targetElement, message, options = {}) {
     box._dismiss = dismiss;
     
     const updateMessage = (newMessage) => {
-        content.innerHTML = newMessage;
+        content.innerHTML = processMessage(newMessage);
         positionBox();
     };
     box._updateMessage = updateMessage;

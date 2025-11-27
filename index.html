@@ -1379,16 +1379,23 @@
             max-width: 20em;
             cursor: pointer;
             font-family: SourceSerif, serif;
-            font-size: 0.9em;
+            font-size: 0.825em;
             pointer-events: auto;
             transition: opacity 0.15s;
 
             .infobox-content {
                 color: var(--baseColor);
                 margin: 0;
+                user-select: none;
                 
                 p {
                     margin: 0;
+                }
+                
+                .info-glyph {
+                    font-size: 0.95em;
+                    display: inline;
+                    font-weight: bolder;
                 }
             }
 
@@ -1407,6 +1414,7 @@
                 width: 0;
                 height: 0;
                 border: 6px solid transparent;
+                pointer-events: none;
             }
 
             &.infobox-above::before {

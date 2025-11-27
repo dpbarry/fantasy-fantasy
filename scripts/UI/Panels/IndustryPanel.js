@@ -440,6 +440,7 @@ export default class IndustryPanel {
 
         const mainBtn = document.createElement('button');
         mainBtn.className = 'building-main-btn';
+        mainBtn.dataset.buildingType = type;
         mainBtn.style.position = 'relative';
         const hasBuildCost = def && def.buildCost && Object.keys(def.buildCost).length > 0;
         mainBtn.innerHTML = `
@@ -1615,10 +1616,10 @@ export default class IndustryPanel {
                             if (!drainWarningDiv) {
                                 const drainWarningElement = document.createElement('div');
                                 drainWarningElement.className = 'worker-drain-warning';
-                                drainWarningElement.textContent = `⚠ Input ${resourceText} is at a deficit.`;
+                                drainWarningElement.textContent = `⚠ Worker input ${resourceText} is at a deficit.`;
                                 sectionBody.appendChild(drainWarningElement);
                             } else {
-                                drainWarningDiv.textContent = `⚠ Input ${resourceText} is at a deficit.`;
+                                drainWarningDiv.textContent = `⚠ Worker input ${resourceText} is at a deficit.`;
                             }
                             if (strikeDiv) strikeDiv.remove();
                             if (limitedDiv) limitedDiv.remove();
