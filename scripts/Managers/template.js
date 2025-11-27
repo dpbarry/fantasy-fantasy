@@ -14,7 +14,7 @@ export default class Manager {
         
     }
 
-    getStatus() {
+    getData() {
         return {...this};
     }
 

@@ -1281,7 +1281,7 @@
             z-index: 999;
 
             p + p {
-                margin-top: 0.2em;
+                margin-top: 0.05em;
             }
         }
 
@@ -1650,7 +1650,7 @@
                     pointer-events: none;
                 }
 
-                .resource-row.has-cap:first-of-type::before {
+                .chevron + .resource-row.has-cap::before {
                     border-top-left-radius: 0.2em;
                     border-top-right-radius: 0.2em;
                 }
@@ -1913,9 +1913,9 @@
                     position: relative;
                     overflow: hidden;
                     background: color-mix(in oklab, var(--bgColor) 95%, var(--accent));
-                    transition: grid-template-rows 0.25s ease, 
-                                opacity 0.25s ease,
-                                margin-bottom 0.25s ease;
+                    transition: grid-template-rows 0.15s ease, 
+                                opacity 0.15s ease,
+                                margin-bottom 0.15s ease;
                     pointer-events: none;
                     margin-bottom: -1em;
 

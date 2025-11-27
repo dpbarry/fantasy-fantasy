@@ -29,6 +29,8 @@ export default class IndustryManager {
     static ACTION_STEPS = [1, 5, 10, 25, 50, 100, 'max'];
 
     #loops = {};
+    #cache = {dirty: true, rates: new Map()};
+    #recalculating = false;
 
     constructor(core) {
         this.core = core;
@@ -44,281 +46,417 @@ export default class IndustryManager {
         this.workersOnStrike = false;
         this.configs = {resourceBoxExpanded: true, actionIncrement: 1};
         this.buildings = {};
-        this.initializeBuildings();
-    }
-
-    initializeBuildings() {
         for (const type in IndustryManager.BUILDING_DEFS) {
-            this.buildings[type] = this.createBuildingData(type);
+            this.buildings[type] = {count: 0, workers: 0, dropped: false, unlocked: type === 'farmPlot'};
         }
     }
 
-    createBuildingData(type) {
-        return {count: 0, workers: 0, upgrades: {}, dropped: false, unlocked: type === 'farmPlot'};
+    // ═══════════════════════════════════════════════════════════════════════════
+    // UPGRADE SYSTEM 
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #upgrades = new Set();
+
+    // Add an upgrade function. Returns a removal function.
+    // Upgrades receive context and can return: {gain, drain, addGain, addDrain, gainMult, drainMult}
+    // Meta-upgrades check for upgradeFn/upgradeResult in context to target other upgrades
+    // Optional filters: {buildingTypes?: string[], resources?: string[], effectTypes?: string[]}
+    // Optional priority: lower numbers apply first (default: 100)
+    upgrade(fn, filters = null, priority = 100) {
+        const entry = {fn, filters, priority};
+        this.#upgrades.add(entry);
+        this.#cache.dirty = true;
+        return () => {
+            if (this.#upgrades.delete(entry)) {
+                this.#cache.dirty = true;
+            }
+        };
     }
 
-    getSelectedIncrement() {
-        const value = this.configs?.actionIncrement;
-        if (value === 'max') return 'max';
-        const num = Number(value);
-        if (!Number.isFinite(num) || num < 1) return 1;
-        return Math.floor(num);
+    #sortedUpgrades() {
+        return Array.from(this.#upgrades).sort((a, b) => a.priority - b.priority);
     }
 
-    setSelectedIncrement(step) {
-        const valid = IndustryManager.ACTION_STEPS.includes(step) ? step : 1;
-        this.configs.actionIncrement = valid;
+    #applies(entry, buildingType, resource, effectType) {
+        if (!entry.filters) return true;
+        const f = entry.filters;
+        if (f.buildingTypes && !f.buildingTypes.includes(buildingType)) return false;
+        if (f.resources && !f.resources.includes(resource)) return false;
+        if (f.effectTypes && !f.effectTypes.includes(effectType)) return false;
+        return true;
     }
 
-    cycleActionIncrement() {
-        const steps = IndustryManager.ACTION_STEPS;
-        const current = this.getSelectedIncrement();
-        const idx = steps.findIndex(s => s === current);
-        const next = steps[(idx + 1) % steps.length];
-        this.setSelectedIncrement(next);
-        this.broadcast();
-        return next;
-    }
+    // ═══════════════════════════════════════════════════════════════════════════
+    // RATE CALCULATION
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    getActionPlan(action, type) {
-        const limit = Math.max(0, Math.floor(this.getActionLimit(action, type)));
-        const selected = this.getSelectedIncrement();
-        let target;
-        if (selected === 'max') {
-            target = Math.max(1, limit);
-        } else {
-            target = Math.max(1, selected);
+    recalculate() {
+        if (!this.#cache.dirty || this.#recalculating) return;
+        
+        this.#recalculating = true;
+            const rates = new Map();
+            const ctx = this.#createContext(rates);
+            
+            for (const [type, b] of Object.entries(this.buildings)) {
+                const def = IndustryManager.BUILDING_DEFS[type];
+                if (!def?.effects || b.count === 0) continue;
+                
+                for (const [res, eff] of Object.entries(def.effects)) {
+                    if (eff.base) {
+                        const rate = this.#computeRate(ctx, type, res, 'base', eff.base, b.count);
+                        rates.set(res, (rates.get(res) || 0) + rate);
+                    }
+                    if (eff.worker && b.workers > 0) {
+                        const rate = this.#computeRate(ctx, type, res, 'worker', eff.worker, b.workers);
+                        rates.set(res, (rates.get(res) || 0) + rate);
+                    }
+                }
+            }
+            
+            this.#cache.rates = rates;
+            this.#cache.dirty = false;
+            this.#recalculating = false;
         }
-        const actual = selected === 'max' ? limit : Math.min(limit, target);
-        return {selected, target, actual, limit};
+    
+
+    #createContext(rates) {
+        return {
+            resources: this.resources,
+            buildings: this.buildings,
+            rate: (res) => rates.get(res) || 0,
+            prevRate: (res) => this.#cache.rates.get(res) || 0,
+            value: (res) => this.resources[res]?.value.toNumber() || 0,
+            count: (type) => this.buildings[type]?.count || 0,
+            workers: (type) => this.buildings[type]?.workers || 0,
+            inSet: (type, set) => set.includes(type),
+        };
     }
 
-    getActionLimit(action, type) {
-        const b = this.buildings[type];
-        switch (action) {
-            case 'build':
-                return this.getMaxBuildCount(type);
-            case 'sell':
-                return b ? b.count : 0;
-            case 'hire':
-                if (!b || b.count === 0) return 0;
-                const maxWorkers = this.getMaxWorkers(type);
-                const currentWorkers = b.workers || 0;
-                const availableSlots = maxWorkers - currentWorkers;
-                return Math.min(this.unassignedWorkers, availableSlots);
-            case 'furlough':
-                return b && b.workers ? b.workers : 0;
-            default:
-                return 0;
+    #computeRate(ctx, buildingType, resource, effectType, eff, units) {
+        let gain = eff.gain || 0;
+        let drain = eff.drain || 0;
+        let gainMult = 1;
+        let drainMult = 1;
+        
+        ctx.buildingType = buildingType;
+        ctx.resource = resource;
+        ctx.effectType = effectType;
+        ctx.units = units;
+        
+        for (const entry of this.#sortedUpgrades()) {
+            if (!this.#applies(entry, buildingType, resource, effectType)) continue;
+            // Skip if this is a meta-upgrade (checks for upgradeResult)
+            if (ctx.upgradeResult !== undefined) continue;
+            
+            const upgradeFn = entry.fn;
+            ctx.gain = gain;
+            ctx.drain = drain;
+            ctx.gainMult = gainMult;
+            ctx.drainMult = drainMult;
+            
+            let mod = upgradeFn(ctx);
+            if (!mod) continue;
+            
+            // Apply meta-upgrades to this result
+            mod = this.#applyMetaUpgrades(mod, entry, ctx);
+            
+            if (mod.gain !== undefined) gain = mod.gain;
+            if (mod.drain !== undefined) drain = mod.drain;
+            if (mod.addGain !== undefined) gain += mod.addGain;
+            if (mod.addDrain !== undefined) drain += mod.addDrain;
+            if (mod.gainMult !== undefined) gainMult *= mod.gainMult;
+            if (mod.drainMult !== undefined) drainMult *= mod.drainMult;
         }
+        
+        return (gain * gainMult - drain * drainMult) * units;
     }
 
-    getMaxBuildCount(type) {
-        const def = IndustryManager.BUILDING_DEFS[type];
-        if (!def || !def.buildCost) return Number.MAX_SAFE_INTEGER;
-        let max = Infinity;
-        for (const [res, cost] of Object.entries(def.buildCost)) {
-            const resObj = this.resources[res];
-            if (!resObj) return 0;
-            const costNum = cost && typeof cost.toNumber === 'function' ? cost.toNumber() : Number(cost || 0);
-            if (costNum <= 0) continue;
-            const current = resObj.value.toNumber();
-            const possible = Math.floor(current / costNum);
-            if (possible < max) max = possible;
-        }
-        if (max === Infinity) return Number.MAX_SAFE_INTEGER;
-        if (!Number.isFinite(max) || max < 0) return 0;
-        return max;
-    }
-
-    getMaxWorkers(type) {
-        const def = IndustryManager.BUILDING_DEFS[type];
-        const b = this.buildings[type];
-        if (!def || !b) return 0;
-        const perBuilding = def.workersPerBuilding || 0;
-        return perBuilding * b.count;
-    }
-
-    static multiplyValue(value, amount) {
-        if (value && typeof value.times === 'function') {
-            return value.times(amount);
-        }
-        if (value && typeof value.toNumber === 'function') {
-            return value.toNumber() * amount;
-        }
-        return (value || 0) * amount;
-    }
-
-    getBaseRate(resName) {
-        let total = 0;
-        for (const [type, b] of Object.entries(this.buildings)) {
-            const def = IndustryManager.BUILDING_DEFS[type];
-            if (!def || !def.effects || !def.effects[resName]) continue;
-            const base = def.effects[resName].base;
-            if (base) {
-                if (base.gain) total += b.count * base.gain;
-                if (base.drain) total -= b.count * base.drain;
+    #applyMetaUpgrades(mod, sourceEntry, ctx) {
+        let current = mod;
+        for (const entry of this.#sortedUpgrades()) {
+            if (entry === sourceEntry) continue;
+            
+            // Get what upgrade returns in normal context
+            const normalCtx = {...ctx};
+            normalCtx.gain = ctx.gain;
+            normalCtx.drain = ctx.drain;
+            normalCtx.mult = ctx.mult;
+            const normalResult = entry.fn(normalCtx);
+            
+            // Get what it returns in meta context
+            const metaCtx = {...ctx, upgradeFn: sourceEntry.fn, upgradeResult: current};
+            const metaResult = entry.fn(metaCtx);
+            
+            // Only apply if meta result differs from normal result (meaning it used upgradeResult)
+            if (metaResult && this.#resultsDiffer(metaResult, normalResult)) {
+                current = metaResult;
             }
         }
-        return new Decimal(total);
+        return current;
     }
 
-    getRawWorkerRate(resName) {
-        let total = 0;
-        for (const [type, b] of Object.entries(this.buildings)) {
-            const def = IndustryManager.BUILDING_DEFS[type];
-            if (!def || !def.effects || !def.effects[resName]) continue;
-            const worker = def.effects[resName].worker;
-            if (worker) {
-                if (worker.gain) total += b.workers * worker.gain;
-                if (worker.drain) total -= b.workers * worker.drain;
-            }
+    #resultsDiffer(a, b) {
+        if (!a && !b) return false;
+        if (!a || !b) return true;
+        const keys = ['gain', 'drain', 'addGain', 'addDrain', 'gainMult', 'drainMult'];
+        for (const key of keys) {
+            if (a[key] !== b[key]) return true;
         }
-        return new Decimal(total);
+        return false;
     }
 
-    getWorkerScalingFactor() {
+    getRate(res) {
+        this.recalculate();
+        return this.#cache.rates.get(res) || 0;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // WORKER SCALING 
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    getWorkerScale() {
         if (this.workersOnStrike) return 0;
         
-        let minScale = 1;
-        for (const resName in this.resources) {
-            const workerRate = this.getRawWorkerRate(resName);
-            if (workerRate.lt(0)) {
-                const desiredDrain = Math.abs(workerRate.toNumber());
-                if (desiredDrain === 0) continue;
-                
-                const currentValue = this.resources[resName].value.toNumber();
-                if (currentValue > 0) {
-                    continue;
-                }
-                
-                const baseRate = this.getBaseRate(resName);
-                const baseProduction = baseRate.toNumber();
-                const scale = baseProduction / desiredDrain;
-                
-                if (scale < minScale) {
-                    minScale = scale;
+        // Find all resources that workers drain
+        const workerDrains = new Map();
+        for (const [type, b] of Object.entries(this.buildings)) {
+            if (b.workers <= 0) continue;
+            const def = IndustryManager.BUILDING_DEFS[type];
+            if (!def?.effects) continue;
+            for (const [res, eff] of Object.entries(def.effects)) {
+                if (eff.worker?.drain) {
+                    workerDrains.set(res, (workerDrains.get(res) || 0) + eff.worker.drain * b.workers);
                 }
             }
         }
+        
+        if (workerDrains.size === 0) return 1;
+        
+        // Check each drained resource
+        let minScale = 1;
+        for (const [res, workerDrain] of workerDrains) {
+            const val = this.resources[res]?.value.toNumber() || 0;
+            if (val > 0) continue; // Resource not depleted
+            
+            // Calculate non-worker production of this resource
+            let production = 0;
+            for (const [type, b] of Object.entries(this.buildings)) {
+                const def = IndustryManager.BUILDING_DEFS[type];
+                const eff = def?.effects?.[res];
+                if (eff?.base?.gain) {
+                    const {gain} = this.#computeEffectiveEffects(type, res, 'base', eff.base.gain, 0, b.count);
+                    production += gain;
+                }
+            }
+            
+            // Scale = production / drain
+            if (workerDrain > 0) {
+                const scale = production / workerDrain;
+                if (scale < minScale) minScale = scale;
+            }
+        }
+        
         return Math.max(0, Math.min(1, minScale));
     }
 
-    getBottleneckResources() {
-        if (this.workersOnStrike) return [];
-        
-        const scale = this.getWorkerScalingFactor();
+    getBottlenecks() {
+        const scale = this.getWorkerScale();
         if (scale >= 1) return [];
         
         const bottlenecks = [];
-        for (const resName in this.resources) {
-            const workerRate = this.getRawWorkerRate(resName);
-            if (workerRate.lt(0)) {
-                const desiredDrain = Math.abs(workerRate.toNumber());
-                if (desiredDrain === 0) continue;
-                
-                const currentValue = this.resources[resName].value.toNumber();
-                if (currentValue > 0) continue;
-                
-                const baseRate = this.getBaseRate(resName);
-                const baseProduction = baseRate.toNumber();
-                const resourceScale = baseProduction / desiredDrain;
-                
-                // Resource is a bottleneck if its scale matches or is close to the minimum
-                if (Math.abs(resourceScale - scale) < 0.001) {
-                    bottlenecks.push(resName);
+        for (const [type, b] of Object.entries(this.buildings)) {
+            if (b.workers <= 0) continue;
+            const def = IndustryManager.BUILDING_DEFS[type];
+            if (!def?.effects) continue;
+            for (const [res, eff] of Object.entries(def.effects)) {
+                if (!eff.worker?.drain) continue;
+                const val = this.resources[res]?.value.toNumber() || 0;
+                if (val <= 0 && !bottlenecks.includes(res)) {
+                    bottlenecks.push(res);
                 }
             }
         }
         return bottlenecks;
     }
 
-    getEffectiveWorkerRate(resName) {
-        if (this.workersOnStrike) return new Decimal(0);
-        const rawRate = this.getRawWorkerRate(resName);
-        if (rawRate.eq(0)) return rawRate;
-        
-        const scale = this.getWorkerScalingFactor();
-        return rawRate.times(scale);
-    }
+    // ═══════════════════════════════════════════════════════════════════════════
+    // RESOURCE CAPS
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    getEffectiveCap(resName) {
-        const resource = this.resources[resName];
-        if (!resource) return undefined;
+    getCap(res) {
+        const resource = this.resources[res];
+        if (!resource?.cap) return undefined;
         
-        const baseCap = resource.cap;
-        if (baseCap === undefined) return undefined;
-        
-        let capIncrease = new Decimal(0);
+        let cap = resource.cap.toNumber();
         for (const [type, b] of Object.entries(this.buildings)) {
-            const def = IndustryManager.BUILDING_DEFS[type];
-            if (!def || !def.capIncrease || !def.capIncrease[resName]) continue;
-            const increase = def.capIncrease[resName];
-            const increaseValue = increase && typeof increase.toNumber === 'function' ? increase : new Decimal(increase || 0);
-            capIncrease = capIncrease.plus(increaseValue.times(b.count));
+            const increase = IndustryManager.BUILDING_DEFS[type]?.capIncrease?.[res];
+            if (increase) cap += increase * b.count;
         }
-        
-        return baseCap.plus(capIncrease);
+        return new Decimal(cap);
     }
 
-    setupGrowthFns() {
-        for (const resName in this.resources) {
-            const resource = this.resources[resName];
-            if (!resource) continue;
-            resource.growthFns = {};
-            resource.addGrowthFn('buildingBase', () => this.getBaseRate(resName));
-            resource.addGrowthFn('buildingWorker', () => this.getEffectiveWorkerRate(resName));
-            if (resource.cap !== undefined) {
-                resource.capFn = () => this.getEffectiveCap(resName);
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ACTIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    build(type, amount = null) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        const b = this.buildings[type];
+        if (!def || !b) return 0;
+
+        amount = amount ?? this.getActionPlan('build', type).actual;
+        if (amount <= 0) return 0;
+
+        if (def.buildCost) {
+            for (const [res, cost] of Object.entries(def.buildCost)) {
+                const total = cost * amount;
+                if (!this.resources[res] || this.resources[res].value.lt(total)) return 0;
+            }
+            for (const [res, cost] of Object.entries(def.buildCost)) {
+                this.resources[res].subtract(cost * amount);
             }
         }
-    }
 
-    boot() {
-        if (this.access.basic) {
-            document.querySelector("#industrynav").classList.remove("locked");
-        }
-
-        if (this.configs.resourceBoxExpanded) {
-            this.core.ui.panels.industry.toggleView();
-        }
-        this.setupGrowthFns();
-    }
-
-    performTheurgy(theurgyType) {
-        let changes = [];
-        switch (theurgyType) {
-            case "plant":
-                this.resources.crops.add(1);
-                changes.push({type: "gain", amt: 1, res: "crops"});
-                break;
-            case "harvest":
-                if (this.resources.crops.value.gte(1)) {
-                    this.resources.crops.subtract(1);
-                    this.resources.food.add(1);
-                    changes.push({type: "drain", amt: 1, res: "crops"});
-                    changes.push({type: "gain", amt: 1, res: "food"});
-                }
-                break;
-        }
+        b.count += amount;
+        this.#cache.dirty = true;
         this.broadcast();
-        return changes;
+        return amount;
     }
 
-    canPerformTheurgy(theurgyType) {
-        switch (theurgyType) {
-            case "plant":
-                return true;
-            case "harvest":
-                return this.resources.crops.value.gte(1);
-            default:
-                return false;
+    sell(type, amount = null) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        const b = this.buildings[type];
+        if (!b || b.count <= 0) return 0;
+
+        amount = amount ?? this.getActionPlan('sell', type).actual;
+        if (amount <= 0) return 0;
+
+        if (def?.sellReward) {
+            for (const [res, reward] of Object.entries(def.sellReward)) {
+                if (this.resources[res]) this.resources[res].add(reward * amount);
+            }
         }
+
+        b.count = Math.max(0, b.count - amount);
+        const maxWorkers = (def?.workersPerBuilding || 0) * b.count;
+        if (b.workers > maxWorkers) b.workers = maxWorkers;
+        
+        this.#cache.dirty = true;
+        this.broadcast();
+        return amount;
+    }
+
+    hire(type, amount = null) {
+        const b = this.buildings[type];
+        if (!b || b.count === 0) return 0;
+        
+        amount = amount ?? this.getActionPlan('hire', type).actual;
+        if (amount <= 0) return 0;
+        
+        b.workers = (b.workers || 0) + amount;
+        this.#cache.dirty = true;
+        this.broadcast();
+        return amount;
+    }
+
+    furlough(type, amount = null) {
+        const b = this.buildings[type];
+        if (!b || !b.workers) return 0;
+        
+        amount = amount ?? this.getActionPlan('furlough', type).actual;
+        if (amount <= 0) return 0;
+        
+        b.workers = Math.max(0, b.workers - amount);
+        this.#cache.dirty = true;
+        this.broadcast();
+        return amount;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ACTION PLANNING
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    getActionPlan(action, type) {
+        const limit = this.getActionLimit(action, type);
+        const selected = this.configs.actionIncrement;
+        const target = selected === 'max' ? Math.max(1, limit) : Math.max(1, selected);
+        const actual = selected === 'max' ? limit : Math.min(limit, target);
+        return {selected, target, actual, limit};
+    }
+
+    getActionLimit(action, type) {
+        const b = this.buildings[type];
+        const def = IndustryManager.BUILDING_DEFS[type];
+        
+        switch (action) {
+            case 'build': {
+                if (!def?.buildCost) return Infinity;
+                let max = Infinity;
+                for (const [res, cost] of Object.entries(def.buildCost)) {
+                    const have = this.resources[res]?.value.toNumber() || 0;
+                    max = Math.min(max, Math.floor(have / cost));
+                }
+                return max;
+            }
+            case 'sell':
+                return b?.count || 0;
+            case 'hire': {
+                if (!b?.count) return 0;
+                const maxWorkers = (def?.workersPerBuilding || 0) * b.count;
+                const slots = maxWorkers - (b.workers || 0);
+                return Math.min(this.unassignedWorkers, slots);
+            }
+            case 'furlough':
+                return b?.workers || 0;
+            default:
+                return 0;
+        }
+    }
+
+    cycleIncrement() {
+        const steps = IndustryManager.ACTION_STEPS;
+        const idx = steps.indexOf(this.configs.actionIncrement);
+        this.configs.actionIncrement = steps[(idx + 1) % steps.length];
+        this.broadcast();
+    }
+
+    get unassignedWorkers() {
+        const assigned = Object.values(this.buildings).reduce((a, b) => a + (b.workers || 0), 0);
+        return Math.max(0, Math.floor(this.resources.workers.value.toNumber() - assigned));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // GAME LOOP
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    tick(dt) {
+        this.recalculate();
+        
+        // Check worker strike
+        const foodRate = this.#cache.rates.get('food') || 0;
+        const foodDrain = foodRate < 0 ? Math.abs(foodRate) : 0;
+        const food = this.resources.food;
+        this.workersOnStrike = food && food.value.lt(foodDrain) && food.netGrowthRate.toNumber() < 0;
+
+        for (const resource of Object.values(this.resources)) {
+            resource.update(dt);
+        }
+    }
+
+    broadcast() {
+        this.recalculate();
+        const scale = this.getWorkerScale();
+        
+        for (const [res, resource] of Object.entries(this.resources)) {
+            const rate = this.#cache.rates.get(res) || 0;
+            resource.rate = new Decimal(this.workersOnStrike ? (rate > 0 ? rate : 0) : rate * (rate < 0 ? scale : 1));
+        }
+        this.core.ui.panels.industry.render(this.getData());
     }
 
     updateLoops() {
         if (this.core.ui.activePanels.center === "industry" && !this.#loops.industry) {
-           this.broadcast();
+            this.broadcast();
             this.#loops.industry = this.core.ui.createRenderInterval(() => this.broadcast());
         } else if (this.core.ui.activePanels.center !== "industry") {
             this.core.ui.destroyRenderInterval(this.#loops.industry);
@@ -326,37 +464,51 @@ export default class IndustryManager {
         }
     }
 
-    tick(dt) {
-        let totalFoodDrain = 0;
-        for (const [type, b] of Object.entries(this.buildings)) {
-            const def = IndustryManager.BUILDING_DEFS[type];
-            if (def && def.effects && def.effects.food && def.effects.food.worker && def.effects.food.worker.drain) {
-                totalFoodDrain += b.workers * def.effects.food.worker.drain;
+    // ═══════════════════════════════════════════════════════════════════════════
+    // BOOT / SERIALIZATION
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    boot() {
+        if (this.access.basic) {
+            document.querySelector("#industrynav").classList.remove("locked");
+        }
+        if (this.configs.resourceBoxExpanded) {
+            this.core.ui.panels.industry.toggleView();
+        }
+        this.#setupGrowthFns();
+        this.#setupWisdomUpgrade();
+    }
+
+    #setupWisdomUpgrade() {
+        this.upgrade(ctx => {
+            const wisdom = this.core.city?.ruler?.wisdom || 0;
+            if (wisdom <= 0) return null;
+            return {gainMult: 1 + wisdom * 0.01};
+        }, null, 50);
+    }
+
+    #setupGrowthFns() {
+        for (const [res, resource] of Object.entries(this.resources)) {
+            resource.growthFns = {};
+            resource.addGrowthFn('industry', () => {
+                this.recalculate();
+                const rate = this.#cache.rates.get(res) || 0;
+                const scale = this.getWorkerScale();
+                return new Decimal(this.workersOnStrike ? (rate > 0 ? rate : 0) : rate * (rate < 0 ? scale : 1));
+            });
+            if (resource.cap !== undefined) {
+                resource.capFn = () => this.getCap(res);
             }
         }
-        const foodResource = this.resources.food;
-        const foodNetRate = foodResource ? foodResource.netGrowthRate.toNumber() : 0;
-        this.workersOnStrike = foodResource && foodResource.value.lt(totalFoodDrain) && foodNetRate < 0;
-
-        Object.values(this.resources).forEach(resource => {
-            resource.update(dt);
-        });
     }
 
-    broadcast() {
-        Object.entries(this.resources).forEach(([resName, resource]) => {
-            const baseRate = this.getBaseRate(resName);
-            const workerRate = this.getEffectiveWorkerRate(resName);
-            resource.rate = baseRate.plus(workerRate);
-        });
-        this.core.ui.panels.industry.render(this.getStatus());
-    }
-
-    getStatus() {
+    getData() {
         return {
             ...this,
-            resources: Object.fromEntries(Object.entries(this.resources).filter(([, value]) => value.isDiscovered))
-        }
+            resources: Object.fromEntries(
+                Object.entries(this.resources).filter(([, r]) => r.isDiscovered)
+            )
+        };
     }
 
     serialize() {
@@ -370,287 +522,364 @@ export default class IndustryManager {
     deserialize(data, savedTimestamp) {
         const {resources, buildings, ...rest} = data;
         if (resources) {
-            for (let [k, rd] of Object.entries(resources)) {
+            for (const [k, rd] of Object.entries(resources)) {
                 this.resources[k] = Resource.deserialize(rd);
             }
         }
         if (buildings) {
             for (const [type, bData] of Object.entries(buildings)) {
-                if (this.buildings[type]) {
-                    Object.assign(this.buildings[type], bData);
-                } else {
-                    this.buildings[type] = {...this.createBuildingData(type), ...bData};
-                }
+                if (this.buildings[type]) Object.assign(this.buildings[type], bData);
             }
         }
         Object.assign(this, rest);
-        this.setupGrowthFns();
+        this.#setupGrowthFns();
+        this.#cache.dirty = true;
         
         if (savedTimestamp && this.core.settings.configs.offlineprogress === "on") {
             const offlineTime = Math.min((Date.now() - savedTimestamp) / 1000, 86400);
-            if (offlineTime > 0) {
-                this.tick(offlineTime);
-            }
+            if (offlineTime > 0) this.tick(offlineTime);
         }
         
         this.broadcast();
     }
 
-    get unassignedWorkers() {
-        const assigned = Object.values(this.buildings).reduce((a, b) => a + (b.workers || 0), 0);
-        return Math.max(0, Math.floor(this.resources.workers.value.toNumber() - assigned));
-    }
+    // ═══════════════════════════════════════════════════════════════════════════
+    // THEURGY (Manual actions)
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    buildBuilding(type) {
-        const def = IndustryManager.BUILDING_DEFS[type];
-        const b = this.buildings[type];
-        if (!def || !b) return 0;
-
-        const amount = this.getActionPlan('build', type).actual;
-        if (amount <= 0) return 0;
-
-        if (!def.buildCost || Object.keys(def.buildCost).length === 0) {
-            b.count += amount;
-            this.broadcast();
-            return amount;
+    performTheurgy(type) {
+        const changes = [];
+        if (type === "plant") {
+            this.resources.crops.add(1);
+            changes.push({type: "gain", amt: 1, res: "crops"});
+        } else if (type === "harvest" && this.resources.crops.value.gte(1)) {
+            this.resources.crops.subtract(1);
+            this.resources.food.add(1);
+            changes.push({type: "drain", amt: 1, res: "crops"});
+            changes.push({type: "gain", amt: 1, res: "food"});
         }
-
-        const totals = {};
-        for (const [res, cost] of Object.entries(def.buildCost)) {
-            const totalCost = IndustryManager.multiplyValue(cost, amount);
-            totals[res] = totalCost;
-            if (!this.resources[res] || this.resources[res].value.lt(totalCost)) {
-                return 0;
-            }
-        }
-        for (const [res, totalCost] of Object.entries(totals)) {
-            this.resources[res].subtract(totalCost);
-        }
-        b.count += amount;
         this.broadcast();
-        return amount;
+        return changes;
     }
 
-    sellBuilding(type) {
-        const def = IndustryManager.BUILDING_DEFS[type];
-        const b = this.buildings[type];
-        if (!b || b.count <= 0) return 0;
-
-        const amount = this.getActionPlan('sell', type).actual;
-        if (amount <= 0) return 0;
-
-        if (def && def.sellReward) {
-            for (const [res, reward] of Object.entries(def.sellReward)) {
-                if (this.resources[res]) {
-                    const totalReward = IndustryManager.multiplyValue(reward, amount);
-                    this.resources[res].add(totalReward);
-                }
-            }
-        }
-
-        b.count -= amount;
-        if (b.count < 0) b.count = 0;
-        
-        // Auto-furlough workers if they exceed new limit
-        const maxWorkers = this.getMaxWorkers(type);
-        if (b.workers > maxWorkers) {
-            b.workers = maxWorkers;
-        }
-        
-        this.broadcast();
-        return amount;
+    canPerformTheurgy(type) {
+        return type === "plant" || (type === "harvest" && this.resources.crops.value.gte(1));
     }
 
-    assignWorkerToBuilding(type) {
-        const b = this.buildings[type];
-        if (!b || b.count === 0) return 0;
-        const amount = this.getActionPlan('hire', type).actual;
-        if (amount <= 0) return 0;
-        b.workers = (b.workers || 0) + amount;
-        this.broadcast();
-        return amount;
-    }
+    // ═══════════════════════════════════════════════════════════════════════════
+    // QUERY HELPERS - For UI (kept minimal)
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    unassignWorkerFromBuilding(type) {
-        const b = this.buildings[type];
-        if (!b || (b.workers || 0) <= 0) return 0;
-        const amount = this.getActionPlan('furlough', type).actual;
-        if (amount <= 0) return 0;
-        b.workers -= amount;
-        if (b.workers < 0) b.workers = 0;
-        this.broadcast();
-        return amount;
-    }
-
-    getBuildEffects(type) {
-        const def = IndustryManager.BUILDING_DEFS[type];
-        if (!def) return null;
-
-        const costs = [];
-        if (def.buildCost) {
-            Object.entries(def.buildCost).forEach(([res, amt]) => {
-                costs.push({res, amt: amt.toNumber ? amt.toNumber() : amt});
-            });
-        }
-
-        const effects = {};
-        if (def.effects) {
-            for (const [res, eff] of Object.entries(def.effects)) {
-                if (!eff.base) continue;
-                let net = 0;
-                if (eff.base.gain) net += eff.base.gain.toNumber ? eff.base.gain.toNumber() : eff.base.gain;
-                if (eff.base.drain) net -= eff.base.drain.toNumber ? eff.base.drain.toNumber() : eff.base.drain;
-                if (net !== 0) {
-                    effects[res] = net;
-                }
-            }
-        }
-
-        if (costs.length === 0 && Object.keys(effects).length === 0) return null;
-        return {costs, effects};
-    }
-
-    getDemolishEffects(type) {
-        const def = IndustryManager.BUILDING_DEFS[type];
-        if (!def) return null;
-
-        const rewards = [];
-        if (def.sellReward) {
-            Object.entries(def.sellReward).forEach(([res, amt]) => {
-                rewards.push({res, amt: amt.toNumber ? amt.toNumber() : amt});
-            });
-        }
-
-        const effects = {};
-        if (def.effects) {
-            for (const [res, eff] of Object.entries(def.effects)) {
-                if (!eff.base) continue;
-                let net = 0;
-                if (eff.base.gain) net -= eff.base.gain;
-                if (eff.base.drain) net += eff.base.drain;
-                if (net !== 0) {
-                    effects[res] = net;
-                }
-            }
-        }
-
-        if (rewards.length === 0 && Object.keys(effects).length === 0) return null;
-        return {rewards, effects};
-    }
-
-    getHireWorkerEffects(type) {
-        const def = IndustryManager.BUILDING_DEFS[type];
-        if (!def || !def.effects) return null;
-
-        const effects = {};
-        for (const [res, eff] of Object.entries(def.effects)) {
-            if (!eff.worker) continue;
-            let net = 0;
-            if (eff.worker.gain) net += eff.worker.gain.toNumber ? eff.worker.gain.toNumber() : eff.worker.gain;
-            if (eff.worker.drain) net -= eff.worker.drain.toNumber ? eff.worker.drain.toNumber() : eff.worker.drain;
-            if (net !== 0) {
-                effects[res] = net;
-            }
-        }
-
-        if (Object.keys(effects).length === 0) return null;
-        return {effects};
-    }
-
-    getFurloughWorkerEffects(type) {
-        const def = IndustryManager.BUILDING_DEFS[type];
-        if (!def || !def.effects) return null;
-
-        const effects = {};
-        for (const [res, eff] of Object.entries(def.effects)) {
-            if (!eff.worker) continue;
-            let net = 0;
-            if (eff.worker.gain) net -= eff.worker.gain;
-            if (eff.worker.drain) net += eff.worker.drain;
-            if (net !== 0) {
-                effects[res] = net;
-            }
-        }
-
-        if (Object.keys(effects).length === 0) return null;
-        return {effects};
-    }
-
-    isBuildingUnlocked(type) {
-        return this.buildings[type]?.unlocked === true;
-    }
-
-    unlockBuilding(type) {
+    isUnlocked(type) { return this.buildings[type]?.unlocked === true; }
+    unlock(type) {
         const b = this.buildings[type];
         if (!b || b.unlocked) return false;
         b.unlocked = true;
         this.broadcast();
         return true;
     }
+
+    getMaxWorkers(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        return (def?.workersPerBuilding || 0) * (this.buildings[type]?.count || 0);
+    }
+
+    getSelectedIncrement() {
+        const v = this.configs?.actionIncrement;
+        return v === 'max' ? 'max' : Math.max(1, Math.floor(Number(v) || 1));
+    }
+
+    // Effects for UI display
+    getBuildEffects(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        if (!def) return null;
+        const costs = def.buildCost ? Object.entries(def.buildCost).map(([res, amt]) => ({res, amt})) : [];
+        const effects = {};
+        if (def.effects) {
+            for (const [res, eff] of Object.entries(def.effects)) {
+                if (eff.base) {
+                    const net = (eff.base.gain || 0) - (eff.base.drain || 0);
+                    if (net !== 0) effects[res] = net;
+                }
+            }
+        }
+        return (costs.length || Object.keys(effects).length) ? {costs, effects} : null;
+    }
+
+    getDemolishEffects(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        if (!def) return null;
+        const rewards = def.sellReward ? Object.entries(def.sellReward).map(([res, amt]) => ({res, amt})) : [];
+        const effects = {};
+        if (def.effects) {
+            for (const [res, eff] of Object.entries(def.effects)) {
+                if (eff.base) {
+                    const net = (eff.base.drain || 0) - (eff.base.gain || 0);
+                    if (net !== 0) effects[res] = net;
+                }
+            }
+        }
+        return (rewards.length || Object.keys(effects).length) ? {rewards, effects} : null;
+    }
+
+    getHireWorkerEffects(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        if (!def?.effects) return null;
+        const effects = {};
+        for (const [res, eff] of Object.entries(def.effects)) {
+            if (eff.worker) {
+                const net = (eff.worker.gain || 0) - (eff.worker.drain || 0);
+                if (net !== 0) effects[res] = net;
+            }
+        }
+        return Object.keys(effects).length ? {effects} : null;
+    }
+
+    getFurloughWorkerEffects(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        if (!def?.effects) return null;
+        const effects = {};
+        for (const [res, eff] of Object.entries(def.effects)) {
+            if (eff.worker) {
+                const net = (eff.worker.drain || 0) - (eff.worker.gain || 0);
+                if (net !== 0) effects[res] = net;
+            }
+        }
+        return Object.keys(effects).length ? {effects} : null;
+    }
+
+    getAggregateBuildingEffects(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        const count = this.buildings[type]?.count || 0;
+        if (!def?.effects || count === 0) return null;
+        
+        const effects = {};
+        for (const [res, eff] of Object.entries(def.effects)) {
+            if (eff.base) {
+                const baseGain = eff.base.gain || 0;
+                const baseDrain = eff.base.drain || 0;
+                const {gain, drain} = this.#computeEffectiveEffects(type, res, 'base', baseGain, baseDrain, count);
+                if (gain || drain) effects[res] = {gain, drain};
+            }
+        }
+        return Object.keys(effects).length ? effects : null;
+    }
+
+    #computeEffectiveEffects(buildingType, resource, effectType, baseGain, baseDrain, units) {
+        const rates = new Map();
+        const ctx = this.#createContext(rates);
+        
+        let gain = baseGain;
+        let drain = baseDrain;
+        let gainMult = 1;
+        let drainMult = 1;
+        
+        ctx.buildingType = buildingType;
+        ctx.resource = resource;
+        ctx.effectType = effectType;
+        ctx.units = units;
+        
+        for (const entry of this.#sortedUpgrades()) {
+            if (!this.#applies(entry, buildingType, resource, effectType)) continue;
+            if (ctx.upgradeResult !== undefined) continue;
+            
+            const upgradeFn = entry.fn;
+            ctx.gain = gain;
+            ctx.drain = drain;
+            ctx.gainMult = gainMult;
+            ctx.drainMult = drainMult;
+            
+            let mod = upgradeFn(ctx);
+            if (!mod) continue;
+            
+            mod = this.#applyMetaUpgrades(mod, entry, ctx);
+            
+            if (mod.gain !== undefined) gain = mod.gain;
+            if (mod.drain !== undefined) drain = mod.drain;
+            if (mod.addGain !== undefined) gain += mod.addGain;
+            if (mod.addDrain !== undefined) drain += mod.addDrain;
+            if (mod.gainMult !== undefined) gainMult *= mod.gainMult;
+            if (mod.drainMult !== undefined) drainMult *= mod.drainMult;
+        }
+        
+        return {
+            gain: gain * units * gainMult,
+            drain: drain * units * drainMult
+        };
+    }
+
+    getAggregateWorkerEffects(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        const workers = this.buildings[type]?.workers || 0;
+        if (!def?.effects || workers === 0) return null;
+        
+        const scale = this.getWorkerScale();
+        const effects = {};
+        for (const [res, eff] of Object.entries(def.effects)) {
+            if (eff.worker) {
+                const baseGain = eff.worker.gain || 0;
+                const baseDrain = eff.worker.drain || 0;
+                const {gain, drain} = this.#computeEffectiveEffects(type, res, 'worker', baseGain, baseDrain, workers);
+                const net = (gain - drain) * scale;
+                if (net !== 0) effects[res] = net;
+            }
+        }
+        return Object.keys(effects).length ? effects : null;
+    }
+
+    getBuildProgress(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        if (!def?.buildCost) return 1;
+        const target = this.getActionPlan('build', type).target || 1;
+        let minProgress = 1;
+        for (const [res, cost] of Object.entries(def.buildCost)) {
+            const have = this.resources[res]?.value.toNumber() || 0;
+            const need = cost * target;
+            if (need > 0) minProgress = Math.min(minProgress, Math.max(0, have / need));
+        }
+        return minProgress;
+    }
+
+    getResourceProgress(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        if (!def?.buildCost) return null;
+        const target = this.getActionPlan('build', type).target || 1;
+        
+        let limiting = null;
+        for (const [res, cost] of Object.entries(def.buildCost)) {
+            const current = Math.floor(this.resources[res]?.value.toNumber() || 0);
+            const required = Math.ceil(cost * target);
+            const progress = required > 0 ? current / required : 1;
+            if (!limiting || progress < limiting.progress) {
+                limiting = {current: Math.min(current, required), required, progress};
+            }
+        }
+        return limiting;
+    }
+
+    getTimeUntilNextBuilding(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        if (!def?.buildCost) return null;
+        const target = this.getActionPlan('build', type).target || 1;
+        
+        let maxTime = 0;
+        for (const [res, cost] of Object.entries(def.buildCost)) {
+            const resource = this.resources[res];
+            if (!resource) continue;
+            const needed = cost * target - resource.value.toNumber();
+            const rate = resource.netGrowthRate.toNumber();
+            if (needed > 0 && rate > 0) maxTime = Math.max(maxTime, needed / rate);
+        }
+        return maxTime > 0 ? maxTime : null;
+    }
+
+    getDrainExceedsGainResources(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        if (!def?.effects || !this.buildings[type]?.workers) return [];
+        
+        return Object.entries(def.effects)
+            .filter(([res, eff]) => eff?.worker?.drain && this.resources[res]?.netGrowthRate.toNumber() < 0)
+            .map(([res]) => res);
+    }
+
+    getDemolishWorkerWarning(type) {
+        const b = this.buildings[type];
+        const def = IndustryManager.BUILDING_DEFS[type];
+        if (!b || !def?.workersPerBuilding) return null;
+        
+        const amount = this.getActionPlan('sell', type).actual;
+        const newLimit = Math.max(0, (def.workersPerBuilding * b.count) - (amount * def.workersPerBuilding));
+        
+        if ((b.workers || 0) > newLimit) {
+            return {currentWorkers: b.workers, newWorkers: newLimit, newLimit};
+        }
+        return null;
+    }
+
+    getBuildDisabledReason(type) {
+        if (this.getActionPlan('build', type).actual > 0) return '';
+        const def = IndustryManager.BUILDING_DEFS[type];
+        if (!def?.buildCost) return '';
+        
+        const missing = Object.entries(def.buildCost)
+            .filter(([res, cost]) => (this.resources[res]?.value.toNumber() || 0) < cost)
+            .map(([res, cost]) => `${res} (need ${cost})`);
+        return missing.length ? `Not enough: ${missing.join(', ')}` : 'Cannot build';
+    }
+
+    getDemolishDisabledReason(type) {
+        return this.getActionPlan('sell', type).actual > 0 ? '' : 'No buildings';
+    }
+
+    getHireDisabledReason(type) {
+        if (this.getActionPlan('hire', type).actual > 0) return '';
+        const b = this.buildings[type];
+        if (!b?.count) return 'No buildings';
+        if (this.getMaxWorkers(type) <= (b.workers || 0)) return 'Worker limit reached';
+        if (this.unassignedWorkers <= 0) return 'No available workers';
+        return 'Cannot hire';
+    }
+
+    getFurloughDisabledReason(type) {
+        return this.getActionPlan('furlough', type).actual > 0 ? '' : 'No workers';
+    }
+
+    isBuildingUnlocked(type) { return this.isUnlocked(type); }
+    unlockBuilding(type) { return this.unlock(type); }
+    buildBuilding(type) { return this.build(type); }
+    sellBuilding(type) { return this.sell(type); }
+    assignWorkerToBuilding(type) { return this.hire(type); }
+    unassignWorkerFromBuilding(type) { return this.furlough(type); }
+    cycleActionIncrement() { return this.cycleIncrement(); }
+    getWorkerScalingFactor() { return this.getWorkerScale(); }
+    getBottleneckResources() { return this.getBottlenecks(); }
+    getEffectiveCap(res) { return this.getCap(res); }
+    getBaseRate(res) { this.recalculate(); return new Decimal(this.#cache.rates.get(res) || 0); }
+    getRawWorkerRate() { return new Decimal(0); }
+    getEffectiveWorkerRate() { return new Decimal(0); }
+    isMultiIncrement() { const i = this.getSelectedIncrement(); return i === 'max' || i > 1; }
+    invalidateCache() { this.#cache.dirty = true; }
 }
 
 class Resource {
     constructor(initialValue = 0, options = {}) {
         this.value = new Decimal(initialValue);
         this.cap = options.cap !== undefined ? new Decimal(options.cap) : undefined;
-        this.growthFns = {}; // { key: () => Decimal }
-        this.capFn = null; // () => Decimal
+        this.growthFns = {};
+        this.capFn = null;
         this.isDiscovered = options.isDiscovered || false;
     }
 
-    addGrowthFn(key, fn) {
-        this.growthFns[key] = fn;
-    }
-
-    removeGrowthFn(key) {
-        delete this.growthFns[key];
-    }
+    addGrowthFn(key, fn) { this.growthFns[key] = fn; }
+    removeGrowthFn(key) { delete this.growthFns[key]; }
 
     get netGrowthRate() {
         let rate = new Decimal(0);
-        for (const fn of Object.values(this.growthFns)) {
-            rate = rate.plus(fn());
-        }
+        for (const fn of Object.values(this.growthFns)) rate = rate.plus(fn());
         return rate;
     }
 
-    get effectiveCap() {
-        if (this.capFn) {
-            return this.capFn();
-        }
-        return this.cap;
-    }
+    get effectiveCap() { return this.capFn ? this.capFn() : this.cap; }
 
     update(dt) {
-        const growth = this.netGrowthRate.times(dt);
-        this.value = this.value.plus(growth);
+        this.value = this.value.plus(this.netGrowthRate.times(dt));
         const cap = this.effectiveCap;
-        if (cap !== undefined && this.value.gt(cap)) {
-            this.value = cap;
-        }
-        if (this.value.lt(0)) {
-            this.value = new Decimal(0);
-        }
+        if (cap !== undefined && this.value.gt(cap)) this.value = cap;
+        if (this.value.lt(0)) this.value = new Decimal(0);
     }
 
     add(v) {
         this.value = this.value.plus(v);
         const cap = this.effectiveCap;
-        if (cap !== undefined && this.value.gt(cap)) {
-            this.value = cap;
-        }
+        if (cap !== undefined && this.value.gt(cap)) this.value = cap;
     }
 
     subtract(v) {
         this.value = this.value.minus(v);
-        if (this.value.lt(0)) {
-            this.value = new Decimal(0);
-        }
+        if (this.value.lt(0)) this.value = new Decimal(0);
     }
 
-    setValue(v) {
-        this.value = new Decimal(v);
-    }
+    setValue(v) { this.value = new Decimal(v); }
 
     serialize() {
         return {

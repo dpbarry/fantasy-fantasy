@@ -14,10 +14,10 @@ export default class SettingsManager {
     }
 
     broadcast() {
-        this.core.ui.panels.settings.render(this.getStatus());
+        this.core.ui.panels.settings.render(this.getData());
     }
 
-    getStatus() {
+    getData() {
         return this.configs;
     }
 

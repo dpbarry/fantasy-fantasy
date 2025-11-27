@@ -38,7 +38,6 @@ export default class NewsPanel {
     }
 
     updateVisibility(loc, panel) {
-        this.core.industry.updateLoops();
         if (loc === "right") {
             if (panel === "news") {
                 this.root.classList.add("shown");

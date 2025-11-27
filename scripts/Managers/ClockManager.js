@@ -38,7 +38,7 @@ export default class ClockManager {
             if (Date.now() - lastTrigger >= interval * 1000) { // Convert to milliseconds
                 listener(dt);
                 if (oneTime) {
-                    this.#realTimeListeners.deleteSave(listener);
+                    this.#realTimeListeners.delete(listener);
                 } else {
                     config.lastTrigger = Date.now();
                 }
@@ -50,7 +50,7 @@ export default class ClockManager {
             if (this.totalSeconds - lastTrigger >= interval) {
                 listener(this.totalSeconds - previousSeconds);
                 if (oneTime) {
-                    this.#gameTimeListeners.deleteSave(listener);
+                    this.#gameTimeListeners.delete(listener);
                 } else {
                     config.lastTrigger = this.totalSeconds;
                 }
@@ -79,8 +79,8 @@ export default class ClockManager {
     }
 
     unsubscribe(listener) {
-        this.#realTimeListeners.deleteSave(listener);
-        this.#gameTimeListeners.deleteSave(listener);
+        this.#realTimeListeners.delete(listener);
+        this.#gameTimeListeners.delete(listener);
     }
 
     gameDate(options = {format: null | 'full' | 'short' | 'numeric'}) {
