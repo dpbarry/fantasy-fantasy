@@ -37,15 +37,41 @@ export default function setupGlobalBehavior(core) {
         
         const targetLeft = sectionLeft + (sectionWidth / 2) - (wrapperWidth / 2);
         
+        const originalScrollBehavior = sectionsWrapper.style.scrollBehavior;
+        const originalScrollSnapType = sectionsWrapper.style.scrollSnapType;
+        sectionsWrapper.style.scrollBehavior = 'auto';
+        sectionsWrapper.style.scrollSnapType = 'none';
+        
         if (smooth) {
-            sectionsWrapper.scrollTo({
-                left: targetLeft,
-                behavior: "smooth"
-            });
+            const startLeft = sectionsWrapper.scrollLeft;
+            const distance = targetLeft - startLeft;
+            const duration = 150;
+            const startTime = performance.now();
+            
+            const animate = (currentTime) => {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const ease = progress * (2 - progress);
+                sectionsWrapper.scrollLeft = startLeft + distance * ease;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    sectionsWrapper.style.scrollBehavior = originalScrollBehavior;
+                    sectionsWrapper.style.scrollSnapType = originalScrollSnapType;
+                }
+            };
+            requestAnimationFrame(animate);
         } else {
             sectionsWrapper.scrollLeft = targetLeft;
+            requestAnimationFrame(() => {
+                sectionsWrapper.style.scrollBehavior = originalScrollBehavior;
+                sectionsWrapper.style.scrollSnapType = originalScrollSnapType;
+            });
         }
     }
+    
+    core.ui.scrollToVisibleSection = scrollToVisibleSection;
 
     const navbuttons = document.querySelectorAll(".navbutton");
     navbuttons.forEach(b => {
@@ -84,6 +110,14 @@ export default function setupGlobalBehavior(core) {
         isMobile = window.matchMedia("(width <= 950px)").matches;
         
         if (isMobile && sectionsWrapper) {
+            if (!wasMobile) {
+                core.ui.visibleSection = "center";
+                scrollToVisibleSection(false);
+                if (core.ui.updateMobileNavArrows) {
+                    core.ui.updateMobileNavArrows();
+                }
+            }
+            
             if (!isResizing) {
                 isResizing = true;
                 resizeAnimationFrame = requestAnimationFrame(lockScrollPosition);

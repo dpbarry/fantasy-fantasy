@@ -1241,10 +1241,10 @@ export default class IndustryPanel {
         
         requestAnimationFrame(() => {
             indicator.style.opacity = "0";
-            indicator.style.top = `${rect.top + (isIncrease ? -6 : 6)}px`;
+            indicator.style.transform = `translateY(${isIncrease ? -9.5 : 9.5}px) scale(0.75)`;
         });
         
-        setTimeout(() => indicator.remove(), 500);
+        setTimeout(() => indicator.remove(), 1000);
     }
 
     addResourceFloater(resourceName, change) {
@@ -1279,10 +1279,10 @@ export default class IndustryPanel {
 
         requestAnimationFrame(() => {
             floatingText.style.opacity = "0";
-            floatingText.style.transform = `translateY(-16px)`;
+            floatingText.style.transform = "translateY(-10px) scale(0.75)";
         });
 
-        setTimeout(() => floatingText.remove(), 600);
+        setTimeout(() => floatingText.remove(), 1200);
     }
 
     // ============================================================================

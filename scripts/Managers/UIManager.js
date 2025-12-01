@@ -295,22 +295,11 @@ export default class UIManager {
             if (targetIndex < 0 || targetIndex >= sectionOrder.length) return;
 
             const targetSection = sectionOrder[targetIndex];
-            const sections = sectionsWrapper.querySelectorAll("section");
-            if (sections[targetIndex]) {
-                const section = sections[targetIndex];
-                const sectionLeft = section.offsetLeft;
-                const sectionWidth = section.offsetWidth;
-                const wrapperWidth = sectionsWrapper.clientWidth;
-                
-                const targetLeft = sectionLeft + (sectionWidth / 2) - (wrapperWidth / 2);
-                
-                sectionsWrapper.scrollTo({
-                    left: targetLeft,
-                    behavior: "smooth"
-                });
-                this.visibleSection = targetSection;
-                this.updateMobileNavArrows();
+            this.visibleSection = targetSection;
+            if (this.scrollToVisibleSection) {
+                this.scrollToVisibleSection(true);
             }
+            this.updateMobileNavArrows();
         };
 
         const leftArrows = [

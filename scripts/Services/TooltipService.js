@@ -440,7 +440,7 @@ export default function createTooltipService(core, uiManager) {
             pendingTooltips.delete(el);
         }
 
-        const delay = isInteractive(el) ? 350 : 100;
+        const delay = isInteractive(el) ? 900 : 350;
         const timeout = setTimeout(() => {
             if (pendingTooltips.get(el) !== timeout) return;
             
