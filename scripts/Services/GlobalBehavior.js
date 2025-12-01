@@ -246,9 +246,13 @@ export default function setupGlobalBehavior(core) {
                     detectVisibleSection();
                     return;
                 }
-                if (sectionsWrapper.scrollLeft !== lockedScrollLeft) {
+                
+                const currentScrollLeft = sectionsWrapper.scrollLeft;
+                const diff = Math.abs(currentScrollLeft - lockedScrollLeft);
+                
+                if (diff > 1) {
                     sectionsWrapper.scrollLeft = lockedScrollLeft;
-                } else {
+                } else if (diff === 0) {
                     detectVisibleSection();
                 }
             }, { passive: false });
