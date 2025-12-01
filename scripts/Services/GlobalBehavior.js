@@ -206,15 +206,42 @@ export default function setupGlobalBehavior(core) {
                 lockedScrollLeft = sectionsWrapper.scrollLeft;
             };
             
-            sectionsWrapper.addEventListener("touchstart", (e) => {
+            const isVerticallyScrollable = (el) => {
+                if (!el) return false;
+                const style = window.getComputedStyle(el);
+                const overflowY = style.overflowY;
+                return (overflowY === 'auto' || overflowY === 'scroll') && 
+                       (el.scrollHeight > el.clientHeight);
+            };
+            
+            const handleTouchStart = (e) => {
                 touchStartX = e.touches[0].clientX;
                 touchStartY = e.touches[0].clientY;
-            }, { passive: true });
+            };
             
-            sectionsWrapper.addEventListener("touchmove", (e) => {
+            const handleTouchMove = (e) => {
                 if (e.touches.length !== 1) {
                     e.preventDefault();
+                    e.stopPropagation();
                     return;
+                }
+                
+                let target = e.target;
+                while (target && target !== sectionsWrapper) {
+                    if (isVerticallyScrollable(target)) {
+                        const touchX = e.touches[0].clientX;
+                        const touchY = e.touches[0].clientY;
+                        const deltaX = Math.abs(touchX - touchStartX);
+                        const deltaY = Math.abs(touchY - touchStartY);
+                        
+                        if (deltaX > 0) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return;
+                        }
+                        break;
+                    }
+                    target = target.parentElement;
                 }
                 
                 const touchX = e.touches[0].clientX;
@@ -224,9 +251,33 @@ export default function setupGlobalBehavior(core) {
                 
                 if (deltaX > 0 || (deltaX === 0 && deltaY === 0)) {
                     e.preventDefault();
+                    e.stopPropagation();
                     return;
                 }
-            }, { passive: false });
+            };
+            
+            const handleWheel = (e) => {
+                if (Math.abs(e.deltaX) > 0) {
+                    let target = e.target;
+                    while (target && target !== sectionsWrapper) {
+                        if (isVerticallyScrollable(target)) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            sectionsWrapper.scrollLeft = lockedScrollLeft;
+                            return;
+                        }
+                        target = target.parentElement;
+                    }
+                    
+                    e.preventDefault();
+                    e.stopPropagation();
+                    sectionsWrapper.scrollLeft = lockedScrollLeft;
+                }
+            };
+            
+            sectionsWrapper.addEventListener("touchstart", handleTouchStart, { passive: true, capture: true });
+            sectionsWrapper.addEventListener("touchmove", handleTouchMove, { passive: false, capture: true });
+            sectionsWrapper.addEventListener("wheel", handleWheel, { passive: false, capture: true });
             
             sectionsWrapper.addEventListener("scroll", () => {
                 if (isProgrammaticScroll) {
@@ -238,13 +289,6 @@ export default function setupGlobalBehavior(core) {
                     sectionsWrapper.scrollLeft = lockedScrollLeft;
                 } else {
                     detectVisibleSection();
-                }
-            }, { passive: false });
-            
-            sectionsWrapper.addEventListener("wheel", (e) => {
-                if (Math.abs(e.deltaX) > 0) {
-                    e.preventDefault();
-                    sectionsWrapper.scrollLeft = lockedScrollLeft;
                 }
             }, { passive: false });
             
