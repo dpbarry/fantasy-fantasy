@@ -1662,7 +1662,7 @@
 
                 .resource-row {
                     display: grid;
-                    grid-template-columns: 1fr 5em 4.5em;
+                    grid-template-columns: 1fr 4.25em 4.25em;
                     align-items: center;
                     height: fit-content;
                     padding: 0.1em 0.2em;
@@ -1752,12 +1752,9 @@
                     &.negative {
                         color: var(--drainColor);
                     }
-                }
 
-
-                .resource-rate {
                     opacity: 0.7;
-                    font-size: 0.85em;
+                    font-size: clamp(0.25em, 2vw, 0.85em);
                 }
             }
 

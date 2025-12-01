@@ -199,10 +199,34 @@ export default function setupGlobalBehavior(core) {
         if (isMobile) {
             let lockedScrollLeft = sectionsWrapper.scrollLeft;
             let isProgrammaticScroll = false;
-        
+            let touchStartX = 0;
+            let touchStartY = 0;
+            
             const updateLock = () => {
                 lockedScrollLeft = sectionsWrapper.scrollLeft;
             };
+            
+            sectionsWrapper.addEventListener("touchstart", (e) => {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }, { passive: true });
+            
+            sectionsWrapper.addEventListener("touchmove", (e) => {
+                if (e.touches.length !== 1) {
+                    e.preventDefault();
+                    return;
+                }
+                
+                const touchX = e.touches[0].clientX;
+                const touchY = e.touches[0].clientY;
+                const deltaX = Math.abs(touchX - touchStartX);
+                const deltaY = Math.abs(touchY - touchStartY);
+                
+                if (deltaX > 0 || (deltaX === 0 && deltaY === 0)) {
+                    e.preventDefault();
+                    return;
+                }
+            }, { passive: false });
             
             sectionsWrapper.addEventListener("scroll", () => {
                 if (isProgrammaticScroll) {
@@ -220,43 +244,6 @@ export default function setupGlobalBehavior(core) {
             sectionsWrapper.addEventListener("wheel", (e) => {
                 if (Math.abs(e.deltaX) > 0) {
                     e.preventDefault();
-                    const attemptedScroll = sectionsWrapper.scrollLeft + e.deltaX;
-                    const wrapperWidth = sectionsWrapper.clientWidth;
-                    const centerX = attemptedScroll + wrapperWidth / 2;
-                    
-                    const sections = sectionsWrapper.querySelectorAll("section");
-                    if (sections.length === 3) {
-                        let closestSection = null;
-                        let closestDistance = Infinity;
-                        
-                        sections.forEach((section, index) => {
-                            const sectionLeft = section.offsetLeft;
-                            const sectionCenter = sectionLeft + section.offsetWidth / 2;
-                            const distance = Math.abs(centerX - sectionCenter);
-                            
-                            if (distance < closestDistance) {
-                                closestDistance = distance;
-                                closestSection = sectionOrder[index];
-                            }
-                        });
-                        
-                        if (closestSection && closestSection !== core.ui.visibleSection) {
-                            core.ui.visibleSection = closestSection;
-                            if (core.ui.updateMobileNavArrows) {
-                                core.ui.updateMobileNavArrows();
-                            }
-                            if (core.ui.tooltipService) {
-                                core.ui.tooltipService.checkSectionAndDismiss();
-                            }
-                            if (scrollTimeout) clearTimeout(scrollTimeout);
-                            scrollTimeout = setTimeout(() => {
-                                if (window.matchMedia('(width <= 950px)').matches && core.ui.updateInfoboxVisibility) {
-                                    core.ui.updateInfoboxVisibility(true);
-                                }
-                            }, 300);
-                        }
-                    }
-                    
                     sectionsWrapper.scrollLeft = lockedScrollLeft;
                 }
             }, { passive: false });
