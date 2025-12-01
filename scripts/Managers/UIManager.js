@@ -38,44 +38,11 @@ export default class UIManager {
         this.contextMenuService = createContextMenuService(this.core, this.tooltipService);
         this.tooltipService.setContextMenuService(this.contextMenuService);
         
-        // Listen for section changes in mobile view
         const sectionsWrapper = document.getElementById("sections-wrapper");
         if (sectionsWrapper) {
-            let lastVisibleSection = this.visibleSection;
-            const sectionOrder = ["left", "center", "right"];
-            
-            const detectVisibleSection = () => {
-                const sections = sectionsWrapper.querySelectorAll("section");
-                if (sections.length !== 3) return;
-                
-                const scrollLeft = sectionsWrapper.scrollLeft;
-                const wrapperWidth = sectionsWrapper.clientWidth;
-                const centerX = scrollLeft + wrapperWidth / 2;
-                
-                let closestSection = null;
-                let closestDistance = Infinity;
-                
-                sections.forEach((section, index) => {
-                    const sectionLeft = section.offsetLeft;
-                    const sectionCenter = sectionLeft + section.offsetWidth / 2;
-                    const distance = Math.abs(centerX - sectionCenter);
-                    
-                    if (distance < closestDistance) {
-                        closestDistance = distance;
-                        closestSection = sectionOrder[index];
-                    }
-                });
-                
-                if (closestSection && closestSection !== this.visibleSection) {
-                    this.visibleSection = closestSection;
-                    this.updateMobileNavArrows();
-                }
-            };
-            
-            let scrollTimeout = null;
             let lastScrollLeft = sectionsWrapper.scrollLeft;
             
-            const checkSectionChange = () => {
+            sectionsWrapper.addEventListener('scroll', () => {
                 const isScrolling = Math.abs(sectionsWrapper.scrollLeft - lastScrollLeft) > 1;
                 lastScrollLeft = sectionsWrapper.scrollLeft;
                 
@@ -84,30 +51,10 @@ export default class UIManager {
                         infobox.style.display = 'none';
                     });
                 }
-                
-                detectVisibleSection();
-                if (this.visibleSection !== lastVisibleSection) {
-                    lastVisibleSection = this.visibleSection;
-                    this.tooltipService.checkSectionAndDismiss();
-                    
-                    if (scrollTimeout) clearTimeout(scrollTimeout);
-                    scrollTimeout = setTimeout(() => {
-                        if (window.matchMedia('(width <= 950px)').matches) {
-                            this.updateInfoboxVisibility(true);
-                        }
-                    }, 300);
-                }
-            };
+            }, { passive: true });
             
             this.updateInfoboxVisibility(true);
             window.addEventListener('resize', () => this.updateInfoboxVisibility(true), { passive: true });
-            sectionsWrapper.addEventListener('scroll', checkSectionChange, { passive: true });
-            
-            const originalShow = this.show.bind(this);
-            this.show = (loc, panel) => {
-                originalShow(loc, panel);
-                checkSectionChange();
-            };
         }
     }
 
@@ -234,6 +181,10 @@ export default class UIManager {
         let button = document.querySelector(`.navbutton[data-panel='${panel}']`);
         if (button) {
             button.classList.add("chosen");
+        }
+        
+        if (this.detectVisibleSection) {
+            this.detectVisibleSection();
         }
     }
 

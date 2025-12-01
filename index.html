@@ -220,6 +220,10 @@
 
             touch-action: pan-y pinch-zoom;
             overscroll-behavior-x: contain;
+            
+            @media (width <= 950px) {
+                touch-action: pan-y pinch-zoom;
+            }
 
             height: 100%;
             grid-area: sections;

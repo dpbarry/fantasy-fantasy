@@ -149,29 +149,138 @@ export default function setupGlobalBehavior(core) {
 
     window.addEventListener("resize", resizeHandler, { passive: true });
 
-    if (sectionsWrapper && isMobile) {
-        let touchStartX = 0;
-        let touchStartY = 0;
+    if (sectionsWrapper) {
+        const sectionOrder = ["left", "center", "right"];
+        let scrollTimeout = null;
         
-        sectionsWrapper.addEventListener("touchstart", (e) => {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        }, { passive: true });
-        
-        sectionsWrapper.addEventListener("touchmove", (e) => {
-            if (e.touches.length !== 1) return;
+        const detectVisibleSection = () => {
+            const sections = sectionsWrapper.querySelectorAll("section");
+            if (sections.length !== 3) return;
             
-            const touchX = e.touches[0].clientX;
-            const touchY = e.touches[0].clientY;
-            const deltaX = Math.abs(touchX - touchStartX);
-            const deltaY = Math.abs(touchY - touchStartY);
+            const scrollLeft = sectionsWrapper.scrollLeft;
+            const wrapperWidth = sectionsWrapper.clientWidth;
+            const centerX = scrollLeft + wrapperWidth / 2;
             
-            if (deltaX > deltaY && deltaX > 10) {
-                e.preventDefault();
+            let closestSection = null;
+            let closestDistance = Infinity;
+            
+            sections.forEach((section, index) => {
+                const sectionLeft = section.offsetLeft;
+                const sectionCenter = sectionLeft + section.offsetWidth / 2;
+                const distance = Math.abs(centerX - sectionCenter);
+                
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestSection = sectionOrder[index];
+                }
+            });
+            
+            if (closestSection && closestSection !== core.ui.visibleSection) {
+                core.ui.visibleSection = closestSection;
+                if (core.ui.updateMobileNavArrows) {
+                    core.ui.updateMobileNavArrows();
+                }
+                if (core.ui.tooltipService) {
+                    core.ui.tooltipService.checkSectionAndDismiss();
+                }
+                if (scrollTimeout) clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    if (window.matchMedia('(width <= 950px)').matches && core.ui.updateInfoboxVisibility) {
+                        core.ui.updateInfoboxVisibility(true);
+                    }
+                }, 300);
             }
-        }, { passive: false });
+        };
         
-        scrollToVisibleSection(false);
+        core.ui.detectVisibleSection = detectVisibleSection;
+        
+        if (isMobile) {
+            let lockedScrollLeft = sectionsWrapper.scrollLeft;
+            let isProgrammaticScroll = false;
+        
+            const updateLock = () => {
+                lockedScrollLeft = sectionsWrapper.scrollLeft;
+            };
+            
+            sectionsWrapper.addEventListener("scroll", () => {
+                if (isProgrammaticScroll) {
+                    updateLock();
+                    detectVisibleSection();
+                    return;
+                }
+                if (sectionsWrapper.scrollLeft !== lockedScrollLeft) {
+                    sectionsWrapper.scrollLeft = lockedScrollLeft;
+                } else {
+                    detectVisibleSection();
+                }
+            }, { passive: false });
+            
+            sectionsWrapper.addEventListener("wheel", (e) => {
+                if (Math.abs(e.deltaX) > 0) {
+                    e.preventDefault();
+                    const attemptedScroll = sectionsWrapper.scrollLeft + e.deltaX;
+                    const wrapperWidth = sectionsWrapper.clientWidth;
+                    const centerX = attemptedScroll + wrapperWidth / 2;
+                    
+                    const sections = sectionsWrapper.querySelectorAll("section");
+                    if (sections.length === 3) {
+                        let closestSection = null;
+                        let closestDistance = Infinity;
+                        
+                        sections.forEach((section, index) => {
+                            const sectionLeft = section.offsetLeft;
+                            const sectionCenter = sectionLeft + section.offsetWidth / 2;
+                            const distance = Math.abs(centerX - sectionCenter);
+                            
+                            if (distance < closestDistance) {
+                                closestDistance = distance;
+                                closestSection = sectionOrder[index];
+                            }
+                        });
+                        
+                        if (closestSection && closestSection !== core.ui.visibleSection) {
+                            core.ui.visibleSection = closestSection;
+                            if (core.ui.updateMobileNavArrows) {
+                                core.ui.updateMobileNavArrows();
+                            }
+                            if (core.ui.tooltipService) {
+                                core.ui.tooltipService.checkSectionAndDismiss();
+                            }
+                            if (scrollTimeout) clearTimeout(scrollTimeout);
+                            scrollTimeout = setTimeout(() => {
+                                if (window.matchMedia('(width <= 950px)').matches && core.ui.updateInfoboxVisibility) {
+                                    core.ui.updateInfoboxVisibility(true);
+                                }
+                            }, 300);
+                        }
+                    }
+                    
+                    sectionsWrapper.scrollLeft = lockedScrollLeft;
+                }
+            }, { passive: false });
+            
+            scrollToVisibleSection(false);
+            updateLock();
+            
+            const originalScrollToVisibleSection = core.ui.scrollToVisibleSection;
+            core.ui.scrollToVisibleSection = (smooth = false) => {
+                isProgrammaticScroll = true;
+                originalScrollToVisibleSection(smooth);
+                if (smooth) {
+                    setTimeout(() => {
+                        updateLock();
+                        isProgrammaticScroll = false;
+                    }, 160);
+                } else {
+                    requestAnimationFrame(() => {
+                        updateLock();
+                        isProgrammaticScroll = false;
+                    });
+                }
+            };
+        } else {
+            sectionsWrapper.addEventListener("scroll", detectVisibleSection, { passive: true });
+        }
     }
 }
 
