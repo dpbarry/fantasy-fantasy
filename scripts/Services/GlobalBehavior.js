@@ -206,14 +206,6 @@ export default function setupGlobalBehavior(core) {
                 lockedScrollLeft = sectionsWrapper.scrollLeft;
             };
             
-            const isVerticallyScrollable = (el) => {
-                if (!el) return false;
-                const style = window.getComputedStyle(el);
-                const overflowY = style.overflowY;
-                return (overflowY === 'auto' || overflowY === 'scroll') && 
-                       (el.scrollHeight > el.clientHeight);
-            };
-            
             const handleTouchStart = (e) => {
                 touchStartX = e.touches[0].clientX;
                 touchStartY = e.touches[0].clientY;
@@ -226,30 +218,10 @@ export default function setupGlobalBehavior(core) {
                     return;
                 }
                 
-                let target = e.target;
-                while (target && target !== sectionsWrapper) {
-                    if (isVerticallyScrollable(target)) {
-                        const touchX = e.touches[0].clientX;
-                        const touchY = e.touches[0].clientY;
-                        const deltaX = Math.abs(touchX - touchStartX);
-                        const deltaY = Math.abs(touchY - touchStartY);
-                        
-                        if (deltaX > 0) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            return;
-                        }
-                        break;
-                    }
-                    target = target.parentElement;
-                }
-                
                 const touchX = e.touches[0].clientX;
-                const touchY = e.touches[0].clientY;
                 const deltaX = Math.abs(touchX - touchStartX);
-                const deltaY = Math.abs(touchY - touchStartY);
                 
-                if (deltaX > 0 || (deltaX === 0 && deltaY === 0)) {
+                if (deltaX > 0) {
                     e.preventDefault();
                     e.stopPropagation();
                     return;
@@ -258,17 +230,6 @@ export default function setupGlobalBehavior(core) {
             
             const handleWheel = (e) => {
                 if (Math.abs(e.deltaX) > 0) {
-                    let target = e.target;
-                    while (target && target !== sectionsWrapper) {
-                        if (isVerticallyScrollable(target)) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            sectionsWrapper.scrollLeft = lockedScrollLeft;
-                            return;
-                        }
-                        target = target.parentElement;
-                    }
-                    
                     e.preventDefault();
                     e.stopPropagation();
                     sectionsWrapper.scrollLeft = lockedScrollLeft;
