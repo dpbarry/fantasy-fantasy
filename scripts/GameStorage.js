@@ -154,6 +154,11 @@ export default class GameStorage {
                         choices: { 2: 2 },
                         currentEpisode: null
                     },
+                    news: {
+                        logs: [
+                            {timestamp: Date.now(), message: "Welcome to the game!"}
+                        ]
+                    },
                     industry: {
                         access: { basic: true }
                     },

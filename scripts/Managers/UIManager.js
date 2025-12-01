@@ -1,4 +1,5 @@
 import createTooltipService from "../Services/TooltipService.js";
+import createContextMenuService from "../Services/ContextMenuService.js";
 import setupKeyboard from "../UI/Components/Keyboard.js";
 import setupGlobalBehavior, {spawnRipple} from "../Services/GlobalBehavior.js";
 import {verticalScroll} from "../Utils.js";
@@ -10,8 +11,6 @@ import IndustryPanel from "../UI/Panels/IndustryPanel.js";
 export default class UIManager {
     constructor(core) {
         this.core = core;
-
-        this.tooltipService = createTooltipService(core, this);
         this.activePanels = {
             "left": "",
             "center": "story",
@@ -29,6 +28,86 @@ export default class UIManager {
             news: new NewsPanel(this.core),
             settings: new SettingsPanel(this.core),
             industry: new IndustryPanel(this.core),
+        }
+
+        this.postPanelInitialization();
+    }
+
+     postPanelInitialization() {
+        this.tooltipService = createTooltipService(this.core, this);
+        this.contextMenuService = createContextMenuService(this.core, this.tooltipService);
+        this.tooltipService.setContextMenuService(this.contextMenuService);
+        
+        // Listen for section changes in mobile view
+        const sectionsWrapper = document.getElementById("sections-wrapper");
+        if (sectionsWrapper) {
+            let lastVisibleSection = this.visibleSection;
+            const sectionOrder = ["left", "center", "right"];
+            
+            const detectVisibleSection = () => {
+                const sections = sectionsWrapper.querySelectorAll("section");
+                if (sections.length !== 3) return;
+                
+                const scrollLeft = sectionsWrapper.scrollLeft;
+                const wrapperWidth = sectionsWrapper.clientWidth;
+                const centerX = scrollLeft + wrapperWidth / 2;
+                
+                let closestSection = null;
+                let closestDistance = Infinity;
+                
+                sections.forEach((section, index) => {
+                    const sectionLeft = section.offsetLeft;
+                    const sectionCenter = sectionLeft + section.offsetWidth / 2;
+                    const distance = Math.abs(centerX - sectionCenter);
+                    
+                    if (distance < closestDistance) {
+                        closestDistance = distance;
+                        closestSection = sectionOrder[index];
+                    }
+                });
+                
+                if (closestSection && closestSection !== this.visibleSection) {
+                    this.visibleSection = closestSection;
+                    this.updateMobileNavArrows();
+                }
+            };
+            
+            let scrollTimeout = null;
+            let lastScrollLeft = sectionsWrapper.scrollLeft;
+            
+            const checkSectionChange = () => {
+                const isScrolling = Math.abs(sectionsWrapper.scrollLeft - lastScrollLeft) > 1;
+                lastScrollLeft = sectionsWrapper.scrollLeft;
+                
+                if (isScrolling) {
+                    document.querySelectorAll('.infobox[data-infobox-section]').forEach(infobox => {
+                        infobox.style.display = 'none';
+                    });
+                }
+                
+                detectVisibleSection();
+                if (this.visibleSection !== lastVisibleSection) {
+                    lastVisibleSection = this.visibleSection;
+                    this.tooltipService.checkSectionAndDismiss();
+                    
+                    if (scrollTimeout) clearTimeout(scrollTimeout);
+                    scrollTimeout = setTimeout(() => {
+                        if (window.matchMedia('(width <= 950px)').matches) {
+                            this.updateInfoboxVisibility(true);
+                        }
+                    }, 300);
+                }
+            };
+            
+            this.updateInfoboxVisibility(true);
+            window.addEventListener('resize', () => this.updateInfoboxVisibility(true), { passive: true });
+            sectionsWrapper.addEventListener('scroll', checkSectionChange, { passive: true });
+            
+            const originalShow = this.show.bind(this);
+            this.show = (loc, panel) => {
+                originalShow(loc, panel);
+                checkSectionChange();
+            };
         }
     }
 
@@ -218,8 +297,15 @@ export default class UIManager {
             const targetSection = sectionOrder[targetIndex];
             const sections = sectionsWrapper.querySelectorAll("section");
             if (sections[targetIndex]) {
+                const section = sections[targetIndex];
+                const sectionLeft = section.offsetLeft;
+                const sectionWidth = section.offsetWidth;
+                const wrapperWidth = sectionsWrapper.clientWidth;
+                
+                const targetLeft = sectionLeft + (sectionWidth / 2) - (wrapperWidth / 2);
+                
                 sectionsWrapper.scrollTo({
-                    left: sections[targetIndex].offsetLeft,
+                    left: targetLeft,
                     behavior: "smooth"
                 });
                 this.visibleSection = targetSection;
@@ -257,6 +343,20 @@ export default class UIManager {
         };
 
         window.addEventListener("resize", checkMobileNav);
+    }
+
+    updateInfoboxVisibility(immediate = true) {
+        const isMobile = window.matchMedia('(width <= 950px)').matches;
+        if (!isMobile) {
+            document.querySelectorAll('.infobox').forEach(infobox => infobox.style.display = '');
+            return;
+        }
+        if (!immediate) return;
+        
+        document.querySelectorAll('.infobox').forEach(infobox => {
+            const section = infobox.dataset.infoboxSection;
+            infobox.style.display = (section && section !== this.visibleSection) ? 'none' : '';
+        });
     }
 
     updateMobileNavArrows() {

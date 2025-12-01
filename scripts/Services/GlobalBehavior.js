@@ -30,7 +30,12 @@ export default function setupGlobalBehavior(core) {
         const sections = sectionsWrapper.querySelectorAll("section");
         if (!sections[sectionIndex]) return;
         
-        const targetLeft = sections[sectionIndex].offsetLeft;
+        const section = sections[sectionIndex];
+        const sectionLeft = section.offsetLeft;
+        const sectionWidth = section.offsetWidth;
+        const wrapperWidth = sectionsWrapper.clientWidth;
+        
+        const targetLeft = sectionLeft + (sectionWidth / 2) - (wrapperWidth / 2);
         
         if (smooth) {
             sectionsWrapper.scrollTo({
@@ -63,7 +68,12 @@ export default function setupGlobalBehavior(core) {
         const sections = sectionsWrapper.querySelectorAll("section");
         if (!sections[sectionIndex]) return;
         
-        const targetLeft = sections[sectionIndex].offsetLeft;
+        const section = sections[sectionIndex];
+        const sectionLeft = section.offsetLeft;
+        const sectionWidth = section.offsetWidth;
+        const wrapperWidth = sectionsWrapper.clientWidth;
+        
+        const targetLeft = sectionLeft + (sectionWidth / 2) - (wrapperWidth / 2);
         sectionsWrapper.scrollLeft = targetLeft;
         
         resizeAnimationFrame = requestAnimationFrame(lockScrollPosition);
@@ -105,7 +115,28 @@ export default function setupGlobalBehavior(core) {
 
     window.addEventListener("resize", resizeHandler, { passive: true });
 
-    if (isMobile) {
+    if (sectionsWrapper && isMobile) {
+        let touchStartX = 0;
+        let touchStartY = 0;
+        
+        sectionsWrapper.addEventListener("touchstart", (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+        
+        sectionsWrapper.addEventListener("touchmove", (e) => {
+            if (e.touches.length !== 1) return;
+            
+            const touchX = e.touches[0].clientX;
+            const touchY = e.touches[0].clientY;
+            const deltaX = Math.abs(touchX - touchStartX);
+            const deltaY = Math.abs(touchY - touchStartY);
+            
+            if (deltaX > deltaY && deltaX > 10) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
         scrollToVisibleSection(false);
     }
 }

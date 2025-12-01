@@ -1,20 +1,34 @@
 export default function createInfoBox(targetElement, message, options = {}) {
-    const processMessage = (msg) => {
-        if (!msg) return msg;
-        const str = String(msg);
-        return str.replace(/^(<p[^>]*>)/, '$1<span class="info-glyph">ⓘ</span> ');
-    };
+    const PADDING = 8;
+    const MARGIN = 3;
+    
+    function getElementSection(el) {
+        if (!el) return null;
+        const left = document.getElementById('left');
+        const center = document.getElementById('center');
+        const right = document.getElementById('right');
+        if (left?.contains(el)) return 'left';
+        if (center?.contains(el)) return 'center';
+        if (right?.contains(el)) return 'right';
+        return null;
+    }
     
     const box = document.createElement('div');
     box.className = 'infobox';
-    if (options.id) {
-        box.dataset.infoboxId = options.id;
+    if (options.id) box.dataset.infoboxId = options.id;
+    const elementSection = getElementSection(targetElement);
+    if (elementSection) {
+        box.dataset.infoboxSection = elementSection;
+        const core = options.core || window.core;
+        if (window.matchMedia('(width <= 950px)').matches && core?.ui?.visibleSection && elementSection !== core.ui.visibleSection) {
+            box.style.display = 'none';
+        }
     }
     box.style.opacity = '0';
     
     const content = document.createElement('div');
     content.className = 'infobox-content';
-    content.innerHTML = processMessage(message);
+    content.innerHTML = message;
     
     const dismissNote = document.createElement('div');
     dismissNote.className = 'infobox-dismiss';
@@ -24,10 +38,10 @@ export default function createInfoBox(targetElement, message, options = {}) {
     box.appendChild(dismissNote);
     document.body.appendChild(box);
     
-    const PADDING = 8;
-    const MARGIN = 3;
-    
     let currentPos = null;
+    let dismissed = false;
+    let updateInterval = null;
+    let lastMessage = message;
     
     function positionBox() {
         const targetRect = targetElement.getBoundingClientRect();
@@ -42,22 +56,18 @@ export default function createInfoBox(targetElement, message, options = {}) {
             right: vw - targetRect.right,
         };
         const horizontalBuffer = Math.max(0, (boxRect.width - targetRect.width) / 2);
-        const canCenterHorizontally =
-            (targetRect.left - horizontalBuffer) >= PADDING &&
-            (targetRect.right + horizontalBuffer) <= (vw - PADDING);
+        const canCenter = (targetRect.left - horizontalBuffer) >= PADDING && 
+                         (targetRect.right + horizontalBuffer) <= (vw - PADDING);
         
-        const order = (() => {
-            const base = ['above', 'below', 'left', 'right'];
-            if (!options.preferredPosition) return base;
-            return [options.preferredPosition, ...base.filter(p => p !== options.preferredPosition)];
-        })();
+        const order = options.preferredPosition 
+            ? [options.preferredPosition, ...['above', 'below', 'left', 'right'].filter(p => p !== options.preferredPosition)]
+            : ['above', 'below', 'left', 'right'];
         
         const fits = (pos) => {
             switch (pos) {
                 case 'above':
-                    return space.above >= boxRect.height + PADDING && canCenterHorizontally;
                 case 'below':
-                    return space.below >= boxRect.height + PADDING && canCenterHorizontally;
+                    return space[pos] >= boxRect.height + PADDING && canCenter;
                 case 'left':
                     return (targetRect.left - boxRect.width - MARGIN) >= PADDING;
                 case 'right':
@@ -67,13 +77,10 @@ export default function createInfoBox(targetElement, message, options = {}) {
             }
         };
         
-        let pos = order.find(fits);
-        if (!pos) pos = 'above';
+        const pos = order.find(fits) || 'above';
         
         if (currentPos !== pos) {
-            if (currentPos !== null) {
-                box.classList.remove(`infobox-${currentPos}`);
-            }
+            if (currentPos !== null) box.classList.remove(`infobox-${currentPos}`);
             box.classList.add(`infobox-${pos}`);
             currentPos = pos;
         }
@@ -98,11 +105,8 @@ export default function createInfoBox(targetElement, message, options = {}) {
                 break;
         }
         
-        left = Math.max(PADDING, Math.min(left, vw - boxRect.width - PADDING));
-        top = Math.max(PADDING, Math.min(top, vh - boxRect.height - PADDING));
-        
-        box.style.top = `${top}px`;
-        box.style.left = `${left}px`;
+        box.style.top = `${Math.max(PADDING, Math.min(top, vh - boxRect.height - PADDING))}px`;
+        box.style.left = `${Math.max(PADDING, Math.min(left, vw - boxRect.width - PADDING))}px`;
     }
     
     positionBox();
@@ -112,48 +116,41 @@ export default function createInfoBox(targetElement, message, options = {}) {
         box.style.opacity = '1';
     });
     
-    const resizeObserver = new ResizeObserver(() => {
-        positionBox();
-    });
+    const resizeObserver = new ResizeObserver(positionBox);
     resizeObserver.observe(box);
     resizeObserver.observe(targetElement);
     
-    const scrollHandler = () => {
-        positionBox();
-    };
+    const scrollHandler = positionBox;
     window.addEventListener('scroll', scrollHandler, true);
     window.addEventListener('resize', scrollHandler);
-    
-    let dismissed = false;
-    let updateInterval = null;
     
     if (options.updateFn) {
         box._updateFn = options.updateFn;
         box._positionBox = positionBox;
         const updaterFn = () => {
             if (dismissed || !box.parentElement) {
-                if (updateInterval && options.destroyRenderInterval) {
-                    options.destroyRenderInterval(updateInterval);
-                } else if (updateInterval) {
-                    clearInterval(updateInterval);
+                if (updateInterval) {
+                    if (options.destroyRenderInterval) {
+                        options.destroyRenderInterval(updateInterval);
+                    } else {
+                        clearInterval(updateInterval);
+                    }
+                    updateInterval = null;
                 }
                 return;
             }
+            
             const newMessage = options.updateFn();
-            if (newMessage) {
-                const processed = processMessage(newMessage);
-                if (content.innerHTML !== processed) {
-                    content.innerHTML = processed;
-                    positionBox();
-                }
+            if (newMessage && newMessage !== lastMessage) {
+                content.innerHTML = newMessage;
+                lastMessage = newMessage;
+                positionBox();
             }
         };
         
-        if (options.createRenderInterval) {
-            updateInterval = options.createRenderInterval(updaterFn);
-        } else {
-            updateInterval = setInterval(updaterFn, 250);
-        }
+        updateInterval = options.createRenderInterval 
+            ? options.createRenderInterval(updaterFn)
+            : setInterval(updaterFn, 250);
         box._updateInterval = updateInterval;
     }
     
@@ -179,29 +176,17 @@ export default function createInfoBox(targetElement, message, options = {}) {
         box.style.transform = 'translateY(0.5em)';
         
         setTimeout(() => {
-            if (box.parentElement) {
-                box.remove();
-            }
+            if (box.parentElement) box.remove();
         }, 200);
         
-        if (options.onDismiss) {
-            options.onDismiss();
-        }
+        options.onDismiss?.();
     };
     
     box.addEventListener('click', dismiss);
     box._dismiss = dismiss;
-    
-    const updateMessage = (newMessage) => {
-        content.innerHTML = processMessage(newMessage);
-        positionBox();
-    };
-    box._updateMessage = updateMessage;
-    
+        
     return {
         dismiss,
-        updateMessage,
         element: box
     };
 }
-

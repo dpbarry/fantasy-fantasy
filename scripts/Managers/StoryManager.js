@@ -277,6 +277,7 @@ export default class StoryManager {
             updateFn: options.updateFn,
             createRenderInterval: this.core.ui.createRenderInterval.bind(this.core.ui),
             destroyRenderInterval: this.core.ui.destroyRenderInterval.bind(this.core.ui),
+            core: this.core,
             onDismiss: () => {
                 this.dismissedInfoBoxes.add(id);
                 this.core.storage.saveFullGame(this.core);
