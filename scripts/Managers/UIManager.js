@@ -41,6 +41,7 @@ export default class UIManager {
         const sectionsWrapper = document.getElementById("sections-wrapper");
         if (sectionsWrapper) {
             let lastScrollLeft = sectionsWrapper.scrollLeft;
+            let scrollTimeout = null;
             
             sectionsWrapper.addEventListener('scroll', () => {
                 const isScrolling = Math.abs(sectionsWrapper.scrollLeft - lastScrollLeft) > 1;
@@ -50,6 +51,11 @@ export default class UIManager {
                     document.querySelectorAll('.infobox[data-infobox-section]').forEach(infobox => {
                         infobox.style.display = 'none';
                     });
+                    
+                    if (scrollTimeout) clearTimeout(scrollTimeout);
+                    scrollTimeout = setTimeout(() => {
+                        this.updateInfoboxVisibility(true);
+                    }, 300);
                 }
             }, { passive: true });
             

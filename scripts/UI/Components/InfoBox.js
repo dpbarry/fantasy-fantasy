@@ -19,10 +19,6 @@ export default function createInfoBox(targetElement, message, options = {}) {
     const elementSection = getElementSection(targetElement);
     if (elementSection) {
         box.dataset.infoboxSection = elementSection;
-        const core = options.core || window.core;
-        if (window.matchMedia('(width <= 950px)').matches && core?.ui?.visibleSection && elementSection !== core.ui.visibleSection) {
-            box.style.display = 'none';
-        }
     }
     box.style.opacity = '0';
     

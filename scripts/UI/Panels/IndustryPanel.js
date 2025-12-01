@@ -461,11 +461,9 @@ export default class IndustryPanel {
         if (plan.actual > 0 && plan.actual < plan.target) {
             button.classList.add('hastip');
             button.dataset.tip = 'build-partial';
-            button.dataset.buildingType = type;
         } else {
             button.classList.remove('hastip');
             delete button.dataset.tip;
-            delete button.dataset.buildingType;
         }
     }
 
@@ -512,11 +510,9 @@ export default class IndustryPanel {
         if (buildPlan.actual > 0 && buildPlan.actual < buildPlan.target) {
             button.classList.add('hastip');
             button.dataset.tip = 'build-partial';
-            button.dataset.buildingType = type;
         } else {
             button.classList.remove('hastip');
             delete button.dataset.tip;
-            delete button.dataset.buildingType;
         }
     }
 
@@ -580,11 +576,9 @@ export default class IndustryPanel {
         if (plan.actual > 0 && plan.actual < plan.target) {
             button.classList.add('hastip');
             button.dataset.tip = 'hire-partial';
-            button.dataset.buildingType = type;
         } else {
             button.classList.remove('hastip');
             delete button.dataset.tip;
-            delete button.dataset.buildingType;
         }
     }
 
