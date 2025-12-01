@@ -82,17 +82,9 @@ export default class UIManager {
     }
 
     initialize() {
-        this.initNavbar();
         this.initShortcuts();
         this.initEventListeners();
         this.initMobileNavigation();
-    }
-
-    initNavbar() {
-        const navButtons = document.querySelectorAll(".navbutton");
-        navButtons.forEach(b => {
-            b.onpointerdown = () => this.show(b.dataset.loc, b.dataset.panel);
-        });
     }
 
     newCanvas() {

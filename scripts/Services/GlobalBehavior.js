@@ -42,6 +42,8 @@ export default function setupGlobalBehavior(core) {
         sectionsWrapper.style.scrollBehavior = 'auto';
         sectionsWrapper.style.scrollSnapType = 'none';
         
+        sectionsWrapper.style.overflowX = 'scroll';
+        
         if (smooth) {
             const startLeft = sectionsWrapper.scrollLeft;
             const distance = targetLeft - startLeft;
@@ -52,7 +54,9 @@ export default function setupGlobalBehavior(core) {
                 const elapsed = currentTime - startTime;
                 const progress = Math.min(elapsed / duration, 1);
                 const ease = progress * (2 - progress);
-                sectionsWrapper.scrollLeft = startLeft + distance * ease;
+                const currentValue = startLeft + distance * ease;
+                
+                sectionsWrapper.scrollLeft = currentValue;
                 
                 if (progress < 1) {
                     requestAnimationFrame(animate);
@@ -200,38 +204,51 @@ export default function setupGlobalBehavior(core) {
             let lockedScrollLeft = sectionsWrapper.scrollLeft;
             let isProgrammaticScroll = false;
             let lastScrollTime = 0;
+            let _scrollLeft = sectionsWrapper.scrollLeft;
             
             const updateLock = () => {
-                lockedScrollLeft = sectionsWrapper.scrollLeft;
+                lockedScrollLeft = _scrollLeft;
             };
             
             sectionsWrapper.style.overflowX = 'hidden';
-            const originalScrollTo = sectionsWrapper.scrollTo;
-            sectionsWrapper.scrollTo = function(options) {
-                if (options && typeof options.left !== 'undefined') {
-                    sectionsWrapper.style.overflowX = 'scroll';
-                    originalScrollTo.call(this, options);
-                    requestAnimationFrame(() => {
-                        sectionsWrapper.style.overflowX = 'hidden';
-                        lockedScrollLeft = sectionsWrapper.scrollLeft;
-                    });
+            
+            const setScrollLeftDirect = (value) => {
+                sectionsWrapper.style.overflowX = 'scroll';
+                const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollLeft') || 
+                    Object.getOwnPropertyDescriptor(Element.prototype, 'scrollLeft');
+                if (descriptor && descriptor.set) {
+                    descriptor.set.call(sectionsWrapper, value);
                 } else {
-                    originalScrollTo.call(this, options);
+                    sectionsWrapper.scrollLeft = value;
                 }
+                _scrollLeft = value;
+                lockedScrollLeft = value;
+                setTimeout(() => {
+                    sectionsWrapper.style.overflowX = 'hidden';
+                }, 0);
+            };
+            
+            const getScrollLeft = () => {
+                const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollLeft') || 
+                    Object.getOwnPropertyDescriptor(Element.prototype, 'scrollLeft');
+                if (descriptor && descriptor.get) {
+                    return descriptor.get.call(sectionsWrapper);
+                }
+                return sectionsWrapper.scrollLeft;
             };
             
             Object.defineProperty(sectionsWrapper, 'scrollLeft', {
                 get: function() {
-                    return lockedScrollLeft;
+                    if (isProgrammaticScroll && sectionsWrapper.style.overflowX === 'scroll') {
+                        return getScrollLeft();
+                    }
+                    return _scrollLeft;
                 },
                 set: function(value) {
                     if (isProgrammaticScroll) {
-                        lockedScrollLeft = value;
-                        sectionsWrapper.style.overflowX = 'scroll';
-                        sectionsWrapper.style.scrollLeft = value;
-                        requestAnimationFrame(() => {
-                            sectionsWrapper.style.overflowX = 'hidden';
-                        });
+                        setScrollLeftDirect(value);
+                    } else {
+                        _scrollLeft = lockedScrollLeft;
                     }
                 },
                 configurable: true
@@ -243,33 +260,38 @@ export default function setupGlobalBehavior(core) {
                 lastScrollTime = now;
                 
                 if (isProgrammaticScroll) {
+                    _scrollLeft = sectionsWrapper.scrollLeft;
                     updateLock();
                     detectVisibleSection();
-                    return;
                 }
-                
-                detectVisibleSection();
             }, { passive: true });
-            
-            scrollToVisibleSection(false);
-            updateLock();
             
             const originalScrollToVisibleSection = core.ui.scrollToVisibleSection;
             core.ui.scrollToVisibleSection = (smooth = false) => {
                 isProgrammaticScroll = true;
+                sectionsWrapper.style.overflowX = 'scroll';
                 originalScrollToVisibleSection(smooth);
                 if (smooth) {
                     setTimeout(() => {
                         updateLock();
+                        sectionsWrapper.style.overflowX = 'hidden';
                         isProgrammaticScroll = false;
                     }, 160);
                 } else {
                     requestAnimationFrame(() => {
                         updateLock();
+                        sectionsWrapper.style.overflowX = 'hidden';
                         isProgrammaticScroll = false;
                     });
                 }
             };
+            
+            isProgrammaticScroll = true;
+            sectionsWrapper.style.overflowX = 'scroll';
+            scrollToVisibleSection(false);
+            updateLock();
+            sectionsWrapper.style.overflowX = 'hidden';
+            isProgrammaticScroll = false;
         } else {
             sectionsWrapper.addEventListener("scroll", detectVisibleSection, { passive: true });
         }

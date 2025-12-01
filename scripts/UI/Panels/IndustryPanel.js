@@ -456,6 +456,17 @@ export default class IndustryPanel {
         
         const progress = this.core.industry.getBuildProgress(type);
         this.updateProgressFill(progressFill, progress);
+        
+        const plan = this.getActionPlanDetails('build', type);
+        if (plan.actual > 0 && plan.actual < plan.target) {
+            button.classList.add('hastip');
+            button.dataset.tip = 'build-partial';
+            button.dataset.buildingType = type;
+        } else {
+            button.classList.remove('hastip');
+            delete button.dataset.tip;
+            delete button.dataset.buildingType;
+        }
     }
 
     updateMainButton(card, type, def) {
@@ -496,6 +507,17 @@ export default class IndustryPanel {
             resourceProgressIndicator.textContent = progressText || '';
             resourceProgressIndicator.style.display = progressText ? 'inline' : 'none';
         }
+        
+        const buildPlan = this.getActionPlanDetails('build', type);
+        if (buildPlan.actual > 0 && buildPlan.actual < buildPlan.target) {
+            button.classList.add('hastip');
+            button.dataset.tip = 'build-partial';
+            button.dataset.buildingType = type;
+        } else {
+            button.classList.remove('hastip');
+            delete button.dataset.tip;
+            delete button.dataset.buildingType;
+        }
     }
 
     updateDemolishButton(card, type) {
@@ -524,9 +546,46 @@ export default class IndustryPanel {
         const button = card.dropdown?.querySelector('.dropdown-workers .dropdown-add-worker-btn');
         if (!button) return;
         
-        button.textContent = this.formatActionLabel('Hire', 'hire', type);
+        const textNodeType = (typeof Node !== 'undefined' && Node.TEXT_NODE) || 3;
+        Array.from(button.childNodes).forEach(node => {
+            if (node.nodeType === textNodeType && node.textContent.trim().length) {
+                node.remove();
+            }
+        });
+        
+        let progressFill = button.querySelector('.hire-progress-fill');
+        if (!progressFill) {
+            progressFill = document.createElement('div');
+            progressFill.className = 'hire-progress-fill';
+            button.prepend(progressFill);
+        }
+        
+        let labelSpan = button.querySelector('.hire-btn-label');
+        if (!labelSpan) {
+            labelSpan = document.createElement('span');
+            labelSpan.className = 'hire-btn-label';
+            labelSpan.style.position = 'relative';
+            labelSpan.style.zIndex = '1';
+            button.appendChild(labelSpan);
+        }
+        labelSpan.textContent = this.formatActionLabel('Hire', 'hire', type);
+        
         const details = this.getWorkerButtonDetails(type);
         this.updateButtonInfoBox(button, details);
+        
+        const progress = this.core.industry.getHireProgress(type);
+        this.updateProgressFill(progressFill, progress);
+        
+        const plan = this.getActionPlanDetails('hire', type);
+        if (plan.actual > 0 && plan.actual < plan.target) {
+            button.classList.add('hastip');
+            button.dataset.tip = 'hire-partial';
+            button.dataset.buildingType = type;
+        } else {
+            button.classList.remove('hastip');
+            delete button.dataset.tip;
+            delete button.dataset.buildingType;
+        }
     }
 
     updateFurloughButton(card, type) {
@@ -865,8 +924,9 @@ export default class IndustryPanel {
                 <div class="dropdown-section-body">
                     <div class="action-buttons">
                         <div class="button-with-info">
-                            <button class="dropdown-add-worker-btn ${!canAdd ? 'hastip' : ''}" ${!canAdd ? `disabled data-tip="hire-disabled" data-building-type="${type}"` : ''}>
-                                Hire
+                            <button class="dropdown-add-worker-btn ${!canAdd ? 'hastip' : ''}" ${!canAdd ? `disabled data-tip="hire-disabled" data-building-type="${type}"` : ''} style="position: relative;">
+                                <div class="hire-progress-fill"></div>
+                                <span class="hire-btn-label" style="position: relative; z-index: 1;">Hire</span>
                             </button>
                         </div>
                         <div class="button-with-info">
@@ -1074,6 +1134,18 @@ export default class IndustryPanel {
         if (availableSlots <= 0) return `Worker limit reached (${maxWorkers})`;
         if (this.core.industry.unassignedWorkers <= 0) return 'No available workers';
         return 'Cannot hire';
+    }
+
+    getBuildPartialText(type) {
+        const plan = this.getActionPlanDetails('build', type);
+        if (plan.actual <= 0 || plan.actual >= plan.target) return '';
+        return `Can build ${plan.actual}`;
+    }
+
+    getHirePartialText(type) {
+        const plan = this.getActionPlanDetails('hire', type);
+        if (plan.actual <= 0 || plan.actual >= plan.target) return '';
+        return `Can hire ${plan.actual}`;
     }
 
     getFurloughDisabledReason(type) {

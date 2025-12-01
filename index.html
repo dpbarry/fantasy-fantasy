@@ -1922,7 +1922,8 @@
                 @media (hover: hover) and (pointer: fine) {
                     .building-row button:hover:not(:disabled) {
                         background: color-mix(in oklab, var(--bgColor) 60%, var(--accent));
-                        .build-progress-fill {
+                        .build-progress-fill,
+                        .hire-progress-fill {
                             background: color-mix(in oklab, var(--bgColor) 60%, var(--accent));
                         }
                     }
@@ -1940,7 +1941,8 @@
                     color: var(--lightBaseColor);
                 }
 
-                .build-progress-fill {
+                .build-progress-fill,
+                .hire-progress-fill {
                     position: absolute;
                     left: 0;
                     top: 0;
@@ -2092,7 +2094,8 @@
                                     &:hover:not(:disabled) {
                                         border-color: var(--accent);
                                         background: color-mix(in oklab, var(--bgColor) 60%, var(--accent));
-                                        .build-progress-fill {
+                                        .build-progress-fill,
+                                        .hire-progress-fill {
                                             background: color-mix(in oklab, var(--bgColor) 60%, var(--accent));
                                         }
                                     }
@@ -2107,7 +2110,7 @@
                             }
 
                             &.dropdown-add-worker-btn {
-                                background: color-mix(in oklab, var(--bgColor) 70%, var(--accent));
+                                background: color-mix(in oklab, var(--bgColor) 85%, var(--accent));
                                 &:disabled {
                                     background: color-mix(in oklab, var(--bgColor) 85%, var(--accent));
                                 }
@@ -2141,7 +2144,8 @@
                                     color: var(--lightBaseColor);                            
                                 }
 
-                            .build-progress-fill {
+                            .build-progress-fill,
+                            .hire-progress-fill {
                                 position: absolute;
                                 left: 0;
                                 top: 0;

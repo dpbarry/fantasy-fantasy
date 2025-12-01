@@ -808,6 +808,22 @@ export default function createTooltipService(core, uiManager) {
             return reason ? `<p>${reason}</p>` : '';
         });
 
+        registerTip('build-partial', (el) => {
+            const type = el.dataset.buildingType;
+            if (!type) return '';
+            const panel = core.ui.panels.industry;
+            const text = panel.getBuildPartialText(type);
+            return text ? `<p>${text}</p>` : '';
+        });
+
+        registerTip('hire-partial', (el) => {
+            const type = el.dataset.buildingType;
+            if (!type) return '';
+            const panel = core.ui.panels.industry;
+            const text = panel.getHirePartialText(type);
+            return text ? `<p>${text}</p>` : '';
+        });
+
         registerTip('furlough-disabled', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';

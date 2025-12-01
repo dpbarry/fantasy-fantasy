@@ -740,6 +740,22 @@ export default class IndustryManager {
         return minProgress;
     }
 
+    getHireProgress(type) {
+        const b = this.buildings[type];
+        if (!b?.count) return 0;
+        
+        const maxWorkers = this.getMaxWorkers(type);
+        const availableSlots = maxWorkers - (b.workers || 0);
+        if (availableSlots <= 0) return 0;
+        
+        const plan = this.getActionPlan('hire', type);
+        const target = plan.target || 1;
+        const have = this.unassignedWorkers;
+        
+        if (target <= 0) return 0;
+        return Math.max(0, Math.min(1, have / target));
+    }
+
     getResourceProgress(type) {
         const def = IndustryManager.BUILDING_DEFS[type];
         if (!def?.buildCost) return null;
