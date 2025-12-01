@@ -199,63 +199,57 @@ export default function setupGlobalBehavior(core) {
         if (isMobile) {
             let lockedScrollLeft = sectionsWrapper.scrollLeft;
             let isProgrammaticScroll = false;
-            let touchStartX = 0;
-            let touchStartY = 0;
+            let lastScrollTime = 0;
             
             const updateLock = () => {
                 lockedScrollLeft = sectionsWrapper.scrollLeft;
             };
             
-            const handleTouchStart = (e) => {
-                touchStartX = e.touches[0].clientX;
-                touchStartY = e.touches[0].clientY;
-            };
-            
-            const handleTouchMove = (e) => {
-                if (e.touches.length !== 1) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return;
-                }
-                
-                const touchX = e.touches[0].clientX;
-                const deltaX = Math.abs(touchX - touchStartX);
-                
-                if (deltaX > 0) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return;
+            sectionsWrapper.style.overflowX = 'hidden';
+            const originalScrollTo = sectionsWrapper.scrollTo;
+            sectionsWrapper.scrollTo = function(options) {
+                if (options && typeof options.left !== 'undefined') {
+                    sectionsWrapper.style.overflowX = 'scroll';
+                    originalScrollTo.call(this, options);
+                    requestAnimationFrame(() => {
+                        sectionsWrapper.style.overflowX = 'hidden';
+                        lockedScrollLeft = sectionsWrapper.scrollLeft;
+                    });
+                } else {
+                    originalScrollTo.call(this, options);
                 }
             };
             
-            const handleWheel = (e) => {
-                if (Math.abs(e.deltaX) > 0) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    sectionsWrapper.scrollLeft = lockedScrollLeft;
-                }
-            };
-            
-            sectionsWrapper.addEventListener("touchstart", handleTouchStart, { passive: true, capture: true });
-            sectionsWrapper.addEventListener("touchmove", handleTouchMove, { passive: false, capture: true });
-            sectionsWrapper.addEventListener("wheel", handleWheel, { passive: false, capture: true });
+            Object.defineProperty(sectionsWrapper, 'scrollLeft', {
+                get: function() {
+                    return lockedScrollLeft;
+                },
+                set: function(value) {
+                    if (isProgrammaticScroll) {
+                        lockedScrollLeft = value;
+                        sectionsWrapper.style.overflowX = 'scroll';
+                        sectionsWrapper.style.scrollLeft = value;
+                        requestAnimationFrame(() => {
+                            sectionsWrapper.style.overflowX = 'hidden';
+                        });
+                    }
+                },
+                configurable: true
+            });
             
             sectionsWrapper.addEventListener("scroll", () => {
+                const now = performance.now();
+                if (now - lastScrollTime < 16) return;
+                lastScrollTime = now;
+                
                 if (isProgrammaticScroll) {
                     updateLock();
                     detectVisibleSection();
                     return;
                 }
                 
-                const currentScrollLeft = sectionsWrapper.scrollLeft;
-                const diff = Math.abs(currentScrollLeft - lockedScrollLeft);
-                
-                if (diff > 1) {
-                    sectionsWrapper.scrollLeft = lockedScrollLeft;
-                } else if (diff === 0) {
-                    detectVisibleSection();
-                }
-            }, { passive: false });
+                detectVisibleSection();
+            }, { passive: true });
             
             scrollToVisibleSection(false);
             updateLock();
