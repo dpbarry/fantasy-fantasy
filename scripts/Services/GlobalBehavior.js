@@ -116,25 +116,25 @@ export default function setupGlobalBehavior(core) {
                 if (core.ui.updateMobileNavArrows) {
                     core.ui.updateMobileNavArrows();
                 }
-            }
-            
-            if (!isResizing) {
-                isResizing = true;
-                resizeAnimationFrame = requestAnimationFrame(lockScrollPosition);
-            }
-            
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                isResizing = false;
-                if (resizeAnimationFrame) {
-                    cancelAnimationFrame(resizeAnimationFrame);
-                    resizeAnimationFrame = null;
+            } else {
+                if (!isResizing) {
+                    isResizing = true;
+                    resizeAnimationFrame = requestAnimationFrame(lockScrollPosition);
                 }
-                scrollToVisibleSection(false);
-                if (core.ui.updateMobileNavArrows) {
-                    core.ui.updateMobileNavArrows();
-                }
-            }, 150);
+                
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    isResizing = false;
+                    if (resizeAnimationFrame) {
+                        cancelAnimationFrame(resizeAnimationFrame);
+                        resizeAnimationFrame = null;
+                    }
+                    scrollToVisibleSection(false);
+                    if (core.ui.updateMobileNavArrows) {
+                        core.ui.updateMobileNavArrows();
+                    }
+                }, 150);
+            }
         } else if (!isMobile && wasMobile) {
             isResizing = false;
             if (resizeAnimationFrame) {
@@ -154,6 +154,8 @@ export default function setupGlobalBehavior(core) {
         let scrollTimeout = null;
         
         const detectVisibleSection = () => {
+            if (isResizing) return;
+            
             const sections = sectionsWrapper.querySelectorAll("section");
             if (sections.length !== 3) return;
             
