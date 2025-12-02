@@ -4,7 +4,6 @@ export default class IndustryManager {
     static BUILDING_DEFS = {
         farmPlot: {
             name: "Farm Plot",
-            lore: "An arable patch of land",
             workersPerBuilding: 2,
             effects: {
                 crops: {base: {gain: 0.5}, worker: {drain: 0.5}},
@@ -16,7 +15,6 @@ export default class IndustryManager {
         },
         treePlantation: {
             name: "Tree Plantation",
-            lore: "A thicket of hearty trees",
             workersPerBuilding: 3,
             effects: {
                 trees: {base: {gain: 0.5}, worker: {drain: 0.5}},
@@ -828,17 +826,17 @@ export default class IndustryManager {
     getHireProgress(type) {
         const b = this.buildings[type];
         if (!b?.count) return 0;
-        
+
         const maxWorkers = this.getMaxWorkers(type);
         const availableSlots = maxWorkers - (b.workers || 0);
         if (availableSlots <= 0) return 0;
-        
+
         const plan = this.getActionPlan('hire', type);
-        const target = plan.selected === 'max' ? plan.actual : Math.min(availableSlots, plan.target || 1);
-        const have = this.unassignedWorkers;
-        
+        const target = plan.target || 1;
+        const canHire = Math.min(this.unassignedWorkers, availableSlots);
+
         if (target <= 0) return 0;
-        return Math.max(0, Math.min(1, have / target));
+        return Math.max(0, Math.min(1, canHire / target));
     }
 
     getResourceProgress(type) {

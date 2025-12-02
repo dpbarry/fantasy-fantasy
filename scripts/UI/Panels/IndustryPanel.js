@@ -191,12 +191,6 @@ export default class IndustryPanel {
                     const canHire = hirePlan.actual > 0;
                     this.updateButtonStateWithTooltip(card.workerBtn, canHire, 'hire-disabled', type);
 
-                    // Set hire-partial tooltip if applicable
-                    if (hirePlan.actual > 0 && hirePlan.actual < hirePlan.target) {
-                        this.core.ui.hookTip(card.workerBtn, 'hire-partial');
-                    } else {
-                        this.core.ui.unhookTip(card.workerBtn, 'hire-partial');
-                    }
                 }
                 
                 const canBuild = buildPlan.actual > 0;
@@ -489,6 +483,7 @@ export default class IndustryPanel {
         const plan = this.getActionPlanDetails('build', type);
         if (plan.actual > 0 && plan.actual < plan.target) {
             this.core.ui.hookTip(button, 'build-partial');
+            button.dataset.buildingType = type;
         } else {
             this.core.ui.unhookTip(button, 'build-partial');
         }
@@ -509,18 +504,12 @@ export default class IndustryPanel {
                     incrementSpan.className = 'building-increment';
                     titleSpan.insertBefore(incrementSpan, titleSpan.firstChild);
                 }
-                incrementSpan.textContent = ` x${buildPlan.actual} `;
+                incrementSpan.textContent = ` x${buildPlan.target} `;
             } else if (incrementSpan) {
                 incrementSpan.remove();
             }
 
-            // Update title span tooltips - it always has building-lore, and gets build-partial if applicable
-            const hasPartial = buildPlan.actual > 0 && buildPlan.actual < buildPlan.target;
-            if (hasPartial) {
-                this.core.ui.hookTip(titleSpan, 'build-partial');
-            } else {
-                this.core.ui.unhookTip(titleSpan, 'build-partial');
-            }
+            // Title span tooltip shows build effects (handled by build-effects tip)
         }
         
         const progressFill = button.querySelector('.build-progress-fill');
@@ -536,12 +525,6 @@ export default class IndustryPanel {
             resourceProgressIndicator.style.display = progressText ? 'inline' : 'none';
         }
         
-        const buildPlan = this.getActionPlanDetails('build', type);
-        if (buildPlan.actual > 0 && buildPlan.actual < buildPlan.target) {
-            this.core.ui.hookTip(button, 'build-partial');
-        } else {
-            this.core.ui.unhookTip(button, 'build-partial');
-        }
     }
 
     updateDemolishButton(card, type) {
@@ -596,7 +579,7 @@ export default class IndustryPanel {
         
         const progress = this.core.industry.getHireProgress(type);
         this.updateProgressFill(progressFill, progress);
-        
+
         const plan = this.getActionPlanDetails('hire', type);
         if (plan.actual > 0 && plan.actual < plan.target) {
             this.core.ui.hookTip(button, 'hire-partial');
@@ -789,11 +772,9 @@ export default class IndustryPanel {
             <span class="building-title">${def ? def.name : type} <span class="building-count">(${building.count})</span></span>
             <span class="resource-progress-indicator" style="display: ${hasBuildCost ? '' : 'none'}"></span>
         `;
-        const titleSpan = mainBtn.querySelector('.building-title');
-        if (titleSpan) {
-            this.core.ui.hookTip(titleSpan, 'building-lore');
-            titleSpan.dataset.buildingType = type;
-        }
+
+        this.core.ui.hookTip(mainBtn, 'build-effects-affordable');
+        mainBtn.dataset.buildingType = type;
         mainBtn.onclick = () => this.handleBuildAction(type, def);
 
         const workerBtn = document.createElement('button');
@@ -809,6 +790,9 @@ export default class IndustryPanel {
         if (!canHire) {
             this.core.ui.hookTip(workerBtn, 'hire-disabled');
         }
+
+        // Hook hire effects tooltip to the worker button
+        this.core.ui.hookTip(workerBtn, 'hire-effects-affordable');
         
         workerBtn.onclick = (e) => {
             e.stopPropagation();
@@ -963,23 +947,38 @@ export default class IndustryPanel {
     formatActionLabel(baseText, action, type) {
         if (!this.isMultiIncrementActive()) return baseText;
         const plan = this.getActionPlanDetails(action, type);
-        
-        let capacity;
-        if (action === 'hire') {
-            const maxWorkers = this.core.industry.getMaxWorkers(type);
-            const b = this.core.industry.buildings[type];
-            capacity = maxWorkers - (b?.workers || 0);
-        } else if (action === 'furlough') {
-            const b = this.core.industry.buildings[type];
-            capacity = b?.workers || 0;
-        } else if (action === 'sell') {
-            const b = this.core.industry.buildings[type];
-            capacity = b?.count || 0;
+
+        let displayValue;
+        if (plan.selected === 'max') {
+            displayValue = plan.actual;
         } else {
-            capacity = plan.limit;
+            // For build and hire actions, always show the selected target increment
+            // For other actions, show the target but cap it at what's possible
+            if (action === 'build' || action === 'hire') {
+                if (action === 'hire') {
+                    const maxWorkers = this.core.industry.getMaxWorkers(type);
+                    const b = this.core.industry.buildings[type];
+                    const capacity = maxWorkers - (b?.workers || 0);
+                    // When hire button is disabled due to no buildings, show x1 instead of x0
+                    displayValue = capacity === 0 ? 1 : plan.target;
+                } else {
+                    displayValue = plan.target;
+                }
+            } else {
+                let capacity;
+                if (action === 'furlough') {
+                    const b = this.core.industry.buildings[type];
+                    capacity = b?.workers || 0;
+                } else if (action === 'sell') {
+                    const b = this.core.industry.buildings[type];
+                    capacity = b?.count || 0;
+                } else {
+                    capacity = plan.limit;
+                }
+                displayValue = Math.min(capacity, plan.target);
+            }
         }
-        
-        const displayValue = plan.selected === 'max' ? plan.actual : Math.min(capacity, plan.target);
+
         return displayValue > 1 ? `${baseText} x${displayValue}` : baseText;
     }
 
@@ -1058,7 +1057,13 @@ export default class IndustryPanel {
     }
 
     getBuildingButtonDetails(type) {
-        return this.getButtonDetails(type, 'build', t => this.core.industry.getBuildEffects(t));
+        const result = this.core.industry.getBuildEffects(type);
+        if (!result) return null;
+
+        const plan = this.getActionPlanDetails('build', type);
+        // Show effects for the full selected increment, not just what you can afford
+        const multiplier = plan.target;
+        return this.getButtonDetailsWithMultiplier(result, multiplier);
     }
 
     getDemolishButtonDetails(type) {
@@ -1072,15 +1077,19 @@ export default class IndustryPanel {
     getWorkerButtonDetails(type) {
         const result = this.core.industry.getHireWorkerEffects(type);
         if (!result) return null;
-        
+
         const plan = this.getActionPlanDetails('hire', type);
-        
+
+        // Show effects for the full selected increment, but use x1 when disabled due to no buildings
+        const capacity = this.core.industry.getMaxWorkers(type) - (this.core.industry.buildings[type]?.workers || 0);
+        const multiplier = capacity === 0 ? 1 : plan.target;
+
         const {costs, effects} = Object.entries(result.effects || {}).reduce((acc, [res, val]) => {
-            const item = {res, val: Math.abs(val) * plan.actual, type: val < 0 ? 'drain' : 'gain'};
+            const item = {res, val: Math.abs(val) * multiplier, type: val < 0 ? 'drain' : 'gain'};
             (val < 0 ? acc.costs : acc.effects).push(item);
             return acc;
         }, {costs: [], effects: []});
-        
+
         return {costs, effects};
     }
 

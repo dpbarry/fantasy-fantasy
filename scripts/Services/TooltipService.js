@@ -143,7 +143,7 @@ export default function createTooltipService(core, uiManager) {
 
     function needsUpdate(el) {
         const tipKeys = getTipKeys(el);
-        const dynamic = ['resource', 'building-effects', 'worker-effects', 'time-to-next', 'disabled', 'increment-amount', 'partial'];
+        const dynamic = ['resource', 'building-effects', 'build-effects-affordable', 'hire-effects-affordable', 'worker-effects', 'time-to-next', 'disabled', 'increment-amount', 'partial'];
         return tipKeys.some(k => dynamic.some(d => k.includes(d)));
     }
 
@@ -724,37 +724,6 @@ export default function createTooltipService(core, uiManager) {
             return createBreakdownBox({ items, modifiers: [], result: { items: resultItems } });
         });
 
-        registerTip('building-lore', (el) => {
-            const type = el.dataset.buildingType;
-            if (!type) return '';
-            
-            const def = core.industry.constructor.BUILDING_DEFS[type];
-            if (!def) return '';
-            
-            let html = '';
-            if (def.lore) {
-                html += `<p style="font-style: italic;">${def.lore}&nbsp;</p>`;
-            }
-            
-            const resources = new Set();
-            if (def.effects) {
-                for (const [resName, eff] of Object.entries(def.effects)) {
-                    if ((eff.base && (eff.base.gain || eff.base.drain)) || 
-                        (eff.worker && (eff.worker.gain || eff.worker.drain))) {
-                        resources.add(resName);
-                    }
-                }
-            }
-            
-            if (resources.size > 0) {
-                const resourceList = Array.from(resources).map(r => 
-                    r.charAt(0).toUpperCase() + r.slice(1)
-                ).join(', ');
-                html += `<p style="opacity: 0.8; font-size: 0.9em">Affects: ${resourceList}</p>`;
-            }
-            
-            return html;
-        });
 
         registerTip('build-disabled', (el) => {
             const type = el.dataset.buildingType;
@@ -796,6 +765,89 @@ export default function createTooltipService(core, uiManager) {
             return text ? `<p>${text}</p>` : '';
         });
 
+        registerTip('build-effects-affordable', (el) => {
+            const type = el.dataset.buildingType;
+            if (!type) return '';
+            const panel = core.ui.panels.industry;
+            const result = core.industry.getBuildEffects(type);
+            if (!result) return '';
+
+            const plan = panel.getActionPlanDetails('build', type);
+            const isPartial = plan.actual > 0 && plan.actual < plan.target;
+
+            if (isPartial) {
+                // Show partial build info (what can actually be built)
+                const multiplier = plan.actual;
+                const details = panel.getButtonDetailsWithMultiplier(result, multiplier);
+                if (!details) return '';
+
+                const formatType = core.settings.configs.numformat;
+                const items = [];
+                if (details.costs?.length) {
+                    details.costs.forEach(c => {
+                        items.push(`<span style="color: var(--drainColor)">-${formatNumber(c.amt, formatType, { decimalPlaces: 2 })} ${c.res}</span>`);
+                    });
+                }
+                if (details.effects?.length) {
+                    details.effects.forEach(e => {
+                        const sign = e.type === 'gain' ? '+' : '-';
+                        const color = e.type === 'gain' ? 'var(--gainColor)' : 'var(--drainColor)';
+                        items.push(`<span style="color: ${color}">${sign}${formatNumber(e.val, formatType, { decimalPlaces: 2 })} ${e.res}/s</span>`);
+                    });
+                }
+                if (details.capChanges?.length) {
+                    const capItems = [];
+                    details.capChanges.forEach(c => {
+                        const isPositive = c.val >= 0;
+                        const sign = isPositive ? '+' : '';
+                        const color = isPositive ? 'var(--gainColor)' : 'var(--drainColor)';
+                        capItems.push(`<span style="color: ${color}">${sign}${formatNumber(c.val, formatType, { decimalPlaces: 2 })} ${c.res} cap</span>`);
+                    });
+                    if (capItems.length > 0) {
+                        items.push(`<br>${capItems.join(' ')}`);
+                    }
+                }
+
+                if (items.length === 0) return '';
+                return `<p>Can build ${multiplier}</p><p style="font-weight: 600">${items.join(', ')}</p>`;
+            } else {
+                // Show full build effects (what will be built at increment)
+                const multiplier = plan.target;
+                const details = panel.getButtonDetailsWithMultiplier(result, multiplier);
+                if (!details) return '';
+
+                const formatType = core.settings.configs.numformat;
+                const items = [];
+                if (details.costs?.length) {
+                    details.costs.forEach(c => {
+                        items.push(`<span style="color: var(--drainColor)">-${formatNumber(c.amt, formatType, { decimalPlaces: 2 })} ${c.res}</span>`);
+                    });
+                }
+                if (details.effects?.length) {
+                    details.effects.forEach(e => {
+                        const sign = e.type === 'gain' ? '+' : '-';
+                        const color = e.type === 'gain' ? 'var(--gainColor)' : 'var(--drainColor)';
+                        items.push(`<span style="color: ${color}">${sign}${formatNumber(e.val, formatType, { decimalPlaces: 2 })} ${e.res}/s</span>`);
+                    });
+                }
+                if (details.capChanges?.length) {
+                    const capItems = [];
+                    details.capChanges.forEach(c => {
+                        const isPositive = c.val >= 0;
+                        const sign = isPositive ? '+' : '';
+                        const color = isPositive ? 'var(--gainColor)' : 'var(--drainColor)';
+                        capItems.push(`<span style="color: ${color}">${sign}${formatNumber(c.val, formatType, { decimalPlaces: 2 })} ${c.res} cap</span>`);
+                    });
+                    if (capItems.length > 0) {
+                        items.push(`<br>${capItems.join(' ')}`);
+                    }
+                }
+
+                if (items.length === 0) return '';
+                return `<p style="font-weight: 600">${items.join(', ')}</p>`;
+            }
+        });
+
         registerTip('hire-partial', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
@@ -803,6 +855,74 @@ export default function createTooltipService(core, uiManager) {
             const text = panel.getHirePartialText(type);
             return text ? `<p>${text}</p>` : '';
         });
+
+        registerTip('hire-effects-affordable', (el) => {
+            const type = el.dataset.buildingType;
+            if (!type) return '';
+            const panel = core.ui.panels.industry;
+            const result = core.industry.getHireWorkerEffects(type);
+            if (!result) return '';
+
+            const plan = panel.getActionPlanDetails('hire', type);
+            const isPartial = plan.actual > 0 && plan.actual < plan.target;
+
+            if (isPartial) {
+                // Show partial hire info (what can actually be hired)
+                const multiplier = plan.actual;
+                // For worker hiring, all effects are in result.effects and we separate based on sign
+                const {costs, effects} = Object.entries(result.effects || {}).reduce((acc, [res, val]) => {
+                    const item = {res, val: Math.abs(val) * multiplier, type: val < 0 ? 'drain' : 'gain'};
+                    (val < 0 ? acc.costs : acc.effects).push(item);
+                    return acc;
+                }, {costs: [], effects: []});
+
+                const formatType = core.settings.configs.numformat;
+                const items = [];
+                if (costs?.length) {
+                    costs.forEach(c => {
+                        items.push(`<span style="color: var(--drainColor)">-${formatNumber(c.val, formatType, { decimalPlaces: 2 })} ${c.res}</span>`);
+                    });
+                }
+                if (effects?.length) {
+                    effects.forEach(e => {
+                        const sign = e.type === 'gain' ? '+' : '-';
+                        const color = e.type === 'gain' ? 'var(--gainColor)' : 'var(--drainColor)';
+                        items.push(`<span style="color: ${color}">${sign}${formatNumber(e.val, formatType, { decimalPlaces: 2 })} ${e.res}/s</span>`);
+                    });
+                }
+
+                if (items.length === 0) return '';
+                return `<p>Can hire ${multiplier}</p><p style="font-weight: 600">${items.join(', ')}</p>`;
+            } else {
+                // Show full hire effects (what will be hired at increment)
+                const multiplier = plan.target;
+                // For worker hiring, all effects are in result.effects and we separate based on sign
+                const {costs, effects} = Object.entries(result.effects || {}).reduce((acc, [res, val]) => {
+                    const item = {res, val: Math.abs(val) * multiplier, type: val < 0 ? 'drain' : 'gain'};
+                    (val < 0 ? acc.costs : acc.effects).push(item);
+                    return acc;
+                }, {costs: [], effects: []});
+
+                const formatType = core.settings.configs.numformat;
+                const items = [];
+                if (costs?.length) {
+                    costs.forEach(c => {
+                        items.push(`<span style="color: var(--drainColor)">-${formatNumber(c.val, formatType, { decimalPlaces: 2 })} ${c.res}</span>`);
+                    });
+                }
+                if (effects?.length) {
+                    effects.forEach(e => {
+                        const sign = e.type === 'gain' ? '+' : '-';
+                        const color = e.type === 'gain' ? 'var(--gainColor)' : 'var(--drainColor)';
+                        items.push(`<span style="color: ${color}">${sign}${formatNumber(e.val, formatType, { decimalPlaces: 2 })} ${e.res}/s</span>`);
+                    });
+                }
+
+                if (items.length === 0) return '';
+                return `<p style="font-weight: 600">${items.join(', ')}</p>`;
+            }
+        });
+
 
         registerTip('furlough-disabled', (el) => {
             const type = el.dataset.buildingType;
