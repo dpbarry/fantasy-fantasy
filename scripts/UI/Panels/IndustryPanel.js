@@ -1,3 +1,5 @@
+import { formatNumber } from "../../Utils.js";
+
 export default class IndustryPanel {
     constructor(core) {
         this.core = core;
@@ -32,28 +34,46 @@ export default class IndustryPanel {
     }
 
     renderResources(data) {
+        const formatType = this.core.settings.configs.numformat;
+
         function formatValueParts(val) {
-            let num = val.toNumber();
-            if (num < 1) {
-                const decPart = num.toFixed(2).slice(1);
-                return {int: '0', dec: decPart};
+            const num = val && typeof val.toNumber === 'function' ? val.toNumber() : Number(val);
+            const absNum = Math.abs(num);
+            
+            // For numbers < 1000, always show 2 decimal places to prevent flickering
+            if (absNum < 1000) {
+                const formatted = num.toFixed(2);
+                const parts = formatted.split('.');
+                return {int: parts[0], dec: '.' + parts[1], exp: '', hasAbbrev: false};
             }
-            if (num < 1000) {
-                const intPart = Math.floor(num).toString();
-                const decPart = (num % 1).toFixed(2).slice(1);
-                return {int: intPart, dec: decPart};
+            
+            // For numbers >= 1000, use the normal formatter with consistent decimals
+            const formatted = formatNumber(val, formatType, { decimalPlaces: 2 });
+
+            // Check if it has an abbreviation (k, m, b, t, q, or alphabetical letters)
+            const abbrevMatch = formatted.match(/^[+-]?[\d.]+([a-z]+)$/);
+            const hasAbbrev = !!abbrevMatch;
+
+            // Check if it's scientific notation (contains 'e')
+            if (formatted.includes('e')) {
+                // Scientific notation - render normally, no shrinking
+                return {int: formatted, dec: '', exp: '', hasAbbrev: false};
             }
-            if (num < 1e6) return {int: (num / 1e3).toFixed(2) + 'k', dec: ''};
-            if (num < 1e9) return {int: (num / 1e6).toFixed(2) + 'M', dec: ''};
-            return {int: num.toExponential(2), dec: ''};
+
+            // If it has an abbreviation, render the whole thing normally
+            if (hasAbbrev) {
+                return {int: formatted, dec: '', exp: '', hasAbbrev: true};
+            }
+
+            // Regular format without abbreviation - split for styling
+            const parts = formatted.split('.');
+            const intPart = parts[0];
+            const decPart = parts.length > 1 ? '.' + parts[1] : '';
+            return {int: intPart, dec: decPart, exp: '', hasAbbrev: false};
         }
 
         function formatRate(val) {
-            let num = val.toNumber();
-            if (Math.abs(num) < 1000) return num.toFixed(2);
-            if (Math.abs(num) < 1e6) return (num / 1e3).toFixed(2).replace(/\.00$/, '') + 'k';
-            if (Math.abs(num) < 1e9) return (num / 1e6).toFixed(2).replace(/\.00$/, '') + 'M';
-            return num.toExponential(2);
+            return formatNumber(val, formatType, { decimalPlaces: 2 });
         }
 
         const buildingStateChanged = this.hasBuildingStateChanged(data);
@@ -63,9 +83,14 @@ export default class IndustryPanel {
                 const {valueSpan, rateSpan, row} = this.resourcebox._rows[k];
                 const parts = formatValueParts(v.value);
                 if (this.isExpanded || window.matchMedia('(width <= 950px)').matches) {
-                    valueSpan.innerHTML = `${parts.int}<span style="opacity: 0.5;font-size:0.8em;">${parts.dec}</span>`;
+                    // Only shrink decimal if there's no abbreviation (real decimal of resource)
+                    if (parts.hasAbbrev || !parts.dec) {
+                        valueSpan.textContent = parts.int + parts.dec + parts.exp;
+                    } else {
+                        valueSpan.innerHTML = `${parts.int}<span style="opacity: 0.5;font-size:0.8em;">${parts.dec}</span>${parts.exp}`;
+                    }
                 } else {
-                    valueSpan.textContent = parts.int;
+                    valueSpan.textContent = parts.int + parts.dec + parts.exp;
                 }
 
                 const cap = v.effectiveCap;
@@ -155,17 +180,23 @@ export default class IndustryPanel {
                     const maxWorkers = this.core.industry.getMaxWorkers(type);
                     const onStrike = this.core.industry.workersOnStrike;
                     const isScaled = this.areWorkersScaled();
-                    const atLimit = workerCount >= maxWorkers && maxWorkers > 0;
-                    
+
                     if (card.workerBtnCount) {
                         card.workerBtnCount.textContent = workerCount;
-                        const classes = { 'on-strike': onStrike && workerCount > 0, 'limited': isScaled && workerCount > 0, 'at-limit': atLimit };
-                        Object.entries(classes).forEach(([cls, active]) => 
+                        const classes = { 'on-strike': onStrike && workerCount > 0, 'limited': isScaled && workerCount > 0 };
+                        Object.entries(classes).forEach(([cls, active]) =>
                             card.workerBtnCount.classList.toggle(cls, active)
                         );
                     }
                     const canHire = hirePlan.actual > 0;
                     this.updateButtonStateWithTooltip(card.workerBtn, canHire, 'hire-disabled', type);
+
+                    // Set hire-partial tooltip if applicable
+                    if (hirePlan.actual > 0 && hirePlan.actual < hirePlan.target) {
+                        this.core.ui.hookTip(card.workerBtn, 'hire-partial');
+                    } else {
+                        this.core.ui.unhookTip(card.workerBtn, 'hire-partial');
+                    }
                 }
                 
                 const canBuild = buildPlan.actual > 0;
@@ -216,8 +247,7 @@ export default class IndustryPanel {
                     }
                     
                     const maxWorkers = this.core.industry.getMaxWorkers(type);
-                    const atLimit = (b.workers || 0) >= maxWorkers && maxWorkers > 0;
-                    this.updateOrCreateLimitSpan(workerHeader, maxWorkers, atLimit, type);
+                    this.updateOrCreateLimitSpan(workerHeader, maxWorkers, type);
                 }
                 
                 const workersSection = card.dropdown?.querySelector('.dropdown-workers');
@@ -235,7 +265,7 @@ export default class IndustryPanel {
     updateFreeWorkers() {
         if (this.freeWorkersSpan) {
             const freeWorkers = this.core.industry.unassignedWorkers;
-            this.freeWorkersSpan.textContent = `Free: ${Math.floor(freeWorkers).toFixed(0)}`;
+            this.freeWorkersSpan.textContent = `Free: ${formatNumber(Math.floor(freeWorkers), this.core.settings.configs.numformat)}`;
         }
     }
 
@@ -258,8 +288,7 @@ export default class IndustryPanel {
         this.theurgyButtons = ['plant', 'harvest'].reduce((acc, type) => {
             const btn = theurgyContainer.querySelector(`#theurgy-${type}`);
             if (btn) {
-                btn.classList.add('hastip');
-                btn.dataset.tip = `theurgy-${type}`;
+                this.core.ui.hookTip(btn, `theurgy-${type}`);
                 btn.addEventListener("pointerdown", (event) => {
                     if (!btn.disabled) this.handleTheurgyClick(type, event);
                 });
@@ -280,8 +309,8 @@ export default class IndustryPanel {
         row.classList.add("resource-row");
 
         const nameSpan = document.createElement("span");
-        nameSpan.classList.add("resource-name", "hastip");
-        nameSpan.dataset.tip = "resource-name";
+        nameSpan.classList.add("resource-name");
+        this.core.ui.hookTip(nameSpan, 'resource-name');
         nameSpan.dataset.resource = resource;
 
         const nameText = document.createElement("span");
@@ -292,8 +321,8 @@ export default class IndustryPanel {
         );
 
         const rateSpan = document.createElement("span");
-        rateSpan.classList.add("resource-rate", "hastip");
-        rateSpan.dataset.tip = "resource-rate";
+        rateSpan.classList.add("resource-rate");
+        this.core.ui.hookTip(rateSpan, 'resource-rate');
         rateSpan.dataset.resource = resource;
 
         const valueSpan = document.createElement("span");
@@ -337,8 +366,8 @@ export default class IndustryPanel {
 
         const incrementBtn = document.createElement('button');
         incrementBtn.type = 'button';
-        incrementBtn.className = 'prod-increment hastip';
-        incrementBtn.dataset.tip = 'increment-amount';
+        incrementBtn.className = 'prod-increment';
+        this.core.ui.hookTip(incrementBtn, 'increment-amount');
         incrementBtn.textContent = this.getIncrementLabel();
         incrementBtn.addEventListener('click', () => {
             this.core.industry.cycleActionIncrement();
@@ -459,11 +488,9 @@ export default class IndustryPanel {
         
         const plan = this.getActionPlanDetails('build', type);
         if (plan.actual > 0 && plan.actual < plan.target) {
-            button.classList.add('hastip');
-            button.dataset.tip = 'build-partial';
+            this.core.ui.hookTip(button, 'build-partial');
         } else {
-            button.classList.remove('hastip');
-            delete button.dataset.tip;
+            this.core.ui.unhookTip(button, 'build-partial');
         }
     }
 
@@ -476,20 +503,23 @@ export default class IndustryPanel {
             let incrementSpan = titleSpan.querySelector('.building-increment');
             const buildPlan = this.getActionPlanDetails('build', type);
             
-            if (this.isMultiIncrementActive()) {
-                const value = buildPlan.selected === 'max' ? buildPlan.actual : buildPlan.target;
-                if (value > 1) {
-                    if (!incrementSpan) {
-                        incrementSpan = document.createElement('span');
-                        incrementSpan.className = 'building-increment';
-                        titleSpan.insertBefore(incrementSpan, titleSpan.firstChild);
-                    }
-                    incrementSpan.textContent = ` x${value} `;
-                } else if (incrementSpan) {
-                    incrementSpan.remove();
+            if (this.isMultiIncrementActive() && buildPlan.actual > 1) {
+                if (!incrementSpan) {
+                    incrementSpan = document.createElement('span');
+                    incrementSpan.className = 'building-increment';
+                    titleSpan.insertBefore(incrementSpan, titleSpan.firstChild);
                 }
+                incrementSpan.textContent = ` x${buildPlan.actual} `;
             } else if (incrementSpan) {
                 incrementSpan.remove();
+            }
+
+            // Update title span tooltips - it always has building-lore, and gets build-partial if applicable
+            const hasPartial = buildPlan.actual > 0 && buildPlan.actual < buildPlan.target;
+            if (hasPartial) {
+                this.core.ui.hookTip(titleSpan, 'build-partial');
+            } else {
+                this.core.ui.unhookTip(titleSpan, 'build-partial');
             }
         }
         
@@ -508,11 +538,9 @@ export default class IndustryPanel {
         
         const buildPlan = this.getActionPlanDetails('build', type);
         if (buildPlan.actual > 0 && buildPlan.actual < buildPlan.target) {
-            button.classList.add('hastip');
-            button.dataset.tip = 'build-partial';
+            this.core.ui.hookTip(button, 'build-partial');
         } else {
-            button.classList.remove('hastip');
-            delete button.dataset.tip;
+            this.core.ui.unhookTip(button, 'build-partial');
         }
     }
 
@@ -528,13 +556,10 @@ export default class IndustryPanel {
         const warning = this.getDemolishWorkerWarning(type);
         const hasWarning = warning && sellPlan.actual > 0;
         if (hasWarning) {
-            button.classList.add('hastip');
-            button.dataset.tip = 'demolish-warning';
+            this.core.ui.hookTip(button, 'demolish-warning');
             button.dataset.buildingType = type;
         } else {
-            button.classList.remove('hastip');
-            delete button.dataset.tip;
-            delete button.dataset.buildingType;
+            this.core.ui.unhookTip(button, 'demolish-warning');
         }
     }
 
@@ -574,11 +599,9 @@ export default class IndustryPanel {
         
         const plan = this.getActionPlanDetails('hire', type);
         if (plan.actual > 0 && plan.actual < plan.target) {
-            button.classList.add('hastip');
-            button.dataset.tip = 'hire-partial';
+            this.core.ui.hookTip(button, 'hire-partial');
         } else {
-            button.classList.remove('hastip');
-            delete button.dataset.tip;
+            this.core.ui.unhookTip(button, 'hire-partial');
         }
     }
 
@@ -596,26 +619,20 @@ export default class IndustryPanel {
         if (!button) return;
         button.disabled = !isEnabled;
         if (!isEnabled) {
-            button.classList.add('hastip');
-            button.dataset.tip = tipName;
+            this.core.ui.hookTip(button, tipName);
             button.dataset.buildingType = buildingType;
         } else {
-            button.classList.remove('hastip');
-            delete button.dataset.tip;
-            delete button.dataset.buildingType;
+            this.core.ui.unhookTip(button, tipName);
         }
     }
 
     updateHeaderSpanWithTooltip(headerSpan, hasTooltip, tipName, buildingType, content) {
         if (!headerSpan) return;
         if (hasTooltip) {
-            headerSpan.classList.add('hastip');
-            headerSpan.dataset.tip = tipName;
+            this.core.ui.hookTip(headerSpan, tipName);
             headerSpan.dataset.buildingType = buildingType;
         } else {
-            headerSpan.classList.remove('hastip');
-            delete headerSpan.dataset.tip;
-            delete headerSpan.dataset.buildingType;
+            this.core.ui.unhookTip(headerSpan, tipName);
         }
         headerSpan.innerHTML = content;
     }
@@ -625,8 +642,8 @@ export default class IndustryPanel {
         if (timeToNext) {
             if (!timeSpan) {
                 timeSpan = document.createElement('span');
-                timeSpan.className = 'header-time hastip';
-                timeSpan.dataset.tip = tipName;
+                timeSpan.className = 'header-time';
+                this.core.ui.hookTip(timeSpan, tipName);
                 timeSpan.dataset.buildingType = buildingType;
                 header.appendChild(timeSpan);
             }
@@ -636,12 +653,12 @@ export default class IndustryPanel {
         }
     }
 
-    updateOrCreateLimitSpan(header, maxWorkers, atLimit, buildingType) {
+    updateOrCreateLimitSpan(header, maxWorkers, buildingType) {
         let limitSpan = header.querySelector('.header-limit');
         if (!limitSpan) {
             limitSpan = document.createElement('span');
-            limitSpan.className = 'header-limit hastip';
-            limitSpan.dataset.tip = 'worker-limit';
+            limitSpan.className = 'header-limit';
+            this.core.ui.hookTip(limitSpan, 'worker-limit');
             limitSpan.dataset.buildingType = buildingType;
             header.appendChild(limitSpan);
         }
@@ -656,30 +673,33 @@ export default class IndustryPanel {
             this.previousLimits[buildingType] = maxWorkers;
         }
         
-        const limitText = `Limit: ${maxWorkers}`;
+        const b = this.core.industry.buildings[buildingType];
+        const workers = b ? b.workers || 0 : 0;
+        const limitText = `${workers}/${maxWorkers}`;
         if (limitSpan.textContent !== limitText) {
             limitSpan.textContent = limitText;
         }
-        limitSpan.classList.toggle('at-limit', atLimit);
     }
 
     updateButtonInfoBox(buttonElement, details) {
         if (!buttonElement) return;
-        
+
         const buttonWithInfo = buttonElement.closest('.button-with-info');
         if (!buttonWithInfo) return;
-        
+
         let infoBox = buttonWithInfo.querySelector('.button-info-box');
         const content = this.renderButtonInfoBox(details);
-        
+
         if (content) {
             if (!infoBox) {
                 infoBox = document.createElement('div');
                 infoBox.className = 'button-info-box';
                 buttonWithInfo.appendChild(infoBox);
+                this.core.ui.hookTip(infoBox, 'info-box-breakdown');
             }
             infoBox.innerHTML = content;
         } else if (infoBox) {
+            this.core.ui.unhookTip(infoBox, 'info-box-breakdown');
             infoBox.remove();
         }
     }
@@ -771,14 +791,14 @@ export default class IndustryPanel {
         `;
         const titleSpan = mainBtn.querySelector('.building-title');
         if (titleSpan) {
-            titleSpan.classList.add('hastip');
-            titleSpan.dataset.tip = 'building-lore';
+            this.core.ui.hookTip(titleSpan, 'building-lore');
             titleSpan.dataset.buildingType = type;
         }
         mainBtn.onclick = () => this.handleBuildAction(type, def);
 
         const workerBtn = document.createElement('button');
         workerBtn.className = 'building-worker-btn';
+        workerBtn.dataset.buildingType = type;
         const workerCount = building.workers || 0;
         workerBtn.innerHTML = `
             <span class="worker-btn-count">${workerCount}</span>
@@ -787,9 +807,7 @@ export default class IndustryPanel {
         const canHire = initialHirePlan.actual > 0;
         workerBtn.disabled = !canHire;
         if (!canHire) {
-            workerBtn.classList.add('hastip');
-            workerBtn.dataset.tip = 'hire-disabled';
-            workerBtn.dataset.buildingType = type;
+            this.core.ui.hookTip(workerBtn, 'hire-disabled');
         }
         
         workerBtn.onclick = (e) => {
@@ -878,19 +896,19 @@ export default class IndustryPanel {
         return `
             <div class="dropdown-section dropdown-building">
                 <div class="dropdown-section-header">
-                    <span ${aggregateEffects ? `class="hastip" data-tip="building-effects" data-building-type="${type}"` : ''}>BUILDING${aggregateEffects ? ` (${aggregateEffects})` : ''}</span>
-                    ${timeToNext ? `<span class="header-time hastip" data-tip="time-to-next" data-building-type="${type}">${timeToNext}</span>` : ''}
+                    <span ${aggregateEffects ? `class="hastip" data-tips="building-effects" data-building-type="${type}"` : ''}>BUILDING${aggregateEffects ? ` (${aggregateEffects})` : ''}</span>
+                    ${timeToNext ? `<span class="header-time hastip" data-tips="time-to-next" data-building-type="${type}">${timeToNext}</span>` : ''}
                 </div>
                 <div class="dropdown-section-body">
                     <div class="action-buttons">
                         <div class="button-with-info">
-                            <button class="dropdown-add-building-btn" ${!canBuild ? 'disabled' : ''} style="position: relative;">
+                            <button class="dropdown-add-building-btn" data-building-type="${type}" ${!canBuild ? 'disabled' : ''} style="position: relative;">
                                 <div class="build-progress-fill"></div>
                                 Build
                             </button>
                         </div>
                         <div class="button-with-info">
-                            <button class="dropdown-sell-btn ${!canSell ? 'hastip' : ''}" ${!canSell ? `disabled data-tip="demolish-disabled" data-building-type="${type}"` : ''}>Demolish</button>
+                            <button class="dropdown-sell-btn ${!canSell ? 'hastip' : ''}" ${!canSell ? `disabled data-tips="demolish-disabled" data-building-type="${type}"` : ''}>Demolish</button>
                         </div>
                     </div>
                 </div>
@@ -912,26 +930,26 @@ export default class IndustryPanel {
         return `
             <div class="dropdown-section dropdown-workers">
                 <div class="dropdown-section-header">
-                    <span ${aggregateWorkerEffects ? `class="hastip" data-tip="worker-effects" data-building-type="${type}"` : ''}>WORKERS${aggregateWorkerEffects ? ` (${aggregateWorkerEffects})` : ''}</span>
-                    <span class="header-limit hastip" data-tip="worker-limit" data-building-type="${type}">Limit: ${maxWorkers}</span>
+                    <span ${aggregateWorkerEffects ? `class="hastip" data-tips="worker-effects" data-building-type="${type}"` : ''}>WORKERS${aggregateWorkerEffects ? ` (${aggregateWorkerEffects})` : ''}</span>
+                    <span class="header-limit hastip" data-tips="worker-limit" data-building-type="${type}">${workerCount}/${maxWorkers}</span>
                 </div>
                 <div class="dropdown-section-body">
                     <div class="action-buttons">
                         <div class="button-with-info">
-                            <button class="dropdown-add-worker-btn ${!canAdd ? 'hastip' : ''}" ${!canAdd ? `disabled data-tip="hire-disabled" data-building-type="${type}"` : ''} style="position: relative;">
+                            <button class="dropdown-add-worker-btn ${!canAdd ? 'hastip' : ''}" data-building-type="${type}" ${!canAdd ? `disabled data-tips="hire-disabled"` : ''} style="position: relative;">
                                 <div class="hire-progress-fill"></div>
                                 <span class="hire-btn-label" style="position: relative; z-index: 1;">Hire</span>
                             </button>
                         </div>
                         <div class="button-with-info">
-                            <button class="dropdown-remove-worker-btn ${!canRemove ? 'hastip' : ''}" ${!canRemove ? `disabled data-tip="furlough-disabled" data-building-type="${type}"` : ''}>Furlough</button>
+                            <button class="dropdown-remove-worker-btn ${!canRemove ? 'hastip' : ''}" ${!canRemove ? `disabled data-tips="furlough-disabled" data-building-type="${type}"` : ''}>Furlough</button>
                         </div>
                     </div>
                     ${onStrike ? `
                     <div class="worker-strike">⚠ Workers on strike (insufficient food)</div>
                     ` : ''}
                     ${isScaled && !onStrike ? `
-                    <div class="worker-limited hastip" data-tip="worker-limited" data-building-type="${type}">⚠ Worker output limited by ${this.getBottleneckText()}</div>
+                    <div class="worker-limited hastip" data-tips="worker-limited" data-building-type="${type}">⚠ Worker output limited by ${this.getBottleneckText()}</div>
                     ` : ''}
                 </div>
             </div>
@@ -945,8 +963,24 @@ export default class IndustryPanel {
     formatActionLabel(baseText, action, type) {
         if (!this.isMultiIncrementActive()) return baseText;
         const plan = this.getActionPlanDetails(action, type);
-        const value = plan.selected === 'max' ? plan.actual : plan.target;
-        return value > 1 ? `${baseText} x${value}` : baseText;
+        
+        let capacity;
+        if (action === 'hire') {
+            const maxWorkers = this.core.industry.getMaxWorkers(type);
+            const b = this.core.industry.buildings[type];
+            capacity = maxWorkers - (b?.workers || 0);
+        } else if (action === 'furlough') {
+            const b = this.core.industry.buildings[type];
+            capacity = b?.workers || 0;
+        } else if (action === 'sell') {
+            const b = this.core.industry.buildings[type];
+            capacity = b?.count || 0;
+        } else {
+            capacity = plan.limit;
+        }
+        
+        const displayValue = plan.selected === 'max' ? plan.actual : Math.min(capacity, plan.target);
+        return displayValue > 1 ? `${baseText} x${displayValue}` : baseText;
     }
 
     formatTime(seconds) {
@@ -958,37 +992,42 @@ export default class IndustryPanel {
 
     getResourceProgressText(type) {
         const progress = this.core.industry.getResourceProgress(type);
-        return progress ? `${progress.current}/${progress.required}` : '';
+        if (!progress) return '';
+
+        const formatType = this.core.settings.configs.numformat;
+        return `${formatNumber(progress.current, formatType)}/${formatNumber(progress.required, formatType)}`;
     }
 
     getAggregateBuildingEffects(type) {
         const effects = this.core.industry.getAggregateBuildingEffects(type);
         if (!effects) return null;
-        
+
+        const formatType = this.core.settings.configs.numformat;
         const items = Object.entries(effects).flatMap(([res, {gain, drain}]) => {
             const items = [];
             if (gain) {
-                items.push(`<span style="color: var(--gainColor)">+${gain.toFixed(2)} ${res}/s</span>`);
+                items.push(`<span style="color: var(--gainColor)">+${formatNumber(gain, formatType)} ${res}/s</span>`);
             }
             if (drain) {
-                items.push(`<span style="color: var(--drainColor)">-${drain.toFixed(2)} ${res}/s</span>`);
+                items.push(`<span style="color: var(--drainColor)">-${formatNumber(drain, formatType)} ${res}/s</span>`);
             }
             return items;
         });
-        
+
         return items.length > 0 ? items.join(',&nbsp;') : null;
     }
 
     getAggregateWorkerEffects(type) {
         const effects = this.core.industry.getAggregateWorkerEffects(type);
         if (!effects) return null;
-        
+
+        const formatType = this.core.settings.configs.numformat;
         const items = Object.entries(effects)
             .map(([res, net]) => {
                 const isGain = net > 0;
-                return `<span style="color: var(--${isGain ? 'gain' : 'drain'}Color)">${isGain ? '+' : ''}${net.toFixed(2)} ${res}/s</span>`;
+                return `<span style="color: var(--${isGain ? 'gain' : 'drain'}Color)">${isGain ? '+' : ''}${formatNumber(net, formatType)} ${res}/s</span>`;
             });
-        
+
         return items.length > 0 ? items.join(',&nbsp;') : null;
     }
 
@@ -1000,17 +1039,22 @@ export default class IndustryPanel {
     getButtonDetails(type, action, getEffectsFn) {
         const result = getEffectsFn(type);
         if (!result) return null;
-        
+
         const plan = this.getActionPlanDetails(action, type);
-        const multiplier = plan.selected === 'max' ? plan.actual : plan.target;
-        
+        return this.getButtonDetailsWithMultiplier(result, plan.actual);
+    }
+
+    getButtonDetailsWithMultiplier(result, multiplier) {
         const costs = result.costs?.map(c => ({res: c.res, amt: c.amt * multiplier})) || [];
         const rewards = result.rewards?.map(r => ({res: r.res, amt: r.amt * multiplier})) || [];
         const effects = Object.entries(result.effects || {}).map(([res, val]) => ({
             res, val: Math.abs(val) * multiplier, type: val > 0 ? 'gain' : 'drain'
         }));
-        
-        return {costs, rewards, effects};
+        const capChanges = Object.entries(result.capChanges || {}).map(([res, val]) => ({
+            res, val: val * multiplier
+        }));
+
+        return {costs, rewards, effects, capChanges};
     }
 
     getBuildingButtonDetails(type) {
@@ -1030,10 +1074,9 @@ export default class IndustryPanel {
         if (!result) return null;
         
         const plan = this.getActionPlanDetails('hire', type);
-        const multiplier = plan.selected === 'max' ? plan.actual : plan.target;
         
         const {costs, effects} = Object.entries(result.effects || {}).reduce((acc, [res, val]) => {
-            const item = {res, val: Math.abs(val) * multiplier, type: val < 0 ? 'drain' : 'gain'};
+            const item = {res, val: Math.abs(val) * plan.actual, type: val < 0 ? 'drain' : 'gain'};
             (val < 0 ? acc.costs : acc.effects).push(item);
             return acc;
         }, {costs: [], effects: []});
@@ -1054,30 +1097,54 @@ export default class IndustryPanel {
         const itemMap = new Map([
             ...accumulate(details.costs, 'cost', c => c.amt !== undefined ? `cost_${c.res}_amt` : (c.val !== undefined && c.res ? `cost_${c.res}_val` : null)),
             ...accumulate(details.rewards, 'reward', r => `reward_${r.res}_amt`),
-            ...accumulate(details.effects, 'effect', e => `effect_${e.res}_${e.type}`)
+            ...accumulate(details.effects, 'effect', e => `effect_${e.res}_${e.type}`),
+            ...accumulate(details.capChanges, 'cap', c => `cap_${c.res}`)
         ]);
         
+        const fmt = this.core.settings.configs.numformat;
         const formatItem = (key, total) => {
             const [, res, type] = key.split('_');
             const isAmt = type === 'amt';
             const isDrain = type === 'drain';
             const isCost = key.startsWith('cost_');
-            
+
+            let html, colorClass;
             if (isCost) {
-                return `<span class="info-cost">-${isAmt ? total : total.toFixed(2)} ${res}${isAmt ? '' : '/s'}</span>`;
+                html = `-${formatNumber(total, fmt)} ${res}${isAmt ? '' : '/s'}`;
+                colorClass = 'info-cost';
+            } else if (key.startsWith('reward_')) {
+                html = `+${formatNumber(total, fmt)} ${res}`;
+                colorClass = 'info-effect effect-gain';
+            } else if (key.startsWith('cap_')) {
+                const isPos = total >= 0;
+                html = `${isPos ? '+' : ''}${formatNumber(total, fmt)} ${res} cap`;
+                colorClass = `info-effect effect-${isPos ? 'gain' : 'drain'}`;
+            } else {
+                html = `${isDrain ? '-' : '+'}${formatNumber(total, fmt)} ${res}/s`;
+                colorClass = `info-effect effect-${isDrain ? 'drain' : 'gain'}`;
             }
-            if (key.startsWith('reward_')) {
-                return `<span class="info-effect effect-gain">+${total} ${res}</span>`;
-            }
-            return `<span class="info-effect effect-${isDrain ? 'drain' : 'gain'}">${isDrain ? '-' : '+'}${total.toFixed(2)} ${res}/s</span>`;
+            return { html, colorClass };
         };
-        
-        const items = Array.from(itemMap.entries())
-            .map(([key, total]) => ({key, total, isNegative: key.startsWith('cost_') || key.includes('_drain')}))
-            .sort((a, b) => a.isNegative ? -1 : 1)
-            .map(({key, total}) => formatItem(key, total));
-        
-        return items.length > 0 ? `<span class="info-items">${items.join('')}</span>` : '';
+
+        const allItems = Array.from(itemMap.entries()).map(([key, total]) => ({key, total, isNeg: total < 0 || key.includes('_drain') || key.startsWith('cost_')}));
+        const regular = allItems.filter(i => !i.key.startsWith('cap_')).sort((a, b) => b.isNeg - a.isNeg).map(i => formatItem(i.key, i.total));
+        const caps = allItems.filter(i => i.key.startsWith('cap_')).sort((a, b) => b.isNeg - a.isNeg).map(i => formatItem(i.key, i.total));
+
+        const joinWithColoredCommas = (items) => {
+            const result = [];
+            items.forEach((item, idx) => {
+                result.push(`<span class="${item.colorClass}">${item.html}</span>`);
+                if (idx < items.length - 1) {
+                    result.push(`<span class="${item.colorClass}">, </span>`);
+                }
+            });
+            return result.join('');
+        };
+
+        const rows = [];
+        if (regular.length) rows.push(`<span class="info-regular-items">${joinWithColoredCommas(regular)}</span>`);
+        if (caps.length) rows.push(`<span class="info-cap-items">${joinWithColoredCommas(caps)}</span>`);
+        return rows.join('');
     }
 
     getBottleneckText() {
@@ -1093,7 +1160,8 @@ export default class IndustryPanel {
         if (!def?.buildCost) return '';
         const plan = this.getActionPlanDetails('build', type);
         if (plan.actual > 0) return '';
-        
+
+        const formatType = this.core.settings.configs.numformat;
         const missing = Object.entries(def.buildCost)
             .map(([res, cost]) => {
                 const resObj = this.core.industry.resources[res];
@@ -1101,10 +1169,10 @@ export default class IndustryPanel {
                 const costNum = this.getValueNumber(cost);
                 if (costNum <= 0) return null;
                 const current = resObj.value.toNumber();
-                return current < costNum ? `${res} (need ${costNum.toFixed(1)}, have ${current.toFixed(1)})` : null;
+                return current < costNum ? `${res} (need ${formatNumber(costNum, formatType)}, have ${formatNumber(current, formatType)})` : null;
             })
             .filter(r => r !== null);
-        
+
         return missing.length > 0 ? `Not enough: ${missing.join(', ')}` : 'Cannot build';
     }
 
@@ -1133,13 +1201,76 @@ export default class IndustryPanel {
     getBuildPartialText(type) {
         const plan = this.getActionPlanDetails('build', type);
         if (plan.actual <= 0 || plan.actual >= plan.target) return '';
-        return `Can build ${plan.actual}`;
+
+        const result = this.core.industry.getBuildEffects(type);
+        if (!result) return `Can build ${plan.actual}`;
+
+        const details = this.getButtonDetailsWithMultiplier(result, plan.actual);
+        if (!details) return `Can build ${plan.actual}`;
+
+        const formatType = this.core.settings.configs.numformat;
+        const items = [];
+        if (details.costs?.length) {
+            details.costs.forEach(c => {
+                items.push(`<span style="color: var(--drainColor)">-${formatNumber(c.amt, formatType, { decimalPlaces: 2 })} ${c.res}</span>`);
+            });
+        }
+        if (details.effects?.length) {
+            details.effects.forEach(e => {
+                const sign = e.type === 'gain' ? '+' : '-';
+                const color = e.type === 'gain' ? 'var(--gainColor)' : 'var(--drainColor)';
+                items.push(`<span style="color: ${color}">${sign}${formatNumber(e.val, formatType, { decimalPlaces: 2 })} ${e.res}/s</span>`);
+            });
+        }
+        if (details.capChanges?.length) {
+            const capItems = [];
+            details.capChanges.forEach(c => {
+                const isPositive = c.val >= 0;
+                const sign = isPositive ? '+' : '';
+                const color = isPositive ? 'var(--gainColor)' : 'var(--drainColor)';
+                capItems.push(`<span style="color: ${color}">${sign}${formatNumber(c.val, formatType, { decimalPlaces: 2 })} ${c.res} cap</span>`);
+            });
+            if (capItems.length > 0) {
+                items.push(`<br>${capItems.join(' ')}`);
+            }
+        }
+
+        return items.length > 0
+            ? `<p>Can build ${plan.actual}</p><p style="font-weight: 600">${items.join(', ')}</p>`
+            : `Can build ${plan.actual}`;
     }
 
     getHirePartialText(type) {
         const plan = this.getActionPlanDetails('hire', type);
         if (plan.actual <= 0 || plan.actual >= plan.target) return '';
-        return `Can hire ${plan.actual}`;
+
+        const result = this.core.industry.getHireWorkerEffects(type);
+        if (!result) return `Can hire ${plan.actual}`;
+
+        // For worker hiring, all effects are in result.effects and we separate based on sign
+        const multiplier = plan.actual;
+        const {costs, effects} = Object.entries(result.effects || {}).reduce((acc, [res, val]) => {
+            const item = {res, val: Math.abs(val) * multiplier, type: val < 0 ? 'drain' : 'gain'};
+            (val < 0 ? acc.costs : acc.effects).push(item);
+            return acc;
+        }, {costs: [], effects: []});
+
+        const formatType = this.core.settings.configs.numformat;
+        const items = [];
+        if (costs?.length) {
+            costs.forEach(c => {
+                items.push(`<span style="color: var(--drainColor)">-${formatNumber(c.val, formatType, { decimalPlaces: 2 })} ${c.res}/s</span>`);
+            });
+        }
+        if (effects?.length) {
+            effects.forEach(e => {
+                items.push(`<span style="color: var(--gainColor)">+${formatNumber(e.val, formatType, { decimalPlaces: 2 })} ${e.res}/s</span>`);
+            });
+        }
+
+        return items.length > 0
+            ? `<p>Can hire ${plan.actual}</p><p style="font-weight: 600">${items.join(', ')}</p>`
+            : `Can hire ${plan.actual}`;
     }
 
     getFurloughDisabledReason(type) {

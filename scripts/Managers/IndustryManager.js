@@ -595,15 +595,25 @@ export default class IndustryManager {
         if (!def) return null;
         const costs = def.buildCost ? Object.entries(def.buildCost).map(([res, amt]) => ({res, amt})) : [];
         const effects = {};
+        const capChanges = {};
         if (def.effects) {
             for (const [res, eff] of Object.entries(def.effects)) {
                 if (eff.base) {
-                    const net = (eff.base.gain || 0) - (eff.base.drain || 0);
+                    const baseGain = eff.base.gain || 0;
+                    const baseDrain = eff.base.drain || 0;
+                    const {gain, drain} = this.#computeEffectiveEffects(type, res, 'base', baseGain, baseDrain, 1);
+                    const net = gain - drain;
                     if (net !== 0) effects[res] = net;
                 }
             }
         }
-        return (costs.length || Object.keys(effects).length) ? {costs, effects} : null;
+        if (def.capIncrease) {
+            for (const [res, increase] of Object.entries(def.capIncrease)) {
+                capChanges[res] = increase;
+            }
+        }
+        if (def.workersPerBuilding) capChanges.workers = def.workersPerBuilding;
+        return (costs.length || Object.keys(effects).length || Object.keys(capChanges).length) ? {costs, effects, capChanges} : null;
     }
 
     getDemolishEffects(type) {
@@ -611,24 +621,38 @@ export default class IndustryManager {
         if (!def) return null;
         const rewards = def.sellReward ? Object.entries(def.sellReward).map(([res, amt]) => ({res, amt})) : [];
         const effects = {};
+        const capChanges = {};
         if (def.effects) {
             for (const [res, eff] of Object.entries(def.effects)) {
                 if (eff.base) {
-                    const net = (eff.base.drain || 0) - (eff.base.gain || 0);
+                    const baseGain = eff.base.gain || 0;
+                    const baseDrain = eff.base.drain || 0;
+                    const {gain, drain} = this.#computeEffectiveEffects(type, res, 'base', baseGain, baseDrain, 1);
+                    const net = drain - gain;
                     if (net !== 0) effects[res] = net;
                 }
             }
         }
-        return (rewards.length || Object.keys(effects).length) ? {rewards, effects} : null;
+        if (def.capIncrease) {
+            for (const [res, increase] of Object.entries(def.capIncrease)) {
+                capChanges[res] = -increase;
+            }
+        }
+        if (def.workersPerBuilding) capChanges.workers = -def.workersPerBuilding;
+        return (rewards.length || Object.keys(effects).length || Object.keys(capChanges).length) ? {rewards, effects, capChanges} : null;
     }
 
     getHireWorkerEffects(type) {
         const def = IndustryManager.BUILDING_DEFS[type];
         if (!def?.effects) return null;
+        const scale = this.getWorkerScale();
         const effects = {};
         for (const [res, eff] of Object.entries(def.effects)) {
             if (eff.worker) {
-                const net = (eff.worker.gain || 0) - (eff.worker.drain || 0);
+                const baseGain = eff.worker.gain || 0;
+                const baseDrain = eff.worker.drain || 0;
+                const {gain, drain} = this.#computeEffectiveEffects(type, res, 'worker', baseGain, baseDrain, 1);
+                const net = (gain - drain) * scale;
                 if (net !== 0) effects[res] = net;
             }
         }
@@ -638,10 +662,14 @@ export default class IndustryManager {
     getFurloughWorkerEffects(type) {
         const def = IndustryManager.BUILDING_DEFS[type];
         if (!def?.effects) return null;
+        const scale = this.getWorkerScale();
         const effects = {};
         for (const [res, eff] of Object.entries(def.effects)) {
             if (eff.worker) {
-                const net = (eff.worker.drain || 0) - (eff.worker.gain || 0);
+                const baseGain = eff.worker.gain || 0;
+                const baseDrain = eff.worker.drain || 0;
+                const {gain, drain} = this.#computeEffectiveEffects(type, res, 'worker', baseGain, baseDrain, 1);
+                const net = (drain - gain) * scale;
                 if (net !== 0) effects[res] = net;
             }
         }
@@ -727,6 +755,63 @@ export default class IndustryManager {
         return Object.keys(effects).length ? effects : null;
     }
 
+    getBuildEffectsForIncrement(type, increment) {
+        const result = this.getBuildEffects(type);
+        if (!result) return null;
+        const multiplier = increment === 'max' ? this.getActionPlan('build', type).actual : increment;
+        const effects = {};
+        for (const [res, val] of Object.entries(result.effects || {})) {
+            effects[res] = val * multiplier;
+        }
+        return Object.keys(effects).length ? {effects} : null;
+    }
+
+    getResourceProductionBreakdown(resource) {
+        if (!this.resources[resource]) return null;
+        const breakdown = {
+            baseGain: 0,
+            baseDrain: 0,
+            workerGain: 0,
+            workerDrain: 0,
+            byBuilding: {}
+        };
+        const scale = this.getWorkerScale();
+        
+        for (const [type, b] of Object.entries(this.buildings)) {
+            const def = IndustryManager.BUILDING_DEFS[type];
+            if (!def?.effects?.[resource]) continue;
+            
+            const eff = def.effects[resource];
+            const buildingData = {baseGain: 0, baseDrain: 0, workerGain: 0, workerDrain: 0};
+            
+            if (eff.base && b.count > 0) {
+                const baseGain = eff.base.gain || 0;
+                const baseDrain = eff.base.drain || 0;
+                const {gain, drain} = this.#computeEffectiveEffects(type, resource, 'base', baseGain, baseDrain, b.count);
+                buildingData.baseGain = gain;
+                buildingData.baseDrain = drain;
+                breakdown.baseGain += gain;
+                breakdown.baseDrain += drain;
+            }
+            
+            if (eff.worker && b.workers > 0) {
+                const baseGain = eff.worker.gain || 0;
+                const baseDrain = eff.worker.drain || 0;
+                const {gain, drain} = this.#computeEffectiveEffects(type, resource, 'worker', baseGain, baseDrain, b.workers);
+                buildingData.workerGain = gain * scale;
+                buildingData.workerDrain = drain * scale;
+                breakdown.workerGain += buildingData.workerGain;
+                breakdown.workerDrain += buildingData.workerDrain;
+            }
+            
+            if (buildingData.baseGain || buildingData.baseDrain || buildingData.workerGain || buildingData.workerDrain) {
+                breakdown.byBuilding[type] = buildingData;
+            }
+        }
+        
+        return breakdown;
+    }
+
     getBuildProgress(type) {
         const def = IndustryManager.BUILDING_DEFS[type];
         if (!def?.buildCost) return 1;
@@ -749,7 +834,7 @@ export default class IndustryManager {
         if (availableSlots <= 0) return 0;
         
         const plan = this.getActionPlan('hire', type);
-        const target = plan.target || 1;
+        const target = plan.selected === 'max' ? plan.actual : Math.min(availableSlots, plan.target || 1);
         const have = this.unassignedWorkers;
         
         if (target <= 0) return 0;

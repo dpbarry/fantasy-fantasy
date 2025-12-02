@@ -1350,6 +1350,16 @@
             display: none;
         }
 
+        /* Breakdown Box */
+        .bd { display: flex; flex-direction: column; overflow: hidden; }
+
+        .bd-r-mod { margin-left: 0.5em; }
+
+        .bd-n { opacity: 0.75; }
+        .bd-g { color: var(--gainColor); }
+        .bd-d { color: var(--drainColor); }
+        .bd-res { margin-top: 0.15em; padding-top: 0.15em; border-top: 1px solid var(--midBaseColor); font-weight: 600; }
+
         .context-menu {
             position: fixed;
             background: var(--contrastColor);
@@ -1711,7 +1721,7 @@
                     inset: 0;
                     z-index: -1;
                     width: var(--cap-percent);
-                    background: color-mix(in oklab, var(--accent) 10%, transparent);
+                    background: color-mix(in oklab, var(--accent) 15%, transparent);
                     transition: width 0.3s ease-out;
                     pointer-events: none;
                 }
@@ -2184,25 +2194,20 @@
                                 display: flex;
                                 flex-direction: row;
                                 flex-wrap: wrap;
-                                gap: 0.3em;
                                 align-items: center;
                                 margin-top: -0.8em;
                                 font-size: 0.8em;
                                 font-weight: 400;
 
-                                .info-cost,
-                                .info-effect {
-                                    &:not(:last-child)::after {
-                                        content: ',';
-                                        margin-left: 0.1em;
-                                    }
+                                .info-cap-items {
+                                    flex-basis: 100%;
                                 }
 
                                 .info-cost {
                                     color: var(--drainColor);
                                 }
 
-                                .info-effect {                                    
+                                .info-effect {
                                     &.effect-gain {
                                         color: var(--gainColor);
                                     }
@@ -2210,6 +2215,7 @@
                                     &.effect-drain {
                                         color: var(--drainColor);
                                     }
+
                                 }
                             }
 
@@ -2752,15 +2758,15 @@
     <section id="left-section">
         <div class="navbar box" id="herobar">
             <button class="section-nav-arrow" id="nav-arrow-left" aria-label="Previous section" disabled>‹</button>
-            <button class="nudge navbutton locked hastip" data-loc="left" data-panel="team" data-tip="teamnav"
+            <button class="nudge navbutton locked hastip" data-loc="left" data-panel="team" data-tips="teamnav"
                     id="teamnav"><img alt="Team" src="assets/TEAM.svg"></button>
-            <button class="nudge navbutton locked hastip" data-loc="left" data-panel="hero" data-tip="heronav"
+            <button class="nudge navbutton locked hastip" data-loc="left" data-panel="hero" data-tips="heronav"
                     id="heronav"><img alt="Hero" src="assets/HERO.svg"></button>
             <button class="nudge navbutton locked hastip" data-loc="left" data-panel="equipment"
-                    data-tip="equipmentnav" id="equipmentnav"><img alt="Equipment" src="assets/INVENTORY.svg"></button>
-            <button class="nudge navbutton locked hastip" data-loc="left" data-panel="augment" data-tip="augmentnav"
+                    data-tips="equipmentnav" id="equipmentnav"><img alt="Equipment" src="assets/INVENTORY.svg"></button>
+            <button class="nudge navbutton locked hastip" data-loc="left" data-panel="augment" data-tips="augmentnav"
                     id="augmentnav"><img alt="Augment" src="assets/AUGMENT.svg"></button>
-            <button class="nudge navbutton locked hastip" data-loc="left" data-panel="upgrade" data-tip="upgradenav"
+            <button class="nudge navbutton locked hastip" data-loc="left" data-panel="upgrade" data-tips="upgradenav"
                     id="upgradenav"><img alt="Upgrade" src="assets/TREE.svg"></button>
             <button class="section-nav-arrow" id="nav-arrow-center-from-left" aria-label="Next section">›</button>
         </div>
@@ -2771,20 +2777,20 @@
     <section id="center-section">
         <div class="navbar box" id="mainbar">
             <button class="section-nav-arrow" id="nav-arrow-center-from-right" aria-label="Previous section">‹</button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="city" data-tip="citynav"
+            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="city" data-tips="citynav"
                     id="citynav"><img alt="City" src="assets/CITY.svg"></button>
             <button class="nudge locked navbutton hastip" data-loc="center" data-panel="industry"
-                    data-tip="industrynav" id="industrynav"><img alt="Industry" src="assets/INDUSTRY.svg"></button>
+                    data-tips="industrynav" id="industrynav"><img alt="Industry" src="assets/INDUSTRY.svg"></button>
             <button class="nudge locked navbutton hastip" data-loc="center" data-panel="research"
-                    data-tip="researchnav" id="researchnav"><img alt="Research" src="assets/RESEARCH.svg"></button>
+                    data-tips="researchnav" id="researchnav"><img alt="Research" src="assets/RESEARCH.svg"></button>
             <button class="nudge locked navbutton hastip" data-loc="center" data-panel="dungeon"
-                    data-tip="dungeonav" id="dungeonav"><img alt="Dungeon" src="assets/DUNGEON.svg"></button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="trade" data-tip="tradenav"
+                    data-tips="dungeonav" id="dungeonav"><img alt="Dungeon" src="assets/DUNGEON.svg"></button>
+            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="trade" data-tips="tradenav"
                     id="tradenav"><img alt="Trade" src="assets/TRADE.svg"></button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="army" data-tip="armynav"
+            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="army" data-tips="armynav"
                     id="armynav"><img alt="Army" src="assets/ARMY.svg"></button>
             <button class="nudge locked navbutton hastip" data-loc="center" data-panel="tournament"
-                    data-tip="tournamentnav" id="tournamentnav"><img alt="Tournament"
+                    data-tips="tournamentnav" id="tournamentnav"><img alt="Tournament"
                                                                      src="assets/TOURNAMENT.svg"></button>
             <button class="section-nav-arrow" id="nav-arrow-right-from-center" aria-label="Next section">›</button>
         </div>
@@ -2857,14 +2863,14 @@
         <div class="navbar box" id="citybar">
             <button class="section-nav-arrow" id="nav-arrow-right-from-left" aria-label="Previous section">‹</button>
             <button class="nudge navbutton hastip" data-loc="right" data-panel="news"
-                    data-tip="newsnav" id="newsnav"><img alt="News" src="assets/MAIL.svg"></button>
-            <button class="nudge locked navbutton hastip" data-loc="right" data-panel="chart" data-tip="chartnav"
+                    data-tips="newsnav" id="newsnav"><img alt="News" src="assets/MAIL.svg"></button>
+            <button class="nudge locked navbutton hastip" data-loc="right" data-panel="chart" data-tips="chartnav"
                     id="chartnav"><img alt="Charts" src="assets/CHART.svg"></button>
             <button class="nudge locked navbutton hastip" data-loc="right" data-panel="achievements"
-                    data-tip="achievenav" id="achievenav"><img alt="Achievements" src="assets/TROPHY.svg"></button>
-            <button class="nudge navbutton hastip" data-loc="right" data-panel="codex" data-tip="codexnav"
+                    data-tips="achievenav" id="achievenav"><img alt="Achievements" src="assets/TROPHY.svg"></button>
+            <button class="nudge navbutton hastip" data-loc="right" data-panel="codex" data-tips="codexnav"
                     id="codexnav"><img alt="Codex" src="assets/CODEX.svg"></button>
-            <button class="nudge navbutton hastip" data-loc="right" data-panel="settings" data-tip="settingsnav"
+            <button class="nudge navbutton hastip" data-loc="right" data-panel="settings" data-tips="settingsnav"
                     id="settingsnav"><img alt="Settings" src="assets/COG.svg"></button>
             <button class="section-nav-arrow" id="nav-arrow-right" aria-label="Next section" disabled>›</button>
         </div>
@@ -2895,8 +2901,9 @@
                     <label>
                         Number Format
                         <select id="numformat" name="numformat">
-                            <option selected value="alphabetical">Alphabetical</option>
+                            <option selected value="standard">Standard</option>
                             <option value="scientific">Scientific</option>
+                            <option value="alphabetical">Alphabetical</option>
                         </select>
                     </label>
                 </div>

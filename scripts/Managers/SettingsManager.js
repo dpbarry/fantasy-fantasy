@@ -6,6 +6,7 @@ export default class SettingsManager {
         accent: "lightning",
         refreshUI: "30",
         offlineprogress: "on",
+        numformat: "standard",
     }
 
 

@@ -36,7 +36,7 @@ export default class TypingService {
                 span.style.cursor = "default";
 
                 if (spanTips.length > count) {
-                    span.dataset.tip = spanTips[count];
+                    span.dataset.tips = spanTips[count];
                     span.classList.add("hastip");
                 }
 

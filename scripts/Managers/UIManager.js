@@ -318,4 +318,27 @@ export default class UIManager {
         if (rightArrowCenter) rightArrowCenter.disabled = currentIndex !== 1;
         if (rightArrowRight) rightArrowRight.disabled = currentIndex === 2;
     }
+
+    hookTip(el, tipKey) {
+        if (!el || !tipKey) return;
+        const tips = el.dataset.tips || '';
+        const arr = tips ? tips.split('@').filter(Boolean) : [];
+        if (!arr.includes(tipKey)) {
+            arr.push(tipKey);
+            el.dataset.tips = arr.join('@');
+            el.classList.add('hastip');
+        }
+    }
+
+    unhookTip(el, tipKey) {
+        if (!el || !tipKey) return;
+        const tips = el.dataset.tips || '';
+        const arr = tips.split('@').filter(t => t && t !== tipKey);
+        if (arr.length) {
+            el.dataset.tips = arr.join('@');
+        } else {
+            delete el.dataset.tips;
+            el.classList.remove('hastip');
+        }
+    }
 }

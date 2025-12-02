@@ -1,3 +1,6 @@
+import { formatNumber } from "../Utils.js";
+import createBreakdownBox from "../UI/Components/BreakdownBox.js";
+
 export default function createTooltipService(core, uiManager) {
     const tooltips = new Map();
     const pointerDismissHandlers = new WeakMap();
@@ -43,11 +46,52 @@ export default function createTooltipService(core, uiManager) {
         return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
     }
 
+
+
+    let tooltipHideTimeout = null;
+
     document.addEventListener('mousemove', (e) => {
+        // Check if mouse is over any tooltip element
+        const elementAtPoint = document.elementFromPoint(e.clientX, e.clientY);
+        const tooltipElement = elementAtPoint?.closest('[data-tips]');
+        const hasTips = tooltipElement && getTips(tooltipElement).length > 0;
+
+        if (hasTips && tooltipElement !== activeElement) {
+            // Mouse is over a different tooltip element, switch to it
+            if (activeElement) {
+                destroyTooltip(activeElement);
+            }
+            setTimeout(() => showTooltip(tooltipElement), 0);
+            if (tooltipHideTimeout) {
+                clearTimeout(tooltipHideTimeout);
+                tooltipHideTimeout = null;
+            }
+            return;
+        }
+
         if (!activeElement || !activeTooltip || tooltipLocked) return;
-        if (isPointInRect(e.clientX, e.clientY, activeElement.getBoundingClientRect())) return;
+
+        if (isPointInRect(e.clientX, e.clientY, activeElement.getBoundingClientRect())) {
+            // Mouse is still over the element, cancel any pending hide
+            if (tooltipHideTimeout) {
+                clearTimeout(tooltipHideTimeout);
+                tooltipHideTimeout = null;
+            }
+            return;
+        }
+
         if (!isPointInRect(e.clientX, e.clientY, activeTooltip.getBoundingClientRect())) {
-            destroyTooltip(activeElement);
+            // Mouse left both element and tooltip area, start hide timeout
+            if (tooltipHideTimeout) clearTimeout(tooltipHideTimeout);
+            tooltipHideTimeout = setTimeout(() => {
+                tooltipHideTimeout = null;
+                // Double-check if mouse is still not over any tooltip element
+                const currentElementAtPoint = document.elementFromPoint(e.clientX, e.clientY);
+                const currentTooltipElement = currentElementAtPoint?.closest('[data-tips]');
+                if (!currentTooltipElement || !getTips(currentTooltipElement).length) {
+                    destroyTooltip(activeElement);
+                }
+            }, 50);
         }
     }, { passive: true });
 
@@ -77,29 +121,30 @@ export default function createTooltipService(core, uiManager) {
     }
 
     function getTip(el, tipKey) {
-        if (!el?.dataset?.[tipKey]) return '';
-        const cb = tooltips.get(el.dataset[tipKey]);
-        if (!cb) {
-            el.classList.remove('hastip');
-            return '';
-        }
+        if (!tipKey) return '';
+        const cb = tooltips.get(tipKey);
+        if (!cb) return '';
         return cb(el);
+    }
+
+    function getTipKeys(el) {
+        const tips = el.dataset.tips || '';
+        return tips.split('@').filter(Boolean);
     }
 
     function getTips(el) {
         const tips = [];
-        ['tip', 'tip2'].forEach(key => {
+        for (const key of getTipKeys(el)) {
             const content = getTip(el, key);
-            if (content) tips.push({ type: el.dataset[key], content });
-        });
+            if (content) tips.push({ type: key, content });
+        }
         return tips;
     }
 
     function needsUpdate(el) {
-        const tip = el.dataset.tip || '';
-        const tip2 = el.dataset.tip2 || '';
-        const dynamic = ['resource', 'building-effects', 'worker-effects', 'time-to-next', 'disabled', 'increment-amount'];
-        return dynamic.some(d => tip.includes(d) || tip2.includes(d));
+        const tipKeys = getTipKeys(el);
+        const dynamic = ['resource', 'building-effects', 'worker-effects', 'time-to-next', 'disabled', 'increment-amount', 'partial'];
+        return tipKeys.some(k => dynamic.some(d => k.includes(d)));
     }
 
     function updateTooltipContent(tipBoxes, updatedTips) {
@@ -233,7 +278,8 @@ export default function createTooltipService(core, uiManager) {
 
     function cleanupTooltip() {
         if (activeTooltip?._updateInterval) {
-            const isIncrement = activeElement?.dataset.tip?.includes('increment-amount');
+            const tipKeys = activeElement ? getTipKeys(activeElement) : [];
+            const isIncrement = tipKeys.some(k => k.includes('increment-amount'));
             if (isIncrement) clearInterval(activeTooltip._updateInterval);
             else destroyRenderInterval(activeTooltip._updateInterval);
             activeTooltip._updateInterval = null;
@@ -247,18 +293,18 @@ export default function createTooltipService(core, uiManager) {
 
     function showTooltip(el) {
         if (activeElement === el) return;
-        
+
         tooltipLocked = true;
         cleanupTooltip();
-        
+
         if (activeElement) {
             activeElement.dataset.hastooltip = false;
             delete activeElement.dataset.tooltipId;
         }
-        
+
         activeElement = el;
         el.dataset.hastooltip = true;
-        
+
         const tips = getTips(el);
         if (tips.length === 0) {
             tooltipLocked = false;
@@ -307,7 +353,8 @@ export default function createTooltipService(core, uiManager) {
                     }
                     
                     const updatedTips = getTips(el);
-                    const hasDisabledTip = el.dataset.tip?.includes('disabled') || el.dataset.tip2?.includes('disabled');
+                    const tipKeys = getTipKeys(el);
+                    const hasDisabledTip = tipKeys.some(k => k.includes('disabled'));
                     
                     if (hasDisabledTip && updatedTips.length < tipBoxes.length) {
                         if (activeTooltip._updateInterval) {
@@ -555,7 +602,7 @@ export default function createTooltipService(core, uiManager) {
             return `<p style="color: var(--drainColor); font-weight: 500">-1 crops</p><p style="color: var(--gainColor); font-weight: 500">+1 food</p>`;
         });
 
-        registerTip('increment-amount', () => {
+        registerTip('increment-amount', (el) => {
             if (!core.industry || typeof core.industry.getSelectedIncrement !== 'function') {
                 return '<p>Increment by 1</p>';
             }
@@ -563,7 +610,28 @@ export default function createTooltipService(core, uiManager) {
             if (inc === 'max') {
                 return '<p>Increment by maximum</p>';
             }
-            return `<p>Increment by ${inc}</p>`;
+
+            const activeCard = document.querySelector('.building-card.expanded');
+            if (!activeCard) return `<p>Increment by ${inc}</p>`;
+
+            const type = activeCard.dataset.buildingType;
+            if (!type) return `<p>Increment by ${inc}</p>`;
+
+            const result = core.industry.getBuildEffectsForIncrement(type, inc);
+            if (!result?.effects) return `<p>Increment by ${inc}</p>`;
+
+            const sections = [];
+            const formatType = core.settings.configs.numformat;
+            for (const [res, val] of Object.entries(result.effects)) {
+                if (val !== 0) {
+                    const sign = val >= 0 ? '+' : '';
+                    const color = val >= 0 ? 'var(--gainColor)' : 'var(--drainColor)';
+                    sections.push(`<span style="color: ${color}">${sign}${formatNumber(Math.abs(val), formatType)} ${res}/s</span>`);
+                }
+            }
+
+            const effectsStr = sections.length > 0 ? ` (${sections.join(', ')})` : '';
+            return `<p>Increment by ${inc}${effectsStr}</p>`;
         });
 
         registerTip('resource-name', (el) => {
@@ -571,177 +639,89 @@ export default function createTooltipService(core, uiManager) {
             if (!res || !core.industry.resources[res]) return '';
             
             const resObj = core.industry.resources[res];
+            const fmt = core.settings.configs.numformat;
             let capHtml = '';
-            let totalWorkerGain = 0;
-            let totalWorkerDrain = 0;
             
             const cap = resObj.effectiveCap;
             if (cap !== undefined) {
                 const capVal = cap.toNumber();
                 const currentVal = resObj.value.toNumber();
                 const percent = ((currentVal / capVal) * 100).toFixed(1);
-                let capStr = capVal;
-                if (capVal >= 1e6) capStr = (capVal / 1e6).toFixed(2) + 'M';
-                else if (capVal >= 1e3) capStr = (capVal / 1e3).toFixed(2) + 'k';
-                capHtml = `<p style="opacity: 0.8">Cap: ${capStr} (${percent}%)</p>`;
+                capHtml = `<p style="opacity: 0.8; margin-top: 0.3em">Cap: ${formatNumber(capVal, fmt)} (${percent}%)</p>`;
             }
             
-            for (const [type, b] of Object.entries(core.industry.buildings)) {
-                const def = core.industry.constructor.BUILDING_DEFS[type];
-                if (!def?.effects?.[res]) continue;
-                
-                const base = def.effects[res].base;
-                if (base) {
-                    if (base.gain && b.count > 0) {
-                        const total = b.count * (base.gain.toNumber ? base.gain.toNumber() : base.gain);
-                        totalWorkerGain += total;
-                    }
-                    if (base.drain && b.count > 0) {
-                        const total = b.count * (base.drain.toNumber ? base.drain.toNumber() : base.drain);
-                        totalWorkerDrain += total;
-                    }
-                }
-                
-                const worker = def.effects[res].worker;
-                if (worker && b.workers > 0) {
-                    const scale = core.industry.getWorkerScalingFactor();
-                    if (worker.gain) {
-                        totalWorkerGain += b.workers * (worker.gain.toNumber ? worker.gain.toNumber() : worker.gain) * scale;
-                    }
-                    if (worker.drain) {
-                        totalWorkerDrain += b.workers * (worker.drain.toNumber ? worker.drain.toNumber() : worker.drain) * scale;
-                    }
-                }
-            }
-            
-            if (totalWorkerGain === 0 && totalWorkerDrain === 0) {
+            const breakdown = core.industry.getResourceProductionBreakdown(res);
+            if (!breakdown || (breakdown.baseGain === 0 && breakdown.baseDrain === 0 && breakdown.workerGain === 0 && breakdown.workerDrain === 0)) {
                 return `<p style="opacity: 0.7; font-style: italic">No production</p>` + capHtml;
             }
-            
-            const wisdom = core.city?.ruler?.wisdom || 0;
-            const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
-            let totalGain = 0;
-            let totalDrain = 0;
-            const gainFactors = [];
-            const drainFactors = [];
-            
-            for (const [type, b] of Object.entries(core.industry.buildings)) {
+
+            const items = [];
+            for (const [type, data] of Object.entries(breakdown.byBuilding)) {
                 const def = core.industry.constructor.BUILDING_DEFS[type];
-                if (!def?.effects?.[res]) continue;
-                const base = def.effects[res].base;
-                if (base) {
-                    if (base.gain && b.count > 0) {
-                        const val = (base.gain.toNumber ? base.gain.toNumber() : base.gain);
-                        const total = b.count * val;
-                        totalGain += total;
-                        gainFactors.push(`<p style="color: var(--gainColor); font-weight: 500">+${total.toFixed(2)}/s <span style="opacity: 0.7; font-weight: 400; color: var(--baseColor) !important">(${def.name.toLowerCase()})</span></p>`);
-                    }
-                    if (base.drain && b.count > 0) {
-                        const val = (base.drain.toNumber ? base.drain.toNumber() : base.drain);
-                        const total = b.count * val;
-                        totalDrain += total;
-                        drainFactors.push(`<p style="color: var(--drainColor); font-weight: 500">-${total.toFixed(2)}/s <span style="opacity: 0.7; font-weight: 400; color: var(--baseColor) !important">(${def.name.toLowerCase()})</span></p>`);
-                    }
+                if (data.baseGain > 0) {
+                    items.push({ value: `+${formatNumber(data.baseGain, fmt)}`, label: '/s', type: 'gain', note: def.name.toLowerCase() });
+                }
+                if (data.baseDrain > 0) {
+                    items.push({ value: `-${formatNumber(data.baseDrain, fmt)}`, label: '/s', type: 'drain', note: def.name.toLowerCase() });
                 }
             }
-            
-            totalGain += totalWorkerGain;
-            totalDrain += totalWorkerDrain;
-            if (totalWorkerGain > 0) {
-                gainFactors.push(`<p style="color: var(--gainColor); font-weight: 500">+${totalWorkerGain.toFixed(2)}/s <span style="opacity: 0.7; font-weight: 400; color: var(--baseColor) !important">(workers)</span></p>`);
+            if (breakdown.workerGain > 0) {
+                items.push({ value: `+${formatNumber(breakdown.workerGain, fmt)}`, label: '/s', type: 'gain', note: 'workers' });
             }
-            if (totalWorkerDrain > 0) {
-                drainFactors.push(`<p style="color: var(--drainColor); font-weight: 500">-${totalWorkerDrain.toFixed(2)}/s <span style="opacity: 0.7; font-weight: 400; color: var(--baseColor) !important">(workers)</span></p>`);
+            if (breakdown.workerDrain > 0) {
+                items.push({ value: `-${formatNumber(breakdown.workerDrain, fmt)}`, label: '/s', type: 'drain', note: 'workers' });
             }
-            
-            const factors = [...gainFactors];
-            if (wisdom > 0 && gainFactors.length > 0) {
-                factors.push(`<p style="font-weight: 500">× ${wisdomMult.toFixed(2)} <span style="opacity: 0.7; font-weight: 400; color: var(--baseColor) !important">(wisdom)</span></p>`);
-            }
-            factors.push(...drainFactors);
-            
-            const totalRate = totalGain * wisdomMult - totalDrain;
-            const sign = totalRate >= 0 ? '+' : '';
-            const color = totalRate >= 0 ? 'var(--gainColor)' : 'var(--drainColor)';
-            const resultHtml = `<p style="margin-top: 0.3em; padding-top: 0.3em; border-top: 1px solid var(--midBaseColor); color: ${color}; font-weight: 600">= ${sign}${Math.abs(totalRate).toFixed(2)}/s</p>`;
-            
-            return factors.join('') + resultHtml + capHtml;
+
+            const totalRate = breakdown.baseGain + breakdown.workerGain - breakdown.baseDrain - breakdown.workerDrain;
+            const resultItems = [{
+                value: `${totalRate >= 0 ? '+' : ''}${formatNumber(totalRate, fmt)}`,
+                label: '/s',
+                type: totalRate >= 0 ? 'gain' : 'drain'
+            }];
+
+            return createBreakdownBox({ items, modifiers: [], result: { items: resultItems } }) + capHtml;
         });
 
         registerTip('resource-rate', (el) => {
             const res = el.dataset.resource;
             if (!res || !core.industry.resources[res]) return '';
-            
-            const wisdom = core.city?.ruler?.wisdom || 0;
-            const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
-            let totalGain = 0;
-            let totalDrain = 0;
-            let workerGain = 0;
-            let workerDrain = 0;
-            const gainFactors = [];
-            const drainFactors = [];
-            
-            for (const [type, b] of Object.entries(core.industry.buildings)) {
-                const def = core.industry.constructor.BUILDING_DEFS[type];
-                if (!def?.effects?.[res]) continue;
-                
-                const base = def.effects[res].base;
-                if (base) {
-                    if (base.gain && b.count > 0) {
-                        const val = (base.gain.toNumber ? base.gain.toNumber() : base.gain);
-                        const total = b.count * val;
-                        totalGain += total;
-                        gainFactors.push(`<p style="color: var(--gainColor); font-weight: 500">+${total.toFixed(2)}/s <span style="opacity: 0.7; font-weight: 400; color: var(--baseColor) !important">(${def.name.toLowerCase()})</span></p>`);
-                    }
-                    if (base.drain && b.count > 0) {
-                        const val = (base.drain.toNumber ? base.drain.toNumber() : base.drain);
-                        const total = b.count * val;
-                        totalDrain += total;
-                        drainFactors.push(`<p style="color: var(--drainColor); font-weight: 500">-${total.toFixed(2)}/s <span style="opacity: 0.7; font-weight: 400; color: var(--baseColor) !important">(${def.name.toLowerCase()})</span></p>`);
-                    }
-                }
-                
-                const worker = def.effects[res].worker;
-                if (worker && b.workers > 0) {
-                    const scale = core.industry.getWorkerScalingFactor();
-                    if (worker.gain) {
-                        const val = (worker.gain.toNumber ? worker.gain.toNumber() : worker.gain);
-                        const total = b.workers * val * scale;
-                        workerGain += total;
-                        totalGain += total;
-                    }
-                    if (worker.drain) {
-                        const val = (worker.drain.toNumber ? worker.drain.toNumber() : worker.drain);
-                        const total = b.workers * val * scale;
-                        workerDrain += total;
-                        totalDrain += total;
-                    }
-                }
-            }
-            
-            if (workerGain > 0) {
-                gainFactors.push(`<p style="color: var(--gainColor); font-weight: 500">+${workerGain.toFixed(2)}/s <span style="opacity: 0.7; font-weight: 400; color: var(--baseColor) !important">(workers)</span></p>`);
-            }
-            if (workerDrain > 0) {
-                drainFactors.push(`<p style="color: var(--drainColor); font-weight: 500">-${workerDrain.toFixed(2)}/s <span style="opacity: 0.7; font-weight: 400; color: var(--baseColor) !important">(workers)</span></p>`);
-            }
-            
-            if (gainFactors.length === 0 && drainFactors.length === 0) {
+
+            const breakdown = core.industry.getResourceProductionBreakdown(res);
+            if (!breakdown || (breakdown.baseGain === 0 && breakdown.baseDrain === 0 && breakdown.workerGain === 0 && breakdown.workerDrain === 0)) {
                 return `<p style="opacity: 0.7; font-style: italic">No production</p>`;
             }
-            
-            const factors = [...gainFactors];
-            if (wisdom > 0 && gainFactors.length > 0) {
-                factors.push(`<p style="font-weight: 500">× ${wisdomMult.toFixed(2)} <span style="opacity: 0.7; font-weight: 400; color: var(--baseColor) !important">(wisdom)</span></p>`);
+
+            const fmt = core.settings.configs.numformat;
+            const items = [];
+
+            for (const [type, data] of Object.entries(breakdown.byBuilding)) {
+                const def = core.industry.constructor.BUILDING_DEFS[type];
+                if (data.baseGain > 0) {
+                    items.push({ value: `+${formatNumber(data.baseGain, fmt)}`, label: '/s', type: 'gain', note: def.name.toLowerCase() });
+                }
+                if (data.baseDrain > 0) {
+                    items.push({ value: `-${formatNumber(data.baseDrain, fmt)}`, label: '/s', type: 'drain', note: def.name.toLowerCase() });
+                }
             }
-            factors.push(...drainFactors);
-            
-            const totalRate = totalGain * wisdomMult - totalDrain;
-            const sign = totalRate >= 0 ? '+' : '';
-            const color = totalRate >= 0 ? 'var(--gainColor)' : 'var(--drainColor)';
-            const resultHtml = `<p style="margin-top: 0.3em; padding-top: 0.3em; border-top: 1px solid var(--midBaseColor); color: ${color}; font-weight: 600">= ${sign}${Math.abs(totalRate).toFixed(2)}/s</p>`;
-            
-            return factors.join('') + resultHtml;
+            if (breakdown.workerGain > 0) {
+                items.push({ value: `+${formatNumber(breakdown.workerGain, fmt)}`, label: '/s', type: 'gain', note: 'workers' });
+            }
+            if (breakdown.workerDrain > 0) {
+                items.push({ value: `-${formatNumber(breakdown.workerDrain, fmt)}`, label: '/s', type: 'drain', note: 'workers' });
+            }
+
+            if (!items.length) {
+                return `<p style="opacity: 0.7; font-style: italic">No production</p>`;
+            }
+
+            const totalRate = breakdown.baseGain + breakdown.workerGain - breakdown.baseDrain - breakdown.workerDrain;
+            const resultItems = [{
+                value: `${totalRate >= 0 ? '+' : ''}${formatNumber(totalRate, fmt)}`,
+                label: '/s',
+                type: totalRate >= 0 ? 'gain' : 'drain'
+            }];
+
+            return createBreakdownBox({ items, modifiers: [], result: { items: resultItems } });
         });
 
         registerTip('building-lore', (el) => {
@@ -835,175 +815,162 @@ export default function createTooltipService(core, uiManager) {
         registerTip('building-effects', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-            
+
             const def = core.industry.constructor.BUILDING_DEFS[type];
             const b = core.industry.buildings[type];
             if (!def || !b || b.count === 0) return '';
-            
+
             const buildingName = def.name.toLowerCase();
-            const sections = [];
             const wisdom = core.city?.ruler?.wisdom || 0;
             const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
-            
+            const fmt = core.settings.configs.numformat;
+
+            const sections = [];
             for (const [res, eff] of Object.entries(def.effects)) {
                 if (!eff.base) continue;
-                
-                const gainFactors = [];
-                const drainFactors = [];
-                let baseGain = 0;
-                let baseDrain = 0;
-                
+
+                const items = [];
+                const gainItems = [];
+                let baseGain = 0, baseDrain = 0;
+
                 if (eff.base.gain) {
-                    const val = (eff.base.gain.toNumber ? eff.base.gain.toNumber() : eff.base.gain);
-                    baseGain = val;
-                    gainFactors.push(`<p style="color: var(--gainColor); font-weight: 500">+${val.toFixed(2)} ${res}/s</p>`);
+                    baseGain = eff.base.gain.toNumber?.() ?? eff.base.gain;
+                    gainItems.push({ value: `+${formatNumber(baseGain, fmt)}`, label: `${res}/s`, type: 'gain' });
                 }
+                items.push(...gainItems);
+
                 if (eff.base.drain) {
-                    const val = (eff.base.drain.toNumber ? eff.base.drain.toNumber() : eff.base.drain);
-                    baseDrain = val;
-                    drainFactors.push(`<p style="color: var(--drainColor); font-weight: 500">-${val.toFixed(2)} ${res}/s</p>`);
+                    baseDrain = eff.base.drain.toNumber?.() ?? eff.base.drain;
+                    items.push({ value: `-${formatNumber(baseDrain, fmt)}`, label: `${res}/s`, type: 'drain' });
                 }
-                
-                const factors = [...gainFactors];
-                if (wisdom > 0 && gainFactors.length > 0) {
-                    factors.push(`<p style="font-weight: 500">× ${wisdomMult.toFixed(2)} <span style="opacity: 0.7; font-weight: 400; color: var(--baseColor) !important">(wisdom)</span></p>`);
+
+                const mods = [];
+                if (wisdom > 0 && gainItems.length > 0) {
+                    mods.push({ value: `×${formatNumber(wisdomMult, fmt)}`, label: 'wisdom', range: [0, gainItems.length - 1] });
                 }
-                factors.push(...drainFactors);
-                factors.push(`<p style="opacity: 0.7">× ${b.count} ${buildingName}${b.count !== 1 ? 's' : ''}</p>`);
-                
+                mods.push({ value: '×', label: `${b.count} ${buildingName}${b.count !== 1 ? 's' : ''}`, range: [0, items.length - 1] });
+
                 const finalTotal = (baseGain * wisdomMult - baseDrain) * b.count;
-                const sign = finalTotal >= 0 ? '+' : '';
-                const color = finalTotal >= 0 ? 'var(--gainColor)' : 'var(--drainColor)';
-                
-                sections.push(factors.join(''));
-                sections.push(`<p style="margin-top: 0.3em; padding-top: 0.3em; border-top: 1px solid var(--midBaseColor); color: ${color}; font-weight: 600">= ${sign}${Math.abs(finalTotal).toFixed(2)} ${res}/s</p>`);
+                const resultItems = [{
+                    value: `${finalTotal >= 0 ? '+' : ''}${formatNumber(finalTotal, fmt)}`,
+                    label: `${res}/s`,
+                    type: finalTotal >= 0 ? 'gain' : 'drain'
+                }];
+
+                sections.push(createBreakdownBox({ items, modifiers: mods, result: { items: resultItems } }));
             }
-            
+
             return sections.join('');
         });
 
         registerTip('worker-effects', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-            
+
             const def = core.industry.constructor.BUILDING_DEFS[type];
             const b = core.industry.buildings[type];
             if (!def || !b || !b.workers || b.workers === 0) return '';
-            
+
             const scale = core.industry.getWorkerScalingFactor();
             const wisdom = core.city?.ruler?.wisdom || 0;
             const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
-            
-            const perWorkerGain = {};
-            const perWorkerDrain = {};
-            const totalGain = {};
-            const totalDrain = {};
-            
+            const fmt = core.settings.configs.numformat;
+
+            const gains = {}, drains = {};
             for (const [res, eff] of Object.entries(def.effects)) {
                 if (!eff.worker) continue;
-                
                 if (eff.worker.gain) {
-                    const val = (eff.worker.gain.toNumber ? eff.worker.gain.toNumber() : eff.worker.gain);
-                    perWorkerGain[res] = (perWorkerGain[res] || 0) + val;
-                    totalGain[res] = (totalGain[res] || 0) + b.workers * val * scale;
+                    const v = eff.worker.gain.toNumber?.() ?? eff.worker.gain;
+                    gains[res] = (gains[res] || 0) + v;
                 }
                 if (eff.worker.drain) {
-                    const val = (eff.worker.drain.toNumber ? eff.worker.drain.toNumber() : eff.worker.drain);
-                    perWorkerDrain[res] = (perWorkerDrain[res] || 0) + val;
-                    totalDrain[res] = (totalDrain[res] || 0) + b.workers * val * scale;
+                    const v = eff.worker.drain.toNumber?.() ?? eff.worker.drain;
+                    drains[res] = (drains[res] || 0) + v;
                 }
             }
-            
-            if (Object.keys(perWorkerGain).length === 0 && Object.keys(perWorkerDrain).length === 0) return '';
-            
-            const gainFactors = [];
-            const drainFactors = [];
-            
-            for (const [res, val] of Object.entries(perWorkerGain)) {
-                gainFactors.push(`<p style="color: var(--gainColor); font-weight: 500">+${val.toFixed(2)} ${res}/s</p>`);
+
+            if (!Object.keys(gains).length && !Object.keys(drains).length) return '';
+
+            const items = [];
+            const gainItems = [];
+            for (const [res, v] of Object.entries(gains)) {
+                gainItems.push({ value: `+${formatNumber(v, fmt)}`, label: `${res}/s`, type: 'gain' });
             }
-            
-            for (const [res, val] of Object.entries(perWorkerDrain)) {
-                if (!perWorkerGain[res]) {
-                    drainFactors.push(`<p style="color: var(--drainColor); font-weight: 500">-${val.toFixed(2)} ${res}/s <span style="opacity: 0.7; font-weight: 400; color: var(--baseColor) !important">(input)</span></p>`);
-                }
+            items.push(...gainItems);
+
+            for (const [res, v] of Object.entries(drains)) {
+                const note = gains[res] ? 'pay' : 'input';
+                items.push({ value: `-${formatNumber(v, fmt)}`, label: `${res}/s`, type: 'drain', note });
             }
-            
-            for (const [res, val] of Object.entries(perWorkerDrain)) {
-                if (perWorkerGain[res]) {
-                    drainFactors.push(`<p style="color: var(--drainColor); font-weight: 500">-${val.toFixed(2)} ${res}/s <span style="opacity: 0.7; font-weight: 400; color: var(--baseColor) !important">(pay)</span></p>`);
-                }
+
+            const mods = [];
+            let modIdx = 0;
+            if (wisdom > 0 && gainItems.length > 0) {
+                mods.push({ value: `×${formatNumber(wisdomMult, fmt)}`, label: 'wisdom', range: [0, gainItems.length - 1] });
+                modIdx++;
             }
-            
-            const factors = [...gainFactors];
-            if (wisdom > 0 && gainFactors.length > 0) {
-                factors.push(`<p style="font-weight: 500">× ${wisdomMult.toFixed(2)} <span style="opacity: 0.7; font-weight: 400; color: var(--baseColor) !important">(wisdom)</span></p>`);
-            }
-            factors.push(...drainFactors);
-            
-            factors.push(`<p style="opacity: 0.7">× ${b.workers} worker${b.workers !== 1 ? 's' : ''}`);
+
+            let workersLabel = `${b.workers} worker${b.workers !== 1 ? 's' : ''}`;
             if (scale < 1) {
                 const bottlenecks = core.industry.getBottleneckResources();
-                const bottleneckStr = bottlenecks.length > 0 ? bottlenecks.join(', ') : 'input';
-                factors[factors.length - 1] += ` × ${(scale * 100).toFixed(0)}% <span style="font-style: italic">(limited by ${bottleneckStr})</span>`;
+                workersLabel += ` × ${(scale * 100).toFixed(0)}%`;
             }
-            factors[factors.length - 1] += `</p>`;
-            
-            const finalResults = {};
-            for (const [res, gain] of Object.entries(totalGain)) {
-                finalResults[res] = (finalResults[res] || 0) + gain * wisdomMult;
+            mods.push({ value: '×', label: workersLabel, range: [0, items.length - 1] });
+
+            const finals = {};
+            for (const [res, v] of Object.entries(gains)) {
+                finals[res] = (finals[res] || 0) + v * wisdomMult * b.workers * scale;
             }
-            for (const [res, drain] of Object.entries(totalDrain)) {
-                finalResults[res] = (finalResults[res] || 0) - drain;
+            for (const [res, v] of Object.entries(drains)) {
+                finals[res] = (finals[res] || 0) - v * b.workers * scale;
             }
-            
-            const finalLines = [];
-            for (const [res, net] of Object.entries(finalResults)) {
-                if (net !== 0) {
-                    const isGain = net > 0;
-                    finalLines.push(`<span style="color: var(--${isGain ? 'gain' : 'drain'}Color)">${isGain ? '+' : ''}${Math.abs(net).toFixed(2)} ${res}/s</span>`);
-                }
-            }
-            
-            const resultHtml = `<p style="margin-top: 0.3em; padding-top: 0.3em; border-top: 1px solid var(--midBaseColor); font-weight: 600">= ${finalLines.join(', ')}</p>`;
-            
-            return factors.join('') + resultHtml;
+
+            const resultItems = Object.entries(finals)
+                .filter(([, v]) => v !== 0)
+                .map(([res, v]) => ({
+                    value: `${v > 0 ? '+' : ''}${formatNumber(v, fmt)}`,
+                    label: `${res}/s`,
+                    type: v > 0 ? 'gain' : 'drain'
+                }));
+
+            return createBreakdownBox({ items, modifiers: mods, result: { items: resultItems } });
         });
 
         registerTip('time-to-next', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-            
+
             const def = core.industry.constructor.BUILDING_DEFS[type];
             if (!def?.buildCost) return '';
-            
+
             const panel = core.ui.panels.industry;
             const target = panel.getPlanTarget('build', type);
             if (target <= 0) return '';
-            
+
             const resources = core.industry.resources;
+            const formatType = core.settings.configs.numformat;
             let html = '';
-            
+
             for (const [res, cost] of Object.entries(def.buildCost)) {
                 if (!resources[res]) continue;
-                
+
                 const current = resources[res].value.toNumber();
                 const costVal = panel.getValueNumber(cost);
                 const needed = costVal * target - current;
-                
+
                 if (needed <= 0) continue;
-                
+
                 const rate = resources[res].netGrowthRate.toNumber();
                 if (rate <= 0) {
                     html += `<p style="color: var(--drainColor); font-weight: 500">${res}: <span style="opacity: 0.7">no gain</span></p>`;
                     continue;
                 }
-                
+
                 const time = needed / rate;
-                html += `<p style="font-weight: 500">${needed.toFixed(1)} ${res} / ${rate.toFixed(2)}/s</p>`;
+                html += `<p style="font-weight: 500">${formatNumber(needed, formatType)} ${res} / ${formatNumber(rate, formatType)}/s</p>`;
                 html += `<p style="color: var(--accent); margin-left: 0.5em">= ${panel.formatTime(time)}</p>`;
             }
-            
+
             return html;
         });
 
@@ -1029,43 +996,121 @@ export default function createTooltipService(core, uiManager) {
         registerTip('worker-limited', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-            
+
             const def = core.industry.constructor.BUILDING_DEFS[type];
             const b = core.industry.buildings[type];
             if (!def || !b || !b.workers || b.workers === 0) return '';
-            
+
             const scale = core.industry.getWorkerScalingFactor();
             if (scale >= 1) return '';
-            
+
             const currentEffects = core.industry.getAggregateWorkerEffects(type);
             if (!currentEffects) return '';
-            
+
             const potentialByRes = {};
             for (const [res, net] of Object.entries(currentEffects)) {
                 if (scale > 0) potentialByRes[res] = net / scale;
             }
-            
+
             const negativePotential = [];
             const positivePotential = [];
-            
+            const formatType = core.settings.configs.numformat;
+
             for (const [res, val] of Object.entries(potentialByRes)) {
                 if (val !== 0) {
                     const sign = val > 0 ? '+' : '';
                     const color = val > 0 ? 'var(--gainColor)' : 'var(--drainColor)';
-                    const item = `<span style="color: ${color}">${sign}${Math.abs(val).toFixed(2)} ${res}/s</span>`;
+                    const item = `<span style="color: ${color}">${sign}${formatNumber(Math.abs(val), formatType)} ${res}/s</span>`;
                     (val < 0 ? negativePotential : positivePotential).push(item);
                 }
             }
-            
+
             const potentialEffects = [...negativePotential, ...positivePotential];
             return potentialEffects.length > 0 ? `<p style="font-weight: 500">Potential: ${potentialEffects.join(', ')}</p>` : '';
         });
 
         const navButtons = document.querySelectorAll(".navbutton");
         navButtons.forEach(b => {
-            registerTip(b.dataset.tip, () => {
-                return b.classList.contains("locked") ? "<i>Locked</i>" : b.firstElementChild.alt;
+            const tipKey = getTipKeys(b)[0];
+            if (tipKey) {
+                registerTip(tipKey, () => {
+                    return b.classList.contains("locked") ? "<i>Locked</i>" : b.firstElementChild.alt;
+                });
+            }
+        });
+
+        registerTip('info-box-breakdown', (el) => {
+            const buttonElement = el.closest('.button-with-info')?.querySelector('button');
+            if (!buttonElement) return '';
+
+            const buildingType = buttonElement.dataset.buildingType;
+            if (!buildingType) return '';
+
+            let actionType = null;
+            if (buttonElement.classList.contains('dropdown-add-building-btn')) actionType = 'build';
+            else if (buttonElement.classList.contains('dropdown-sell-btn')) actionType = 'demolish';
+            else if (buttonElement.classList.contains('dropdown-add-worker-btn')) actionType = 'hire';
+            else if (buttonElement.classList.contains('dropdown-remove-worker-btn')) actionType = 'furlough';
+
+            if (!actionType) return '';
+
+            const panel = core.ui.panels.industry;
+            let details = null;
+            switch (actionType) {
+                case 'build': details = panel.getBuildingButtonDetails(buildingType); break;
+                case 'demolish': details = panel.getDemolishButtonDetails(buildingType); break;
+                case 'hire': details = panel.getWorkerButtonDetails(buildingType); break;
+                case 'furlough': details = panel.getFurloughButtonDetails(buildingType); break;
+            }
+            if (!details) return '';
+
+            const fmt = core.settings.configs.numformat;
+            const wisdom = core.city?.ruler?.wisdom || 0;
+            const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
+
+            const drainItems = [];
+            const gainItems = [];
+
+            details.costs?.forEach(c => {
+                const v = c.amt || c.val || 0;
+                if (v > 0) drainItems.push({ value: `-${formatNumber(v, fmt)}`, label: c.res + (c.amt !== undefined ? '' : '/s'), type: 'drain' });
             });
+            details.rewards?.forEach(r => {
+                const v = r.amt || 0;
+                if (v > 0) gainItems.push({ value: `+${formatNumber(v, fmt)}`, label: r.res, type: 'gain' });
+            });
+            details.effects?.forEach(e => {
+                const v = e.val || 0;
+                if (v > 0) {
+                    const item = { value: `${e.type === 'gain' ? '+' : '-'}${formatNumber(v, fmt)}`, label: `${e.res}/s`, type: e.type };
+                    (e.type === 'gain' ? gainItems : drainItems).push(item);
+                }
+            });
+
+            const capDrain = [];
+            const capGain = [];
+            details.capChanges?.forEach(c => {
+                const v = c.val;
+                if (v !== 0) {
+                    const isPos = v > 0;
+                    const item = { value: `${isPos ? '+' : ''}${formatNumber(v, fmt)}`, label: `${c.res} cap`, type: isPos ? 'gain' : 'drain' };
+                    (isPos ? capGain : capDrain).push(item);
+                }
+            });
+
+            const items = [...drainItems, ...gainItems];
+            const capItems = [...capDrain, ...capGain];
+
+            const mods = [];
+            if (wisdom > 0 && gainItems.length > 0) {
+                const start = drainItems.length;
+                mods.push({ value: `×${formatNumber(wisdomMult, fmt)}`, label: 'wisdom', range: [start, start + gainItems.length - 1] });
+            }
+
+            if (capItems.length) {
+                return createBreakdownBox({ items, modifiers: mods }) + createBreakdownBox({ items: capItems });
+            }
+            return createBreakdownBox({ items, modifiers: mods });
         });
 
         observeTooltips();
