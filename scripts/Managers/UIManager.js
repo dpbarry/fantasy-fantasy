@@ -21,76 +21,43 @@ export default class UIManager {
         this.initialize();
     }
 
-    // after initialization so that the necessary managers are formed
+    initialize() {
+        this.initShortcuts();
+        this.initEventListeners();
+        
+        // Handled in GlobalBehavior.js
+        this.detectVisibleSection = () => {};
+    }
+
+    // called in GameCore after initialization so that the necessary managers are formed
     readyPanels() {
         this.panels = {
             story: new StoryPanel(this.core),
             news: new NewsPanel(this.core),
             settings: new SettingsPanel(this.core),
             industry: new IndustryPanel(this.core),
-        }
-
-        this.postPanelInitialization();
-    }
-
-     postPanelInitialization() {
-        this.tooltipService = createTooltipService(this.core, this);
-        this.contextMenuService = createContextMenuService(this.core, this.tooltipService);
-        this.tooltipService.setContextMenuService(this.contextMenuService);
-        
-        const sectionsWrapper = document.getElementById("sections-wrapper");
-        if (sectionsWrapper) {
-            let lastScrollLeft = sectionsWrapper.scrollLeft;
-            let scrollTimeout = null;
-            
-            sectionsWrapper.addEventListener('scroll', () => {
-                const isScrolling = Math.abs(sectionsWrapper.scrollLeft - lastScrollLeft) > 1;
-                lastScrollLeft = sectionsWrapper.scrollLeft;
-                
-                if (isScrolling) {
-                    document.querySelectorAll('.infobox[data-infobox-section]').forEach(infobox => {
-                        infobox.style.display = 'none';
-                    });
-                    
-                    if (scrollTimeout) clearTimeout(scrollTimeout);
-                    scrollTimeout = setTimeout(() => {
-                        this.updateInfoboxVisibility(true);
-                    }, 300);
-                }
-            }, { passive: true });
-            
-            this.updateInfoboxVisibility(true);
-            window.addEventListener('resize', () => this.updateInfoboxVisibility(true), { passive: true });
-        }
+        };
     }
 
     boot() {
         setupGlobalBehavior(this.core);
+        this.tooltipService = createTooltipService(this.core, this);
+        this.contextMenuService = createContextMenuService(this.core, this.tooltipService);
+        this.tooltipService.setContextMenuService(this.contextMenuService);
         this.showPanels();
-        if (this.updateMobileNavArrows) {
-            this.updateMobileNavArrows();
-        }
+        this.updateMobileNavArrows();
     }
+
 
     initShortcuts() {
         this.story = document.getElementById("story");
         this.news = document.getElementById("news");
-
         this.left = document.getElementById("left");
         this.center = document.getElementById("center");
         this.right = document.getElementById("right");
-
         this.industry = document.getElementById("industry");
-
         this.settings = document.getElementById("settings");
-        
         this.canvas = this.newCanvas();
-    }
-
-    initialize() {
-        this.initShortcuts();
-        this.initEventListeners();
-        this.initMobileNavigation();
     }
 
     newCanvas() {
@@ -115,39 +82,32 @@ export default class UIManager {
     }
 
     initEventListeners() {
-        document.querySelectorAll(".nudge").forEach(b => b.addEventListener("pointerdown", () => b.classList.add("nudged")));
+        const addNudgeListener = (el) => el.addEventListener("pointerdown", () => el.classList.add("nudged"));
+        const addRippleListener = (el) => el.addEventListener("pointerdown", (e) => spawnRipple(e, el));
+
+        document.querySelectorAll(".nudge").forEach(addNudgeListener);
         document.onpointerup = () => {
             document.querySelectorAll(".nudged").forEach(b => b.classList.remove("nudged"));
         };
 
-        document.querySelectorAll(".ripples").forEach(el => {
-            el.addEventListener("pointerdown", (e) => {
-                spawnRipple(e, el);
-            });
-        });
+        document.querySelectorAll(".ripples").forEach(addRippleListener);
 
         const interactiveObserver = new MutationObserver(mutations => {
             mutations.forEach(mutation => {
                 mutation.addedNodes.forEach(node => {
-                    if (node.nodeType === 1) { 
-                        if (node.classList.contains("nudge")) {
-                            node.addEventListener("pointerdown", () => node.classList.add("nudged"));
-                        }
-                        if (node.classList.contains("ripples")) {
-                            node.addEventListener("click", (e) => {
-                                spawnRipple(e, node);
-                            });
-                        }
-
-                        node.querySelectorAll?.(".nudge").forEach(b => {
-                            b.addEventListener("pointerdown", () => b.classList.add("nudged"));
-                        });
-                        node.querySelectorAll?.(".ripples").forEach(el => {
-                            el.addEventListener("click", (e) => {
-                                spawnRipple(e, el);
-                            });
-                        });
+                    if (node.nodeType !== 1) return;
+                    
+                    if (node.classList.contains("nudge")) {
+                        addNudgeListener(node);
                     }
+                    if (node.classList.contains("ripples")) {
+                        node.addEventListener("click", (e) => spawnRipple(e, node));
+                    }
+
+                    node.querySelectorAll?.(".nudge").forEach(addNudgeListener);
+                    node.querySelectorAll?.(".ripples").forEach(el => {
+                        el.addEventListener("click", (e) => spawnRipple(e, el));
+                    });
                 });
             });
         });
@@ -157,59 +117,58 @@ export default class UIManager {
         });
 
         setupKeyboard();
-        this.story.addEventListener("scroll", () => {
-            verticalScroll(this.story, 5, true);
-        });
-        window.addEventListener("resize", () => {
-            verticalScroll(this.story, 5, true);
-        });
+        
+        const updateStoryScroll = () => verticalScroll(this.story, 5, true);
+
+        this.story.addEventListener("scroll", updateStoryScroll);
+        window.addEventListener("resize", updateStoryScroll);
     }
 
 
     show(loc, panel) {
         if (this.activePanels[loc] === undefined || !panel) return;
 
-        if (this.activePanels[loc] && this.activePanels[loc] !== panel) {
-            this.panels[this.activePanels[loc]].updateVisibility(loc, panel);
+        const previousPanel = this.activePanels[loc];
+        if (previousPanel && previousPanel !== panel) {
+            this.panels[previousPanel].updateVisibility(loc, panel);
         }
         this.activePanels[loc] = panel;
         this.panels[panel].updateVisibility(loc, panel);
 
         document.querySelectorAll(`.navbutton.chosen[data-loc='${loc}']`).forEach(el => el.classList.remove("chosen"));
-        let button = document.querySelector(`.navbutton[data-panel='${panel}']`);
+        const button = document.querySelector(`.navbutton[data-panel='${panel}']`);
         if (button) {
             button.classList.add("chosen");
         }
-        
-        if (this.detectVisibleSection) {
-            this.detectVisibleSection();
-        }
+
+        this.detectVisibleSection();
     }
 
     showPanels() {
-        Object.entries(this.activePanels).forEach((a) => {
-            let [loc, panel] = a;
+        Object.entries(this.activePanels).forEach(([loc, panel]) => {
             this.show(loc, panel);
         });
     }
 
     createRenderInterval(fn) {
-        const interval =  setInterval(() => {fn();}, this.core.settings.refreshUI);
-        this.renderLoops.push({interval: interval, fn: fn});
+        const interval = setInterval(fn, this.core.settings.refreshUI);
+        this.renderLoops.push({interval, fn});
         return interval;
     }
 
     destroyRenderInterval(interval) {
-        const i = this.renderLoops.findIndex(i => i.interval === interval);
-        clearInterval(interval);
-        this.renderLoops.splice(i, 1);
+        const index = this.renderLoops.findIndex(loop => loop.interval === interval);
+        if (index !== -1) {
+            clearInterval(interval);
+            this.renderLoops.splice(index, 1);
+        }
     }
 
     updateRenderIntervals() {
-        for (const pair of this.renderLoops) {
-           clearInterval(pair.interval);
-           pair.interval = setInterval(pair.fn, this.core.settings.refreshUI);
-        }
+        this.renderLoops.forEach(loop => {
+            clearInterval(loop.interval);
+            loop.interval = setInterval(loop.fn, this.core.settings.refreshUI);
+        });
     }
 
     serialize() {
@@ -219,82 +178,6 @@ export default class UIManager {
     deserialize(data) {
         this.activePanels = data.activePanels;
         this.visibleSection = data.visibleSection;
-        if (this.updateMobileNavArrows) {
-            this.updateMobileNavArrows();
-        }
-    }
-
-    initMobileNavigation() {
-        const sectionsWrapper = document.getElementById("sections-wrapper");
-        if (!sectionsWrapper) return;
-
-        const sectionOrder = ["left", "center", "right"];
-        
-        const navigateSection = (direction) => {
-            const currentIndex = sectionOrder.indexOf(this.visibleSection);
-            if (currentIndex === -1) return;
-
-            let targetIndex;
-            if (direction === "left") {
-                targetIndex = currentIndex - 1;
-            } else {
-                targetIndex = currentIndex + 1;
-            }
-
-            if (targetIndex < 0 || targetIndex >= sectionOrder.length) return;
-
-            const targetSection = sectionOrder[targetIndex];
-            this.visibleSection = targetSection;
-            if (this.scrollToVisibleSection) {
-                this.scrollToVisibleSection(true);
-            }
-            this.updateMobileNavArrows();
-        };
-
-        const leftArrows = [
-            document.getElementById("nav-arrow-left"),
-            document.getElementById("nav-arrow-center-from-right"),
-            document.getElementById("nav-arrow-right-from-left")
-        ];
-
-        const rightArrows = [
-            document.getElementById("nav-arrow-center-from-left"),
-            document.getElementById("nav-arrow-right-from-center"),
-            document.getElementById("nav-arrow-right")
-        ];
-
-        leftArrows.forEach(arrow => {
-            if (arrow) arrow.addEventListener("click", () => navigateSection("left"));
-        });
-
-        rightArrows.forEach(arrow => {
-            if (arrow) arrow.addEventListener("click", () => navigateSection("right"));
-        });
-
-        this.updateMobileNavArrows();
-        
-        const checkMobileNav = () => {
-            const isMobile = window.matchMedia("(width <= 950px)").matches;
-            if (isMobile) {
-                this.updateMobileNavArrows();
-            }
-        };
-
-        window.addEventListener("resize", checkMobileNav);
-    }
-
-    updateInfoboxVisibility(immediate = true) {
-        const isMobile = window.matchMedia('(width <= 950px)').matches;
-        if (!isMobile) {
-            document.querySelectorAll('.infobox').forEach(infobox => infobox.style.display = '');
-            return;
-        }
-        if (!immediate) return;
-        
-        document.querySelectorAll('.infobox').forEach(infobox => {
-            const section = infobox.dataset.infoboxSection;
-            infobox.style.display = (section && section !== this.visibleSection) ? 'none' : '';
-        });
     }
 
     updateMobileNavArrows() {
@@ -302,40 +185,40 @@ export default class UIManager {
         const currentIndex = sectionOrder.indexOf(this.visibleSection);
         if (currentIndex === -1) return;
 
-        const leftArrowLeft = document.getElementById("nav-arrow-left");
-        const leftArrowCenter = document.getElementById("nav-arrow-center-from-right");
-        const leftArrowRight = document.getElementById("nav-arrow-right-from-left");
+        const arrows = {
+            left: [
+                { id: "nav-arrow-left", disabled: currentIndex === 0 },
+                { id: "nav-arrow-center-from-right", disabled: currentIndex !== 1 },
+                { id: "nav-arrow-right-from-left", disabled: currentIndex !== 2 }
+            ],
+            right: [
+                { id: "nav-arrow-center-from-left", disabled: currentIndex !== 0 },
+                { id: "nav-arrow-right-from-center", disabled: currentIndex !== 1 },
+                { id: "nav-arrow-right", disabled: currentIndex === 2 }
+            ]
+        };
 
-        const rightArrowLeft = document.getElementById("nav-arrow-center-from-left");
-        const rightArrowCenter = document.getElementById("nav-arrow-right-from-center");
-        const rightArrowRight = document.getElementById("nav-arrow-right");
-
-        if (leftArrowLeft) leftArrowLeft.disabled = currentIndex === 0;
-        if (leftArrowCenter) leftArrowCenter.disabled = currentIndex !== 1;
-        if (leftArrowRight) leftArrowRight.disabled = currentIndex !== 2;
-
-        if (rightArrowLeft) rightArrowLeft.disabled = currentIndex !== 0;
-        if (rightArrowCenter) rightArrowCenter.disabled = currentIndex !== 1;
-        if (rightArrowRight) rightArrowRight.disabled = currentIndex === 2;
+        [...arrows.left, ...arrows.right].forEach(({ id, disabled }) => {
+            const arrow = document.getElementById(id);
+            if (arrow) arrow.disabled = disabled;
+        });
     }
 
     hookTip(el, tipKey) {
         if (!el || !tipKey) return;
-        const tips = el.dataset.tips || '';
-        const arr = tips ? tips.split('@').filter(Boolean) : [];
-        if (!arr.includes(tipKey)) {
-            arr.push(tipKey);
-            el.dataset.tips = arr.join('@');
+        const tips = (el.dataset.tips || '').split('@').filter(Boolean);
+        if (!tips.includes(tipKey)) {
+            tips.push(tipKey);
+            el.dataset.tips = tips.join('@');
             el.classList.add('hastip');
         }
     }
 
     unhookTip(el, tipKey) {
         if (!el || !tipKey) return;
-        const tips = el.dataset.tips || '';
-        const arr = tips.split('@').filter(t => t && t !== tipKey);
-        if (arr.length) {
-            el.dataset.tips = arr.join('@');
+        const tips = (el.dataset.tips || '').split('@').filter(t => t && t !== tipKey);
+        if (tips.length) {
+            el.dataset.tips = tips.join('@');
         } else {
             delete el.dataset.tips;
             el.classList.remove('hastip');

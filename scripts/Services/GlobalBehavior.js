@@ -1,8 +1,15 @@
 import HackService from "./HackService.js";
 
+const MOBILE_BREAKPOINT = "(width <= 950px)";
+const SECTION_ORDER = ["left", "center", "right"];
+
+function matchesMobile() {
+    return window.matchMedia(MOBILE_BREAKPOINT).matches;
+}
+
 export default function setupGlobalBehavior(core) {
     let settingsClicks = 0;
-    let isMobile = window.matchMedia("(width <= 950px)").matches;
+    let isMobile = matchesMobile();
 
     const settingsButton = document.querySelector("#settingsnav");
     if (!settingsButton) return;
@@ -20,62 +27,63 @@ export default function setupGlobalBehavior(core) {
         "center": 1,
         "right": 2
     };
+    let isProgrammaticScroll = false;
 
-    function scrollToVisibleSection(smooth = false) {
-        if (!isMobile || !sectionsWrapper) return;
-        
-        const sectionIndex = sectionMap[core.ui.visibleSection];
-        if (sectionIndex === undefined) return;
-        
-        const sections = sectionsWrapper.querySelectorAll("section");
-        if (!sections[sectionIndex]) return;
-        
-        const section = sections[sectionIndex];
+    function calculateTargetLeft(section, wrapper) {
         const sectionLeft = section.offsetLeft;
         const sectionWidth = section.offsetWidth;
-        const wrapperWidth = sectionsWrapper.clientWidth;
-        
-        const targetLeft = sectionLeft + (sectionWidth / 2) - (wrapperWidth / 2);
-        
+        const wrapperWidth = wrapper.clientWidth;
+        return sectionLeft + (sectionWidth / 2) - (wrapperWidth / 2);
+    }
+
+    function scrollToVisibleSection(smooth = false) {
+        if (!matchesMobile() || !sectionsWrapper) return;
+
+        const sectionIndex = sectionMap[core.ui.visibleSection];
+        if (sectionIndex === undefined) return;
+
+        const sections = sectionsWrapper.querySelectorAll("section");
+        if (!sections[sectionIndex]) return;
+
+        const section = sections[sectionIndex];
+
         const originalScrollBehavior = sectionsWrapper.style.scrollBehavior;
         const originalScrollSnapType = sectionsWrapper.style.scrollSnapType;
         sectionsWrapper.style.scrollBehavior = 'auto';
         sectionsWrapper.style.scrollSnapType = 'none';
-        
         sectionsWrapper.style.overflowX = 'scroll';
-        
+        isProgrammaticScroll = true;
+
         if (smooth) {
             const startLeft = sectionsWrapper.scrollLeft;
-            const distance = targetLeft - startLeft;
+            const distance = calculateTargetLeft(section, sectionsWrapper) - startLeft;
             const duration = 150;
             const startTime = performance.now();
-            
+
             const animate = (currentTime) => {
                 const elapsed = currentTime - startTime;
                 const progress = Math.min(elapsed / duration, 1);
                 const ease = progress * (2 - progress);
-                const currentValue = startLeft + distance * ease;
-                
-                sectionsWrapper.scrollLeft = currentValue;
-                
+                sectionsWrapper.scrollLeft = startLeft + distance * ease;
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
                     sectionsWrapper.style.scrollBehavior = originalScrollBehavior;
                     sectionsWrapper.style.scrollSnapType = originalScrollSnapType;
+                    isProgrammaticScroll = false;
                 }
             };
             requestAnimationFrame(animate);
         } else {
-            sectionsWrapper.scrollLeft = targetLeft;
+            sectionsWrapper.scrollLeft = calculateTargetLeft(section, sectionsWrapper);
             requestAnimationFrame(() => {
                 sectionsWrapper.style.scrollBehavior = originalScrollBehavior;
                 sectionsWrapper.style.scrollSnapType = originalScrollSnapType;
+                isProgrammaticScroll = false;
             });
         }
     }
     
-    core.ui.scrollToVisibleSection = scrollToVisibleSection;
 
     const navbuttons = document.querySelectorAll(".navbutton");
     navbuttons.forEach(b => {
@@ -90,36 +98,118 @@ export default function setupGlobalBehavior(core) {
     let isResizing = false;
     
     const lockScrollPosition = () => {
-        if (!isMobile || !sectionsWrapper || !isResizing) return;
-        
+        if (!matchesMobile() || !sectionsWrapper || !isResizing) return;
+
         const sectionIndex = sectionMap[core.ui.visibleSection];
         if (sectionIndex === undefined) return;
-        
+
         const sections = sectionsWrapper.querySelectorAll("section");
         if (!sections[sectionIndex]) return;
-        
+
         const section = sections[sectionIndex];
-        const sectionLeft = section.offsetLeft;
-        const sectionWidth = section.offsetWidth;
-        const wrapperWidth = sectionsWrapper.clientWidth;
-        
-        const targetLeft = sectionLeft + (sectionWidth / 2) - (wrapperWidth / 2);
-        sectionsWrapper.scrollLeft = targetLeft;
-        
+        sectionsWrapper.scrollLeft = calculateTargetLeft(section, sectionsWrapper);
+
         resizeAnimationFrame = requestAnimationFrame(lockScrollPosition);
+    };
+    
+    function updateInfoboxVisibility(immediate = true) {
+        if (!matchesMobile()) {
+            document.querySelectorAll('.infobox').forEach(infobox => infobox.style.display = '');
+            return;
+        }
+        if (!immediate) return;
+        
+        document.querySelectorAll('.infobox').forEach(infobox => {
+            const section = infobox.dataset.infoboxSection;
+            infobox.style.display = (section && section !== core.ui.visibleSection) ? 'none' : '';
+        });
+    }
+
+    function setupInfoBoxScrollInteraction() {
+        if (!sectionsWrapper) return;
+        
+        let lastScrollLeft = sectionsWrapper.scrollLeft;
+        let scrollTimeout = null;
+        
+        sectionsWrapper.addEventListener('scroll', () => {
+            const isScrolling = Math.abs(sectionsWrapper.scrollLeft - lastScrollLeft) > 1;
+            lastScrollLeft = sectionsWrapper.scrollLeft;
+            
+            if (isScrolling) {
+                document.querySelectorAll('.infobox[data-infobox-section]').forEach(infobox => {
+                    infobox.style.display = 'none';
+                });
+                
+                if (scrollTimeout) clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => updateInfoboxVisibility(true), 300);
+            }
+        }, { passive: true });
+        
+        updateInfoboxVisibility(true);
+        window.addEventListener('resize', () => updateInfoboxVisibility(true), { passive: true });
+    }
+
+    function initMobileNavigation() {
+        if (!sectionsWrapper) return;
+
+        const navigateSection = (direction) => {
+            const currentIndex = SECTION_ORDER.indexOf(core.ui.visibleSection);
+            if (currentIndex === -1) return;
+
+            const targetIndex = direction === "left" ? currentIndex - 1 : currentIndex + 1;
+            if (targetIndex < 0 || targetIndex >= SECTION_ORDER.length) return;
+
+            core.ui.visibleSection = SECTION_ORDER[targetIndex];
+            scrollToVisibleSection(true);
+            core.ui.updateMobileNavArrows();
+        };
+
+        const arrowIds = {
+            left: ["nav-arrow-left", "nav-arrow-center-from-right", "nav-arrow-right-from-left"],
+            right: ["nav-arrow-center-from-left", "nav-arrow-right-from-center", "nav-arrow-right"]
+        };
+
+        arrowIds.left.forEach(id => {
+            const arrow = document.getElementById(id);
+            if (arrow) arrow.addEventListener("click", () => navigateSection("left"));
+        });
+
+        arrowIds.right.forEach(id => {
+            const arrow = document.getElementById(id);
+            if (arrow) arrow.addEventListener("click", () => navigateSection("right"));
+        });
+    }
+
+    const updateScrollBehavior = () => {
+        if (!sectionsWrapper) return;
+        
+        const shouldBeMobile = matchesMobile();
+        
+        if (shouldBeMobile) {
+            setupMobileScrollLocking();
+        } else {
+            if (mobileScrollHandler) {
+                sectionsWrapper.removeEventListener("scroll", mobileScrollHandler);
+                mobileScrollHandler = null;
+            }
+            if (scrollLeftPropertyDefined) {
+                delete sectionsWrapper.scrollLeft;
+                scrollLeftPropertyDefined = false;
+                sectionsWrapper.style.overflowX = '';
+            }
+        }
     };
     
     const resizeHandler = () => {
         const wasMobile = isMobile;
-        isMobile = window.matchMedia("(width <= 950px)").matches;
+        isMobile = matchesMobile();
         
         if (isMobile && sectionsWrapper) {
             if (!wasMobile) {
                 core.ui.visibleSection = "center";
+                core.ui.updateMobileNavArrows();
                 scrollToVisibleSection(false);
-                if (core.ui.updateMobileNavArrows) {
-                    core.ui.updateMobileNavArrows();
-                }
+                updateScrollBehavior();
             } else {
                 if (!isResizing) {
                     isResizing = true;
@@ -134,9 +224,7 @@ export default function setupGlobalBehavior(core) {
                         resizeAnimationFrame = null;
                     }
                     scrollToVisibleSection(false);
-                    if (core.ui.updateMobileNavArrows) {
-                        core.ui.updateMobileNavArrows();
-                    }
+                    core.ui.updateMobileNavArrows();
                 }, 150);
             }
         } else if (!isMobile && wasMobile) {
@@ -145,156 +233,136 @@ export default function setupGlobalBehavior(core) {
                 cancelAnimationFrame(resizeAnimationFrame);
                 resizeAnimationFrame = null;
             }
-            if (core.ui.updateMobileNavArrows) {
-                core.ui.updateMobileNavArrows();
-            }
+            core.ui.updateMobileNavArrows();
         }
     };
 
     window.addEventListener("resize", resizeHandler, { passive: true });
 
-    if (sectionsWrapper) {
-        const sectionOrder = ["left", "center", "right"];
-        let scrollTimeout = null;
+    let scrollTimeout = null;
+    let lockedScrollLeft = 0;
+    let lastScrollTime = 0;
+    let _scrollLeft = 0;
+    let mobileScrollHandler = null;
+    let scrollLeftPropertyDefined = false;
+    
+    const detectVisibleSection = () => {
+        if (!sectionsWrapper || isResizing) return;
         
-        const detectVisibleSection = () => {
-            if (isResizing) return;
+        const sections = sectionsWrapper.querySelectorAll("section");
+        if (sections.length !== 3) return;
+        
+        const scrollLeft = sectionsWrapper.scrollLeft;
+        const wrapperWidth = sectionsWrapper.clientWidth;
+        const centerX = scrollLeft + wrapperWidth / 2;
+        
+        let closestSection = null;
+        let closestDistance = Infinity;
+        
+        sections.forEach((section, index) => {
+            const sectionLeft = section.offsetLeft;
+            const sectionCenter = sectionLeft + section.offsetWidth / 2;
+            const distance = Math.abs(centerX - sectionCenter);
             
-            const sections = sectionsWrapper.querySelectorAll("section");
-            if (sections.length !== 3) return;
-            
-            const scrollLeft = sectionsWrapper.scrollLeft;
-            const wrapperWidth = sectionsWrapper.clientWidth;
-            const centerX = scrollLeft + wrapperWidth / 2;
-            
-            let closestSection = null;
-            let closestDistance = Infinity;
-            
-            sections.forEach((section, index) => {
-                const sectionLeft = section.offsetLeft;
-                const sectionCenter = sectionLeft + section.offsetWidth / 2;
-                const distance = Math.abs(centerX - sectionCenter);
-                
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    closestSection = sectionOrder[index];
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestSection = SECTION_ORDER[index];
+            }
+        });
+        
+        if (closestSection && closestSection !== core.ui.visibleSection) {
+            core.ui.visibleSection = closestSection;
+            core.ui.updateMobileNavArrows();
+            core.ui.tooltipService?.checkSectionAndDismiss();
+            if (scrollTimeout) clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                if (matchesMobile()) {
+                    updateInfoboxVisibility(true);
                 }
-            });
+            }, 300);
+        }
+    };
+    
+    core.ui.detectVisibleSection = detectVisibleSection;
+    
+    setupInfoBoxScrollInteraction();
+    initMobileNavigation();
+    
+    const setupMobileScrollLocking = () => {
+        if (!sectionsWrapper || scrollLeftPropertyDefined) return;
+        
+        const setScrollLeftDirect = (value) => {
+            sectionsWrapper.style.overflowX = 'scroll';
+            const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollLeft') || 
+                Object.getOwnPropertyDescriptor(Element.prototype, 'scrollLeft');
+            if (descriptor && descriptor.set) {
+                descriptor.set.call(sectionsWrapper, value);
+            } else {
+                sectionsWrapper.scrollLeft = value;
+            }
+            _scrollLeft = value;
+            lockedScrollLeft = value;
+            setTimeout(() => {
+                sectionsWrapper.style.overflowX = 'hidden';
+            }, 0);
+        };
+        
+        const getScrollLeft = () => {
+            const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollLeft') || 
+                Object.getOwnPropertyDescriptor(Element.prototype, 'scrollLeft');
+            if (descriptor && descriptor.get) {
+                return descriptor.get.call(sectionsWrapper);
+            }
+            return sectionsWrapper.scrollLeft;
+        };
+        
+        const updateLock = () => {
+            lockedScrollLeft = _scrollLeft;
+        };
+        
+        Object.defineProperty(sectionsWrapper, 'scrollLeft', {
+            get: function() {
+                if (isProgrammaticScroll && sectionsWrapper.style.overflowX === 'scroll') {
+                    return getScrollLeft();
+                }
+                return _scrollLeft;
+            },
+            set: function(value) {
+                if (isProgrammaticScroll) {
+                    setScrollLeftDirect(value);
+                } else {
+                    _scrollLeft = lockedScrollLeft;
+                }
+            },
+            configurable: true
+        });
+        
+        scrollLeftPropertyDefined = true;
+        
+        mobileScrollHandler = () => {
+            const now = performance.now();
+            if (now - lastScrollTime < 16) return;
+            lastScrollTime = now;
             
-            if (closestSection && closestSection !== core.ui.visibleSection) {
-                core.ui.visibleSection = closestSection;
-                if (core.ui.updateMobileNavArrows) {
-                    core.ui.updateMobileNavArrows();
-                }
-                if (core.ui.tooltipService) {
-                    core.ui.tooltipService.checkSectionAndDismiss();
-                }
-                if (scrollTimeout) clearTimeout(scrollTimeout);
-                scrollTimeout = setTimeout(() => {
-                    if (window.matchMedia('(width <= 950px)').matches && core.ui.updateInfoboxVisibility) {
-                        core.ui.updateInfoboxVisibility(true);
-                    }
-                }, 300);
+            if (isProgrammaticScroll) {
+                _scrollLeft = sectionsWrapper.scrollLeft;
+                updateLock();
+                detectVisibleSection();
             }
         };
         
-        core.ui.detectVisibleSection = detectVisibleSection;
-        
-        if (isMobile) {
-            let lockedScrollLeft = sectionsWrapper.scrollLeft;
-            let isProgrammaticScroll = false;
-            let lastScrollTime = 0;
-            let _scrollLeft = sectionsWrapper.scrollLeft;
-            
-            const updateLock = () => {
-                lockedScrollLeft = _scrollLeft;
-            };
-            
-            sectionsWrapper.style.overflowX = 'hidden';
-            
-            const setScrollLeftDirect = (value) => {
-                sectionsWrapper.style.overflowX = 'scroll';
-                const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollLeft') || 
-                    Object.getOwnPropertyDescriptor(Element.prototype, 'scrollLeft');
-                if (descriptor && descriptor.set) {
-                    descriptor.set.call(sectionsWrapper, value);
-                } else {
-                    sectionsWrapper.scrollLeft = value;
-                }
-                _scrollLeft = value;
-                lockedScrollLeft = value;
-                setTimeout(() => {
-                    sectionsWrapper.style.overflowX = 'hidden';
-                }, 0);
-            };
-            
-            const getScrollLeft = () => {
-                const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollLeft') || 
-                    Object.getOwnPropertyDescriptor(Element.prototype, 'scrollLeft');
-                if (descriptor && descriptor.get) {
-                    return descriptor.get.call(sectionsWrapper);
-                }
-                return sectionsWrapper.scrollLeft;
-            };
-            
-            Object.defineProperty(sectionsWrapper, 'scrollLeft', {
-                get: function() {
-                    if (isProgrammaticScroll && sectionsWrapper.style.overflowX === 'scroll') {
-                        return getScrollLeft();
-                    }
-                    return _scrollLeft;
-                },
-                set: function(value) {
-                    if (isProgrammaticScroll) {
-                        setScrollLeftDirect(value);
-                    } else {
-                        _scrollLeft = lockedScrollLeft;
-                    }
-                },
-                configurable: true
-            });
-            
-            sectionsWrapper.addEventListener("scroll", () => {
-                const now = performance.now();
-                if (now - lastScrollTime < 16) return;
-                lastScrollTime = now;
-                
-                if (isProgrammaticScroll) {
-                    _scrollLeft = sectionsWrapper.scrollLeft;
-                    updateLock();
-                    detectVisibleSection();
-                }
-            }, { passive: true });
-            
-            const originalScrollToVisibleSection = core.ui.scrollToVisibleSection;
-            core.ui.scrollToVisibleSection = (smooth = false) => {
-                isProgrammaticScroll = true;
-                sectionsWrapper.style.overflowX = 'scroll';
-                originalScrollToVisibleSection(smooth);
-                if (smooth) {
-                    setTimeout(() => {
-                        updateLock();
-                        sectionsWrapper.style.overflowX = 'hidden';
-                        isProgrammaticScroll = false;
-                    }, 160);
-                } else {
-                    requestAnimationFrame(() => {
-                        updateLock();
-                        sectionsWrapper.style.overflowX = 'hidden';
-                        isProgrammaticScroll = false;
-                    });
-                }
-            };
-            
-            isProgrammaticScroll = true;
-            sectionsWrapper.style.overflowX = 'scroll';
-            scrollToVisibleSection(false);
-            updateLock();
-            sectionsWrapper.style.overflowX = 'hidden';
-            isProgrammaticScroll = false;
-        } else {
-            sectionsWrapper.addEventListener("scroll", detectVisibleSection, { passive: true });
-        }
+        sectionsWrapper.addEventListener("scroll", mobileScrollHandler, { passive: true });
+
+        // Initialize with current scroll position
+        lockedScrollLeft = sectionsWrapper.scrollLeft;
+        _scrollLeft = sectionsWrapper.scrollLeft;
+    };
+    
+    updateScrollBehavior();
+
+    // On mobile, ensure we scroll to the correct section after scroll locking is set up
+    if (matchesMobile() && sectionsWrapper) {
+        scrollToVisibleSection(false);
     }
 }
 
@@ -346,8 +414,8 @@ export function applyTheme(core) {
 
 export function spawnRipple(mouseEvent, element) {
     if (element.disabled) return;
-    document.querySelectorAll(".ripple").forEach(el => {el.remove();})
-    // Create a ripple element
+    document.querySelectorAll(".ripple").forEach(el => el.remove());
+    
     const rippleEl = document.createElement('div');
     rippleEl.classList.add('ripple');
 
@@ -368,7 +436,7 @@ export function spawnRipple(mouseEvent, element) {
         rippleEl.classList.add('run');
     });
 
-    let cleanup =     setTimeout(() => {rippleEl.remove();}, 750);
+    const cleanup = setTimeout(() => rippleEl.remove(), 750);
     // Remove ripple element when the transition is done
     rippleEl.addEventListener('transitionend', () => {
         clearTimeout(cleanup);
