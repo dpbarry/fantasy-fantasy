@@ -1,7 +1,7 @@
-import { formatNumber } from "../Utils.js";
+import { getElementSection } from "../Utils.js";
 import createBreakdownBox from "../UI/Components/BreakdownBox.js";
 
-export default function createTooltipService(core, uiManager) {
+export default function createTooltipService(core) {
     const tooltips = new Map();
     const pointerDismissHandlers = new WeakMap();
     const pendingTooltips = new WeakMap();
@@ -10,23 +10,19 @@ export default function createTooltipService(core, uiManager) {
     let observer = null;
     let activeElement = null;
     let activeTooltip = null;
+    let activeTipKeys = [];
     let tooltipLocked = false;
     let contextMenuService = null;
-    const createRenderInterval = uiManager.createRenderInterval.bind(uiManager);
-    const destroyRenderInterval = uiManager.destroyRenderInterval.bind(uiManager);
+    let lastPointer = null;
+    let lastPointerType = null;
+    let hoverRefreshQueued = false;
+    const createRenderInterval = core.ui.createRenderInterval.bind(core.ui);
+    const destroyRenderInterval = core.ui.destroyRenderInterval.bind(core.ui);
 
     const PADDING = 8, MARGIN = 3, MULTI_GAP = 4;
+    const fmt = (val, opt) => core.ui.formatNumber(val, opt);
     
-    function getElementSection(el) {
-        if (!el) return null;
-        const left = document.getElementById('left');
-        const center = document.getElementById('center');
-        const right = document.getElementById('right');
-        if (left?.contains(el)) return 'left';
-        if (center?.contains(el)) return 'center';
-        if (right?.contains(el)) return 'right';
-        return null;
-    }
+
     
     function checkSectionAndDismiss() {
         if (!window.matchMedia('(width <= 950px)').matches || !core.ui.visibleSection) return;
@@ -46,11 +42,44 @@ export default function createTooltipService(core, uiManager) {
         return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
     }
 
+    function refreshHoveredTooltip() {
+        if (!lastPointer || tooltipLocked || (lastPointerType && lastPointerType !== 'mouse')) return;
+        if (!document.hasFocus()) return;
+        const { x, y } = lastPointer;
+        if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) return;
+        const hovered = document.elementFromPoint(x, y)?.closest('.hastip');
+        if (!hovered || hovered === activeElement) return;
+        if (!getTips(hovered).length) return;
+        showTooltip(hovered);
+    }
 
+    function queueHoverRefresh() {
+        if (hoverRefreshQueued || !lastPointer) return;
+        hoverRefreshQueued = true;
+        requestAnimationFrame(() => {
+            hoverRefreshQueued = false;
+            refreshHoveredTooltip();
+        });
+    }
+
+    function clearPointer() {
+        lastPointer = null;
+        lastPointerType = null;
+    }
+
+    window.addEventListener('blur', () => {
+        clearPointer();
+        if (activeElement) destroyTooltip(activeElement);
+    });
+
+    window.addEventListener('mouseleave', clearPointer);
 
     let tooltipHideTimeout = null;
 
     document.addEventListener('mousemove', (e) => {
+        lastPointer = { x: e.clientX, y: e.clientY };
+        lastPointerType = 'mouse';
+
         // Check if mouse is over any tooltip element
         const elementAtPoint = document.elementFromPoint(e.clientX, e.clientY);
         const tooltipElement = elementAtPoint?.closest('[data-tips]');
@@ -61,7 +90,7 @@ export default function createTooltipService(core, uiManager) {
             if (activeElement) {
                 destroyTooltip(activeElement);
             }
-            setTimeout(() => showTooltip(tooltipElement), 0);
+            showTooltip(tooltipElement);
             if (tooltipHideTimeout) {
                 clearTimeout(tooltipHideTimeout);
                 tooltipHideTimeout = null;
@@ -109,11 +138,12 @@ export default function createTooltipService(core, uiManager) {
                 pendingTooltips.delete(el);
             }
             tooltipShownFromHold.delete(el);
-            el.dataset.hastooltip = false;
+            el.dataset.hastooltip = "false";
             delete el.dataset.tooltipId;
         });
         activeElement = null;
         activeTooltip = null;
+        activeTipKeys = [];
     }
 
     function registerTip(type, cb) {
@@ -291,19 +321,23 @@ export default function createTooltipService(core, uiManager) {
         activeTooltip = null;
     }
 
-    function showTooltip(el) {
-        if (activeElement === el) return;
+    function showTooltip(el, opts = {}) {
+        const keys = getTipKeys(el);
+        const sameEl = activeElement === el;
+        const sameKeys = keys.join('@') === activeTipKeys.join('@');
+        if (sameEl && sameKeys && !opts.refresh) return;
 
         tooltipLocked = true;
         cleanupTooltip();
 
         if (activeElement) {
-            activeElement.dataset.hastooltip = false;
+            activeElement.dataset.hastooltip = "false";
             delete activeElement.dataset.tooltipId;
         }
 
         activeElement = el;
-        el.dataset.hastooltip = true;
+        activeTipKeys = keys;
+        el.dataset.hastooltip = "true";
 
         const tips = getTips(el);
         if (tips.length === 0) {
@@ -339,7 +373,7 @@ export default function createTooltipService(core, uiManager) {
             activeTooltip._siblings = tipBoxes.slice(1);
         }
         
-        setTimeout(() => { tooltipLocked = false; }, 25);
+        tooltipLocked = false;
 
         if (needsUpdate(el)) {
             const updaterFn = () => {
@@ -355,6 +389,51 @@ export default function createTooltipService(core, uiManager) {
                     const updatedTips = getTips(el);
                     const tipKeys = getTipKeys(el);
                     const hasDisabledTip = tipKeys.some(k => k.includes('disabled'));
+
+                    if (updatedTips.length !== tipBoxes.length) {
+                        const oldTipBoxes = tipBoxes.slice();
+                        const oldActive = activeTooltip;
+                        const elementSection = getElementSection(el);
+
+                        const newTipBoxes = updatedTips.map(tip => {
+                            const tipBox = document.createElement('div');
+                            tipBox.className = 'tooltip';
+                            tipBox.dataset.tip = tip.type;
+                            tipBox.style.opacity = '';
+                            tipBox.innerHTML = tip.content;
+                            tipBox._lastContent = tip.content;
+                            document.body.appendChild(tipBox);
+                            if (elementSection) {
+                                tooltipSections.set(tipBox, elementSection);
+                            }
+                            return tipBox;
+                        });
+
+                        if (newTipBoxes.length === 1) {
+                            const tipBox = newTipBoxes[0];
+                            tipBox.dataset.owner = oldActive?.dataset?.owner || Math.random().toString(36);
+                            el.dataset.tooltipId = tipBox.dataset.owner;
+                            positionSingleTooltip(el, tipBox);
+                            activeTooltip = tipBox;
+                        } else {
+                            positionMultiTooltips(el, newTipBoxes);
+                            activeTooltip = newTipBoxes[0];
+                            activeTooltip._siblings = newTipBoxes.slice(1);
+                        }
+
+                        if (oldActive?._updateInterval) {
+                            destroyRenderInterval(oldActive._updateInterval);
+                            oldActive._updateInterval = null;
+                        }
+                        if (oldActive?._siblings) oldActive._siblings.forEach(s => s?.remove());
+                        oldTipBoxes.forEach(b => b?.remove());
+
+                        tipBoxes.length = 0;
+                        newTipBoxes.forEach(b => tipBoxes.push(b));
+                        activeTipKeys = tipKeys;
+                        tooltipLocked = false;
+                        return;
+                    }
                     
                     if (hasDisabledTip && updatedTips.length < tipBoxes.length) {
                         if (activeTooltip._updateInterval) {
@@ -371,7 +450,7 @@ export default function createTooltipService(core, uiManager) {
                         } else {
                             cleanupTooltip();
                             if (activeElement) {
-                                activeElement.dataset.hastooltip = false;
+                                activeElement.dataset.hastooltip = "false";
                                 delete activeElement.dataset.tooltipId;
                             }
                             activeElement = null;
@@ -403,10 +482,11 @@ export default function createTooltipService(core, uiManager) {
         cleanupTooltip();
         
         if (activeElement) {
-            activeElement.dataset.hastooltip = false;
+            activeElement.dataset.hastooltip = "false";
             delete activeElement.dataset.tooltipId;
             activeElement = null;
         }
+        activeTipKeys = [];
     }
 
     function addDismissHandlers(el, cb) {
@@ -547,6 +627,7 @@ export default function createTooltipService(core, uiManager) {
 
     function observeTooltips() {
         observer = new MutationObserver(muts => {
+            let shouldRefreshHover = false;
             muts.forEach(m => {
                 if (m.type === 'childList') {
                     m.addedNodes.forEach(n => {
@@ -559,16 +640,28 @@ export default function createTooltipService(core, uiManager) {
                         const els = n.classList?.contains('hastip') ? [n] : Array.from(n.querySelectorAll('.hastip'));
                         els.forEach(detach);
                     });
-                } else if (m.type === 'attributes' && m.attributeName === 'class') {
+                    shouldRefreshHover = true;
+                } else if (m.type === 'attributes' && (m.attributeName === 'class' || m.attributeName === 'data-tips')) {
                     const tgt = m.target;
                     if (tgt.classList.contains('hastip')) attach(tgt);
-                    else detach(tgt);
+                    else if (m.attributeName === 'class') detach(tgt);
+                    shouldRefreshHover = true;
+
+                    if (tgt === activeElement && activeTooltip) {
+                        const newKeys = getTipKeys(tgt);
+                        if (newKeys.join('@') !== activeTipKeys.join('@')) {
+                            activeTipKeys = newKeys;
+                            showTooltip(tgt, { refresh: true });
+                        }
+                    }
                 }
             });
+
+            if (shouldRefreshHover) queueHoverRefresh();
         });
 
         observer.observe(document.body, {
-            childList: true, subtree: true, attributes: true, attributeFilter: ['class'],
+            childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'data-tips'],
         });
 
         document.querySelectorAll('.hastip').forEach(attach);
@@ -602,7 +695,7 @@ export default function createTooltipService(core, uiManager) {
             return `<p style="color: var(--drainColor); font-weight: 500">-1 crops</p><p style="color: var(--gainColor); font-weight: 500">+1 food</p>`;
         });
 
-        registerTip('increment-amount', (el) => {
+        registerTip('increment-amount', () => {
             if (!core.industry || typeof core.industry.getSelectedIncrement !== 'function') {
                 return '<p>Increment by 1</p>';
             }
@@ -621,12 +714,11 @@ export default function createTooltipService(core, uiManager) {
             if (!result?.effects) return `<p>Increment by ${inc}</p>`;
 
             const sections = [];
-            const formatType = core.settings.configs.numformat;
             for (const [res, val] of Object.entries(result.effects)) {
                 if (val !== 0) {
                     const sign = val >= 0 ? '+' : '';
                     const color = val >= 0 ? 'var(--gainColor)' : 'var(--drainColor)';
-                    sections.push(`<span style="color: ${color}">${sign}${formatNumber(Math.abs(val), formatType)} ${res}/s</span>`);
+                    sections.push(`<span style="color: ${color}">${sign}${fmt(Math.abs(val))} ${res}/s</span>`);
                 }
             }
 
@@ -639,7 +731,6 @@ export default function createTooltipService(core, uiManager) {
             if (!res || !core.industry.resources[res]) return '';
             
             const resObj = core.industry.resources[res];
-            const fmt = core.settings.configs.numformat;
             let capHtml = '';
             
             const cap = resObj.effectiveCap;
@@ -647,7 +738,7 @@ export default function createTooltipService(core, uiManager) {
                 const capVal = cap.toNumber();
                 const currentVal = resObj.value.toNumber();
                 const percent = ((currentVal / capVal) * 100).toFixed(1);
-                capHtml = `<p style="opacity: 0.8; margin-top: 0.3em">Cap: ${formatNumber(capVal, fmt)} (${percent}%)</p>`;
+                capHtml = `<p style="opacity: 0.8; margin-top: 0.3em">Cap: ${fmt(capVal)} (${percent}%)</p>`;
             }
             
             const breakdown = core.industry.getResourceProductionBreakdown(res);
@@ -659,22 +750,22 @@ export default function createTooltipService(core, uiManager) {
             for (const [type, data] of Object.entries(breakdown.byBuilding)) {
                 const def = core.industry.constructor.BUILDING_DEFS[type];
                 if (data.baseGain > 0) {
-                    items.push({ value: `+${formatNumber(data.baseGain, fmt)}`, label: '/s', type: 'gain', note: def.name.toLowerCase() });
+                    items.push({ value: `+${fmt(data.baseGain)}`, label: '/s', type: 'gain', note: def.name.toLowerCase() });
                 }
                 if (data.baseDrain > 0) {
-                    items.push({ value: `-${formatNumber(data.baseDrain, fmt)}`, label: '/s', type: 'drain', note: def.name.toLowerCase() });
+                    items.push({ value: `-${fmt(data.baseDrain)}`, label: '/s', type: 'drain', note: def.name.toLowerCase() });
                 }
             }
             if (breakdown.workerGain > 0) {
-                items.push({ value: `+${formatNumber(breakdown.workerGain, fmt)}`, label: '/s', type: 'gain', note: 'workers' });
+                items.push({ value: `+${fmt(breakdown.workerGain)}`, label: '/s', type: 'gain', note: 'workers' });
             }
             if (breakdown.workerDrain > 0) {
-                items.push({ value: `-${formatNumber(breakdown.workerDrain, fmt)}`, label: '/s', type: 'drain', note: 'workers' });
+                items.push({ value: `-${fmt(breakdown.workerDrain)}`, label: '/s', type: 'drain', note: 'workers' });
             }
 
             const totalRate = breakdown.baseGain + breakdown.workerGain - breakdown.baseDrain - breakdown.workerDrain;
             const resultItems = [{
-                value: `${totalRate >= 0 ? '+' : ''}${formatNumber(totalRate, fmt)}`,
+                value: `${totalRate >= 0 ? '+' : ''}${fmt(totalRate)}`,
                 label: '/s',
                 type: totalRate >= 0 ? 'gain' : 'drain'
             }];
@@ -691,23 +782,22 @@ export default function createTooltipService(core, uiManager) {
                 return `<p style="opacity: 0.7; font-style: italic">No production</p>`;
             }
 
-            const fmt = core.settings.configs.numformat;
             const items = [];
 
             for (const [type, data] of Object.entries(breakdown.byBuilding)) {
                 const def = core.industry.constructor.BUILDING_DEFS[type];
                 if (data.baseGain > 0) {
-                    items.push({ value: `+${formatNumber(data.baseGain, fmt)}`, label: '/s', type: 'gain', note: def.name.toLowerCase() });
+                    items.push({ value: `+${fmt(data.baseGain)}`, label: '/s', type: 'gain', note: def.name.toLowerCase() });
                 }
                 if (data.baseDrain > 0) {
-                    items.push({ value: `-${formatNumber(data.baseDrain, fmt)}`, label: '/s', type: 'drain', note: def.name.toLowerCase() });
+                    items.push({ value: `-${fmt(data.baseDrain)}`, label: '/s', type: 'drain', note: def.name.toLowerCase() });
                 }
             }
             if (breakdown.workerGain > 0) {
-                items.push({ value: `+${formatNumber(breakdown.workerGain, fmt)}`, label: '/s', type: 'gain', note: 'workers' });
+                items.push({ value: `+${fmt(breakdown.workerGain)}`, label: '/s', type: 'gain', note: 'workers' });
             }
             if (breakdown.workerDrain > 0) {
-                items.push({ value: `-${formatNumber(breakdown.workerDrain, fmt)}`, label: '/s', type: 'drain', note: 'workers' });
+                items.push({ value: `-${fmt(breakdown.workerDrain)}`, label: '/s', type: 'drain', note: 'workers' });
             }
 
             if (!items.length) {
@@ -716,7 +806,7 @@ export default function createTooltipService(core, uiManager) {
 
             const totalRate = breakdown.baseGain + breakdown.workerGain - breakdown.baseDrain - breakdown.workerDrain;
             const resultItems = [{
-                value: `${totalRate >= 0 ? '+' : ''}${formatNumber(totalRate, fmt)}`,
+                value: `${totalRate >= 0 ? '+' : ''}${fmt(totalRate)}`,
                 label: '/s',
                 type: totalRate >= 0 ? 'gain' : 'drain'
             }];
@@ -781,27 +871,26 @@ export default function createTooltipService(core, uiManager) {
                 const details = panel.getButtonDetailsWithMultiplier(result, multiplier);
                 if (!details) return '';
 
-                const formatType = core.settings.configs.numformat;
                 const items = [];
-                if (details.costs?.length) {
-                    details.costs.forEach(c => {
-                        items.push(`<span style="color: var(--drainColor)">-${formatNumber(c.amt, formatType, { decimalPlaces: 2 })} ${c.res}</span>`);
-                    });
-                }
-                if (details.effects?.length) {
-                    details.effects.forEach(e => {
-                        const sign = e.type === 'gain' ? '+' : '-';
-                        const color = e.type === 'gain' ? 'var(--gainColor)' : 'var(--drainColor)';
-                        items.push(`<span style="color: ${color}">${sign}${formatNumber(e.val, formatType, { decimalPlaces: 2 })} ${e.res}/s</span>`);
-                    });
-                }
+                        if (details.costs?.length) {
+                            details.costs.forEach(c => {
+                                items.push(`<span style="color: var(--drainColor)">-${fmt(c.amt)} ${c.res}</span>`);
+                            });
+                        }
+                        if (details.effects?.length) {
+                            details.effects.forEach(e => {
+                                const sign = e.type === 'gain' ? '+' : '-';
+                                const color = e.type === 'gain' ? 'var(--gainColor)' : 'var(--drainColor)';
+                                items.push(`<span style="color: ${color}">${sign}${fmt(e.val)} ${e.res}/s</span>`);
+                            });
+                        }
                 if (details.capChanges?.length) {
                     const capItems = [];
                     details.capChanges.forEach(c => {
                         const isPositive = c.val >= 0;
                         const sign = isPositive ? '+' : '';
                         const color = isPositive ? 'var(--gainColor)' : 'var(--drainColor)';
-                        capItems.push(`<span style="color: ${color}">${sign}${formatNumber(c.val, formatType, { decimalPlaces: 2 })} ${c.res} cap</span>`);
+                        capItems.push(`<span style="color: ${color}">${sign}${fmt(c.val, { decimalPlaces: 2 })} ${c.res} cap</span>`);
                     });
                     if (capItems.length > 0) {
                         items.push(`<br>${capItems.join(' ')}`);
@@ -816,18 +905,17 @@ export default function createTooltipService(core, uiManager) {
                 const details = panel.getButtonDetailsWithMultiplier(result, multiplier);
                 if (!details) return '';
 
-                const formatType = core.settings.configs.numformat;
                 const items = [];
                 if (details.costs?.length) {
                     details.costs.forEach(c => {
-                        items.push(`<span style="color: var(--drainColor)">-${formatNumber(c.amt, formatType, { decimalPlaces: 2 })} ${c.res}</span>`);
+                        items.push(`<span style="color: var(--drainColor)">-${fmt(c.amt)} ${c.res}</span>`);
                     });
                 }
                 if (details.effects?.length) {
                     details.effects.forEach(e => {
                         const sign = e.type === 'gain' ? '+' : '-';
                         const color = e.type === 'gain' ? 'var(--gainColor)' : 'var(--drainColor)';
-                        items.push(`<span style="color: ${color}">${sign}${formatNumber(e.val, formatType, { decimalPlaces: 2 })} ${e.res}/s</span>`);
+                        items.push(`<span style="color: ${color}">${sign}${fmt(e.val)} ${e.res}/s</span>`);
                     });
                 }
                 if (details.capChanges?.length) {
@@ -836,7 +924,7 @@ export default function createTooltipService(core, uiManager) {
                         const isPositive = c.val >= 0;
                         const sign = isPositive ? '+' : '';
                         const color = isPositive ? 'var(--gainColor)' : 'var(--drainColor)';
-                        capItems.push(`<span style="color: ${color}">${sign}${formatNumber(c.val, formatType, { decimalPlaces: 2 })} ${c.res} cap</span>`);
+                        capItems.push(`<span style="color: ${color}">${sign}${fmt(c.val, { decimalPlaces: 2 })} ${c.res} cap</span>`);
                     });
                     if (capItems.length > 0) {
                         items.push(`<br>${capItems.join(' ')}`);
@@ -876,18 +964,17 @@ export default function createTooltipService(core, uiManager) {
                     return acc;
                 }, {costs: [], effects: []});
 
-                const formatType = core.settings.configs.numformat;
                 const items = [];
                 if (costs?.length) {
                     costs.forEach(c => {
-                        items.push(`<span style="color: var(--drainColor)">-${formatNumber(c.val, formatType, { decimalPlaces: 2 })} ${c.res}</span>`);
+                        items.push(`<span style="color: var(--drainColor)">-${fmt(c.val, { decimalPlaces: 2 })} ${c.res}</span>`);
                     });
                 }
                 if (effects?.length) {
                     effects.forEach(e => {
                         const sign = e.type === 'gain' ? '+' : '-';
                         const color = e.type === 'gain' ? 'var(--gainColor)' : 'var(--drainColor)';
-                        items.push(`<span style="color: ${color}">${sign}${formatNumber(e.val, formatType, { decimalPlaces: 2 })} ${e.res}/s</span>`);
+                        items.push(`<span style="color: ${color}">${sign}${fmt(e.val, { decimalPlaces: 2 })} ${e.res}/s</span>`);
                     });
                 }
 
@@ -903,18 +990,17 @@ export default function createTooltipService(core, uiManager) {
                     return acc;
                 }, {costs: [], effects: []});
 
-                const formatType = core.settings.configs.numformat;
                 const items = [];
                 if (costs?.length) {
                     costs.forEach(c => {
-                        items.push(`<span style="color: var(--drainColor)">-${formatNumber(c.val, formatType, { decimalPlaces: 2 })} ${c.res}</span>`);
+                        items.push(`<span style="color: var(--drainColor)">-${fmt(c.val, { decimalPlaces: 2 })} ${c.res}</span>`);
                     });
                 }
                 if (effects?.length) {
                     effects.forEach(e => {
                         const sign = e.type === 'gain' ? '+' : '-';
                         const color = e.type === 'gain' ? 'var(--gainColor)' : 'var(--drainColor)';
-                        items.push(`<span style="color: ${color}">${sign}${formatNumber(e.val, formatType, { decimalPlaces: 2 })} ${e.res}/s</span>`);
+                        items.push(`<span style="color: ${color}">${sign}${fmt(e.val, { decimalPlaces: 2 })} ${e.res}/s</span>`);
                     });
                 }
 
@@ -943,7 +1029,6 @@ export default function createTooltipService(core, uiManager) {
             const buildingName = def.name.toLowerCase();
             const wisdom = core.city?.ruler?.wisdom || 0;
             const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
-            const fmt = core.settings.configs.numformat;
 
             const sections = [];
             for (const [res, eff] of Object.entries(def.effects)) {
@@ -955,24 +1040,24 @@ export default function createTooltipService(core, uiManager) {
 
                 if (eff.base.gain) {
                     baseGain = eff.base.gain.toNumber?.() ?? eff.base.gain;
-                    gainItems.push({ value: `+${formatNumber(baseGain, fmt)}`, label: `${res}/s`, type: 'gain' });
+                    gainItems.push({ value: `+${fmt(baseGain)}`, label: `${res}/s`, type: 'gain' });
                 }
                 items.push(...gainItems);
 
                 if (eff.base.drain) {
                     baseDrain = eff.base.drain.toNumber?.() ?? eff.base.drain;
-                    items.push({ value: `-${formatNumber(baseDrain, fmt)}`, label: `${res}/s`, type: 'drain' });
+                    items.push({ value: `-${fmt(baseDrain)}`, label: `${res}/s`, type: 'drain' });
                 }
 
                 const mods = [];
                 if (wisdom > 0 && gainItems.length > 0) {
-                    mods.push({ value: `×${formatNumber(wisdomMult, fmt)}`, label: 'wisdom', range: [0, gainItems.length - 1] });
+                    mods.push({ value: `×${fmt(wisdomMult)}`, label: 'wisdom', range: [0, gainItems.length - 1] });
                 }
                 mods.push({ value: '×', label: `${b.count} ${buildingName}${b.count !== 1 ? 's' : ''}`, range: [0, items.length - 1] });
 
                 const finalTotal = (baseGain * wisdomMult - baseDrain) * b.count;
                 const resultItems = [{
-                    value: `${finalTotal >= 0 ? '+' : ''}${formatNumber(finalTotal, fmt)}`,
+                    value: `${finalTotal >= 0 ? '+' : ''}${fmt(finalTotal)}`,
                     label: `${res}/s`,
                     type: finalTotal >= 0 ? 'gain' : 'drain'
                 }];
@@ -994,7 +1079,6 @@ export default function createTooltipService(core, uiManager) {
             const scale = core.industry.getWorkerScalingFactor();
             const wisdom = core.city?.ruler?.wisdom || 0;
             const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
-            const fmt = core.settings.configs.numformat;
 
             const gains = {}, drains = {};
             for (const [res, eff] of Object.entries(def.effects)) {
@@ -1014,25 +1098,24 @@ export default function createTooltipService(core, uiManager) {
             const items = [];
             const gainItems = [];
             for (const [res, v] of Object.entries(gains)) {
-                gainItems.push({ value: `+${formatNumber(v, fmt)}`, label: `${res}/s`, type: 'gain' });
+                gainItems.push({ value: `+${fmt(v)}`, label: `${res}/s`, type: 'gain' });
             }
             items.push(...gainItems);
 
             for (const [res, v] of Object.entries(drains)) {
                 const note = gains[res] ? 'pay' : 'input';
-                items.push({ value: `-${formatNumber(v, fmt)}`, label: `${res}/s`, type: 'drain', note });
+                items.push({ value: `-${fmt(v)}`, label: `${res}/s`, type: 'drain', note });
             }
 
             const mods = [];
             let modIdx = 0;
             if (wisdom > 0 && gainItems.length > 0) {
-                mods.push({ value: `×${formatNumber(wisdomMult, fmt)}`, label: 'wisdom', range: [0, gainItems.length - 1] });
+                mods.push({ value: `×${fmt(wisdomMult)}`, label: 'wisdom', range: [0, gainItems.length - 1] });
                 modIdx++;
             }
 
             let workersLabel = `${b.workers} worker${b.workers !== 1 ? 's' : ''}`;
             if (scale < 1) {
-                const bottlenecks = core.industry.getBottleneckResources();
                 workersLabel += ` × ${(scale * 100).toFixed(0)}%`;
             }
             mods.push({ value: '×', label: workersLabel, range: [0, items.length - 1] });
@@ -1048,7 +1131,7 @@ export default function createTooltipService(core, uiManager) {
             const resultItems = Object.entries(finals)
                 .filter(([, v]) => v !== 0)
                 .map(([res, v]) => ({
-                    value: `${v > 0 ? '+' : ''}${formatNumber(v, fmt)}`,
+                    value: `${v > 0 ? '+' : ''}${fmt(v)}`,
                     label: `${res}/s`,
                     type: v > 0 ? 'gain' : 'drain'
                 }));
@@ -1068,7 +1151,6 @@ export default function createTooltipService(core, uiManager) {
             if (target <= 0) return '';
 
             const resources = core.industry.resources;
-            const formatType = core.settings.configs.numformat;
             let html = '';
 
             for (const [res, cost] of Object.entries(def.buildCost)) {
@@ -1087,7 +1169,7 @@ export default function createTooltipService(core, uiManager) {
                 }
 
                 const time = needed / rate;
-                html += `<p style="font-weight: 500">${formatNumber(needed, formatType)} ${res} / ${formatNumber(rate, formatType)}/s</p>`;
+                html += `<p style="font-weight: 500">${fmt(needed)} ${res} / ${fmt(rate)}/s</p>`;
                 html += `<p style="color: var(--accent); margin-left: 0.5em">= ${panel.formatTime(time)}</p>`;
             }
 
@@ -1134,13 +1216,12 @@ export default function createTooltipService(core, uiManager) {
 
             const negativePotential = [];
             const positivePotential = [];
-            const formatType = core.settings.configs.numformat;
 
             for (const [res, val] of Object.entries(potentialByRes)) {
                 if (val !== 0) {
-                    const sign = val > 0 ? '+' : '';
+                    const sign = val > 0 ? '+' : '-';
                     const color = val > 0 ? 'var(--gainColor)' : 'var(--drainColor)';
-                    const item = `<span style="color: ${color}">${sign}${formatNumber(Math.abs(val), formatType)} ${res}/s</span>`;
+                    const item = `<span style="color: ${color}">${sign}${fmt(Math.abs(val))} ${res}/s</span>`;
                     (val < 0 ? negativePotential : positivePotential).push(item);
                 }
             }
@@ -1184,7 +1265,6 @@ export default function createTooltipService(core, uiManager) {
             }
             if (!details) return '';
 
-            const fmt = core.settings.configs.numformat;
             const wisdom = core.city?.ruler?.wisdom || 0;
             const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
 
@@ -1193,16 +1273,16 @@ export default function createTooltipService(core, uiManager) {
 
             details.costs?.forEach(c => {
                 const v = c.amt || c.val || 0;
-                if (v > 0) drainItems.push({ value: `-${formatNumber(v, fmt)}`, label: c.res + (c.amt !== undefined ? '' : '/s'), type: 'drain' });
+                if (v > 0) drainItems.push({ value: `-${fmt(v)}`, label: c.res + (c.amt !== undefined ? '' : '/s'), type: 'drain' });
             });
             details.rewards?.forEach(r => {
                 const v = r.amt || 0;
-                if (v > 0) gainItems.push({ value: `+${formatNumber(v, fmt)}`, label: r.res, type: 'gain' });
+                if (v > 0) gainItems.push({ value: `+${fmt(v)}`, label: r.res, type: 'gain' });
             });
             details.effects?.forEach(e => {
                 const v = e.val || 0;
                 if (v > 0) {
-                    const item = { value: `${e.type === 'gain' ? '+' : '-'}${formatNumber(v, fmt)}`, label: `${e.res}/s`, type: e.type };
+                    const item = { value: `${e.type === 'gain' ? '+' : '-'}${fmt(v)}`, label: `${e.res}/s`, type: e.type };
                     (e.type === 'gain' ? gainItems : drainItems).push(item);
                 }
             });
@@ -1213,7 +1293,7 @@ export default function createTooltipService(core, uiManager) {
                 const v = c.val;
                 if (v !== 0) {
                     const isPos = v > 0;
-                    const item = { value: `${isPos ? '+' : ''}${formatNumber(v, fmt)}`, label: `${c.res} cap`, type: isPos ? 'gain' : 'drain' };
+                    const item = { value: `${isPos ? '+' : ''}${fmt(v)}`, label: `${c.res} cap`, type: isPos ? 'gain' : 'drain' };
                     (isPos ? capGain : capDrain).push(item);
                 }
             });
@@ -1224,7 +1304,7 @@ export default function createTooltipService(core, uiManager) {
             const mods = [];
             if (wisdom > 0 && gainItems.length > 0) {
                 const start = drainItems.length;
-                mods.push({ value: `×${formatNumber(wisdomMult, fmt)}`, label: 'wisdom', range: [start, start + gainItems.length - 1] });
+                mods.push({ value: `×${fmt(wisdomMult)}`, label: 'wisdom', range: [start, start + gainItems.length - 1] });
             }
 
             if (capItems.length) {

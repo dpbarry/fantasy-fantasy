@@ -80,8 +80,9 @@ export default class IndustryManager {
         const f = entry.filters;
         if (f.buildingTypes && !f.buildingTypes.includes(buildingType)) return false;
         if (f.resources && !f.resources.includes(resource)) return false;
-        if (f.effectTypes && !f.effectTypes.includes(effectType)) return false;
-        return true;
+
+        return !(f.effectTypes && !f.effectTypes.includes(effectType));
+
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -92,8 +93,7 @@ export default class IndustryManager {
         if (!this.#cache.dirty || this.#recalculating) return;
         
         this.#recalculating = true;
-            const rates = new Map();
-            const ctx = this.#createContext(rates);
+            const rawRates = new Map();
             
             for (const [type, b] of Object.entries(this.buildings)) {
                 const def = IndustryManager.BUILDING_DEFS[type];
@@ -101,62 +101,57 @@ export default class IndustryManager {
                 
                 for (const [res, eff] of Object.entries(def.effects)) {
                     if (eff.base) {
-                        const rate = this.#computeRate(ctx, type, res, 'base', eff.base, b.count);
-                        rates.set(res, (rates.get(res) || 0) + rate);
+                        const rate = this.#computeRate(rawRates, type, res, 'base', eff.base, b.count);
+                        rawRates.set(res, (rawRates.get(res) || 0) + rate);
                     }
                     if (eff.worker && b.workers > 0) {
-                        const rate = this.#computeRate(ctx, type, res, 'worker', eff.worker, b.workers);
-                        rates.set(res, (rates.get(res) || 0) + rate);
+                        const rate = this.#computeRate(rawRates, type, res, 'worker', eff.worker, b.workers);
+                        rawRates.set(res, (rawRates.get(res) || 0) + rate);
                     }
                 }
             }
+
+            const scale = this.getWorkerScale();
+            const throttled = new Map();
+            for (const [res, rate] of rawRates.entries()) {
+                if (this.workersOnStrike) {
+                    throttled.set(res, rate > 0 ? rate : 0);
+                } else {
+                    throttled.set(res, rate < 0 ? rate * scale : rate);
+                }
+            }
             
-            this.#cache.rates = rates;
+            this.#cache.rates = throttled;
             this.#cache.dirty = false;
             this.#recalculating = false;
         }
     
-
-    #createContext(rates) {
-        return {
-            resources: this.resources,
-            buildings: this.buildings,
-            rate: (res) => rates.get(res) || 0,
-            prevRate: (res) => this.#cache.rates.get(res) || 0,
-            value: (res) => this.resources[res]?.value.toNumber() || 0,
-            count: (type) => this.buildings[type]?.count || 0,
-            workers: (type) => this.buildings[type]?.workers || 0,
-            inSet: (type, set) => set.includes(type),
-        };
-    }
-
-    #computeRate(ctx, buildingType, resource, effectType, eff, units) {
+    #computeRate(rates, buildingType, resource, effectType, eff, units) {
         let gain = eff.gain || 0;
         let drain = eff.drain || 0;
         let gainMult = 1;
         let drainMult = 1;
         
-        ctx.buildingType = buildingType;
-        ctx.resource = resource;
-        ctx.effectType = effectType;
-        ctx.units = units;
-        
         for (const entry of this.#sortedUpgrades()) {
             if (!this.#applies(entry, buildingType, resource, effectType)) continue;
-            // Skip if this is a meta-upgrade (checks for upgradeResult)
-            if (ctx.upgradeResult !== undefined) continue;
             
-            const upgradeFn = entry.fn;
-            ctx.gain = gain;
-            ctx.drain = drain;
-            ctx.gainMult = gainMult;
-            ctx.drainMult = drainMult;
+            const args = {
+                buildingType,
+                resource,
+                effectType,
+                units,
+                gain,
+                drain,
+                gainMult,
+                drainMult,
+                rates
+            };
             
-            let mod = upgradeFn(ctx);
+            let mod = entry.fn.call(this, args);
             if (!mod) continue;
             
             // Apply meta-upgrades to this result
-            mod = this.#applyMetaUpgrades(mod, entry, ctx);
+            mod = this.#applyMetaUpgrades(mod, entry, args);
             
             if (mod.gain !== undefined) gain = mod.gain;
             if (mod.drain !== undefined) drain = mod.drain;
@@ -169,21 +164,60 @@ export default class IndustryManager {
         return (gain * gainMult - drain * drainMult) * units;
     }
 
-    #applyMetaUpgrades(mod, sourceEntry, ctx) {
+    #computeEffectiveEffects(buildingType, resource, effectType, baseGain, baseDrain, units) {
+        const rates = new Map();
+        
+        let gain = baseGain;
+        let drain = baseDrain;
+        let gainMult = 1;
+        let drainMult = 1;
+        
+        for (const entry of this.#sortedUpgrades()) {
+            if (!this.#applies(entry, buildingType, resource, effectType)) continue;
+            
+            const args = {
+                buildingType,
+                resource,
+                effectType,
+                units,
+                gain,
+                drain,
+                gainMult,
+                drainMult,
+                rates
+            };
+            
+            let mod = entry.fn.call(this, args);
+            if (!mod) continue;
+            
+            mod = this.#applyMetaUpgrades(mod, entry, args);
+            
+            if (mod.gain !== undefined) gain = mod.gain;
+            if (mod.drain !== undefined) drain = mod.drain;
+            if (mod.addGain !== undefined) gain += mod.addGain;
+            if (mod.addDrain !== undefined) drain += mod.addDrain;
+            if (mod.gainMult !== undefined) gainMult *= mod.gainMult;
+            if (mod.drainMult !== undefined) drainMult *= mod.drainMult;
+        }
+        
+        return {
+            gain: gain * units * gainMult,
+            drain: drain * units * drainMult
+        };
+    }
+
+    #applyMetaUpgrades(mod, sourceEntry, baseArgs) {
         let current = mod;
         for (const entry of this.#sortedUpgrades()) {
             if (entry === sourceEntry) continue;
             
             // Get what upgrade returns in normal context
-            const normalCtx = {...ctx};
-            normalCtx.gain = ctx.gain;
-            normalCtx.drain = ctx.drain;
-            normalCtx.mult = ctx.mult;
-            const normalResult = entry.fn(normalCtx);
+            const normalArgs = {...baseArgs};
+            const normalResult = entry.fn.call(this, normalArgs);
             
             // Get what it returns in meta context
-            const metaCtx = {...ctx, upgradeFn: sourceEntry.fn, upgradeResult: current};
-            const metaResult = entry.fn(metaCtx);
+            const metaArgs = {...baseArgs, upgradeFn: sourceEntry.fn, upgradeResult: current};
+            const metaResult = entry.fn.call(this, metaArgs);
             
             // Only apply if meta result differs from normal result (meaning it used upgradeResult)
             if (metaResult && this.#resultsDiffer(metaResult, normalResult)) {
@@ -203,10 +237,6 @@ export default class IndustryManager {
         return false;
     }
 
-    getRate(res) {
-        this.recalculate();
-        return this.#cache.rates.get(res) || 0;
-    }
 
     // ═══════════════════════════════════════════════════════════════════════════
     // WORKER SCALING 
@@ -443,11 +473,10 @@ export default class IndustryManager {
 
     broadcast() {
         this.recalculate();
-        const scale = this.getWorkerScale();
         
         for (const [res, resource] of Object.entries(this.resources)) {
-            const rate = this.#cache.rates.get(res) || 0;
-            resource.rate = new Decimal(this.workersOnStrike ? (rate > 0 ? rate : 0) : rate * (rate < 0 ? scale : 1));
+            const rate = this.#cache.rates.get(res);
+            resource.rate = new Decimal(rate);
         }
         this.core.ui.panels.industry.render(this.getData());
     }
@@ -478,7 +507,7 @@ export default class IndustryManager {
     }
 
     #setupWisdomUpgrade() {
-        this.upgrade(ctx => {
+        this.upgrade(() => {
             const wisdom = this.core.city?.ruler?.wisdom || 0;
             if (wisdom <= 0) return null;
             return {gainMult: 1 + wisdom * 0.01};
@@ -490,9 +519,7 @@ export default class IndustryManager {
             resource.growthFns = {};
             resource.addGrowthFn('industry', () => {
                 this.recalculate();
-                const rate = this.#cache.rates.get(res) || 0;
-                const scale = this.getWorkerScale();
-                return new Decimal(this.workersOnStrike ? (rate > 0 ? rate : 0) : rate * (rate < 0 ? scale : 1));
+                return new Decimal(this.#cache.rates.get(res));
             });
             if (resource.cap !== undefined) {
                 resource.capFn = () => this.getCap(res);
@@ -565,7 +592,7 @@ export default class IndustryManager {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // QUERY HELPERS - For UI (kept minimal)
+    // QUERY HELPERS 
     // ═══════════════════════════════════════════════════════════════════════════
 
     isUnlocked(type) { return this.buildings[type]?.unlocked === true; }
@@ -587,7 +614,6 @@ export default class IndustryManager {
         return v === 'max' ? 'max' : Math.max(1, Math.floor(Number(v) || 1));
     }
 
-    // Effects for UI display
     getBuildEffects(type) {
         const def = IndustryManager.BUILDING_DEFS[type];
         if (!def) return null;
@@ -691,48 +717,6 @@ export default class IndustryManager {
         return Object.keys(effects).length ? effects : null;
     }
 
-    #computeEffectiveEffects(buildingType, resource, effectType, baseGain, baseDrain, units) {
-        const rates = new Map();
-        const ctx = this.#createContext(rates);
-        
-        let gain = baseGain;
-        let drain = baseDrain;
-        let gainMult = 1;
-        let drainMult = 1;
-        
-        ctx.buildingType = buildingType;
-        ctx.resource = resource;
-        ctx.effectType = effectType;
-        ctx.units = units;
-        
-        for (const entry of this.#sortedUpgrades()) {
-            if (!this.#applies(entry, buildingType, resource, effectType)) continue;
-            if (ctx.upgradeResult !== undefined) continue;
-            
-            const upgradeFn = entry.fn;
-            ctx.gain = gain;
-            ctx.drain = drain;
-            ctx.gainMult = gainMult;
-            ctx.drainMult = drainMult;
-            
-            let mod = upgradeFn(ctx);
-            if (!mod) continue;
-            
-            mod = this.#applyMetaUpgrades(mod, entry, ctx);
-            
-            if (mod.gain !== undefined) gain = mod.gain;
-            if (mod.drain !== undefined) drain = mod.drain;
-            if (mod.addGain !== undefined) gain += mod.addGain;
-            if (mod.addDrain !== undefined) drain += mod.addDrain;
-            if (mod.gainMult !== undefined) gainMult *= mod.gainMult;
-            if (mod.drainMult !== undefined) drainMult *= mod.drainMult;
-        }
-        
-        return {
-            gain: gain * units * gainMult,
-            drain: drain * units * drainMult
-        };
-    }
 
     getAggregateWorkerEffects(type) {
         const def = IndustryManager.BUILDING_DEFS[type];
@@ -764,7 +748,7 @@ export default class IndustryManager {
         return Object.keys(effects).length ? {effects} : null;
     }
 
-    getResourceProductionBreakdown(resource) {
+    getResourceProductionBreakdown(resource, opts = {}) {
         if (!this.resources[resource]) return null;
         const breakdown = {
             baseGain: 0,
@@ -773,7 +757,7 @@ export default class IndustryManager {
             workerDrain: 0,
             byBuilding: {}
         };
-        const scale = this.getWorkerScale();
+        const scale = opts.applyThrottle === false ? 1 : this.getWorkerScale();
         
         for (const [type, b] of Object.entries(this.buildings)) {
             const def = IndustryManager.BUILDING_DEFS[type];
@@ -901,26 +885,29 @@ export default class IndustryManager {
         if (!def?.buildCost) return '';
         
         const missing = Object.entries(def.buildCost)
-            .filter(([res, cost]) => (this.resources[res]?.value.toNumber() || 0) < cost)
-            .map(([res, cost]) => `${res} (need ${cost})`);
+            .map(([res, cost]) => {
+                const have = this.resources[res]?.value.toNumber() || 0;
+                return have < cost ? `${res} (need ${this.core.ui.formatNumber(cost)}, have ${this.core.ui.formatNumber(have)})` : null;
+            })
+            .filter(Boolean);
         return missing.length ? `Not enough: ${missing.join(', ')}` : 'Cannot build';
     }
 
     getDemolishDisabledReason(type) {
-        return this.getActionPlan('sell', type).actual > 0 ? '' : 'No buildings';
+        return this.getActionPlan('sell', type).actual > 0 ? '' : 'No buildings to demolish';
     }
 
     getHireDisabledReason(type) {
         if (this.getActionPlan('hire', type).actual > 0) return '';
         const b = this.buildings[type];
         if (!b?.count) return 'No buildings';
-        if (this.getMaxWorkers(type) <= (b.workers || 0)) return 'Worker limit reached';
+        if (this.getMaxWorkers(type) <= (b.workers || 0)) return `Worker limit reached (${this.getMaxWorkers(type)})`;
         if (this.unassignedWorkers <= 0) return 'No available workers';
         return 'Cannot hire';
     }
 
     getFurloughDisabledReason(type) {
-        return this.getActionPlan('furlough', type).actual > 0 ? '' : 'No workers';
+        return this.getActionPlan('furlough', type).actual > 0 ? '' : 'No workers to furlough';
     }
 
     isBuildingUnlocked(type) { return this.isUnlocked(type); }
@@ -932,12 +919,11 @@ export default class IndustryManager {
     cycleActionIncrement() { return this.cycleIncrement(); }
     getWorkerScalingFactor() { return this.getWorkerScale(); }
     getBottleneckResources() { return this.getBottlenecks(); }
-    getEffectiveCap(res) { return this.getCap(res); }
-    getBaseRate(res) { this.recalculate(); return new Decimal(this.#cache.rates.get(res) || 0); }
-    getRawWorkerRate() { return new Decimal(0); }
-    getEffectiveWorkerRate() { return new Decimal(0); }
     isMultiIncrement() { const i = this.getSelectedIncrement(); return i === 'max' || i > 1; }
-    invalidateCache() { this.#cache.dirty = true; }
+    getNetRate(res) {
+        this.recalculate();
+        return new Decimal(this.#cache.rates.get(res));
+    }
 }
 
 class Resource {
@@ -995,3 +981,4 @@ class Resource {
         return new Resource(data.value, options);
     }
 }
+

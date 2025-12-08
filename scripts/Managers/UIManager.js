@@ -2,7 +2,7 @@ import createTooltipService from "../Services/TooltipService.js";
 import createContextMenuService from "../Services/ContextMenuService.js";
 import setupKeyboard from "../UI/Components/Keyboard.js";
 import setupGlobalBehavior, {spawnRipple} from "../Services/GlobalBehavior.js";
-import {verticalScroll} from "../Utils.js";
+import {verticalScroll, formatNumber as baseFormatNumber} from "../Utils.js";
 import StoryPanel from "../UI/Panels/StoryPanel.js";
 import NewsPanel from "../UI/Panels/NewsPanel.js";
 import SettingsPanel from "../UI/Panels/SettingsPanel.js";
@@ -41,7 +41,7 @@ export default class UIManager {
 
     boot() {
         setupGlobalBehavior(this.core);
-        this.tooltipService = createTooltipService(this.core, this);
+        this.tooltipService = createTooltipService(this.core);
         this.contextMenuService = createContextMenuService(this.core, this.tooltipService);
         this.tooltipService.setContextMenuService(this.contextMenuService);
         this.showPanels();
@@ -126,7 +126,7 @@ export default class UIManager {
 
 
     show(loc, panel) {
-        if (this.activePanels[loc] === undefined || !panel) return;
+        if (!this.activePanels[loc]|| !panel) return;
 
         const previousPanel = this.activePanels[loc];
         if (previousPanel && previousPanel !== panel) {
@@ -169,6 +169,10 @@ export default class UIManager {
             clearInterval(loop.interval);
             loop.interval = setInterval(loop.fn, this.core.settings.refreshUI);
         });
+    }
+
+    formatNumber(val, opt = {}) {
+        return baseFormatNumber(val, this.core.settings.configs.numformat, opt);
     }
 
     serialize() {
@@ -216,8 +220,8 @@ export default class UIManager {
 
     unhookTip(el, tipKey) {
         if (!el || !tipKey) return;
-        const tips = (el.dataset.tips || '').split('@').filter(t => t && t !== tipKey);
-        if (tips.length) {
+        const tips = el.dataset.tips?.split('@').filter(t => t && t !== tipKey);
+        if (tips?.length) {
             el.dataset.tips = tips.join('@');
         } else {
             delete el.dataset.tips;

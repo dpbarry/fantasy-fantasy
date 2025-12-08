@@ -1,18 +1,9 @@
+import { getElementSection } from "../../Utils.js";
+
 export default function createInfoBox(targetElement, message, options = {}) {
     const PADDING = 8;
     const MARGIN = 3;
-    
-    function getElementSection(el) {
-        if (!el) return null;
-        const left = document.getElementById('left');
-        const center = document.getElementById('center');
-        const right = document.getElementById('right');
-        if (left?.contains(el)) return 'left';
-        if (center?.contains(el)) return 'center';
-        if (right?.contains(el)) return 'right';
-        return null;
-    }
-    
+
     const box = document.createElement('div');
     box.className = 'infobox';
     if (options.id) box.dataset.infoboxId = options.id;

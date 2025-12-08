@@ -200,3 +200,14 @@ export function formatNumber(value, formatType = 'standard', opt = {}) {
     // Fallback to scientific notation for very large numbers
     return formatNumber(num, 'scientific');
 }
+
+export function getElementSection(el) {
+    if (!el) return null;
+    const left = document.getElementById('left');
+    const center = document.getElementById('center');
+    const right = document.getElementById('right');
+    if (left?.contains(el)) return 'left';
+    if (center?.contains(el)) return 'center';
+    if (right?.contains(el)) return 'right';
+    return null;
+}
