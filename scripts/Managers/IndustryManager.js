@@ -887,7 +887,7 @@ export default class IndustryManager {
         const missing = Object.entries(def.buildCost)
             .map(([res, cost]) => {
                 const have = this.resources[res]?.value.toNumber() || 0;
-                return have < cost ? `${res} (need ${this.core.ui.formatNumber(cost)}, have ${this.core.ui.formatNumber(have)})` : null;
+                return have < cost ? `${res} (need ${this.core.ui.formatNumber(cost)}, have ${this.core.ui.formatNumber(have, { wholeNumbersOnly: true })})` : null;
             })
             .filter(Boolean);
         return missing.length ? `Not enough: ${missing.join(', ')}` : 'Cannot build';

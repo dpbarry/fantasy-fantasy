@@ -105,6 +105,7 @@ export function formatNumber(value, formatType = 'standard', opt = {}) {
     const isNegative = num < 0;
     const decimalPlaces = opt?.decimalPlaces ?? 2;
     const keepTrailingZeros = opt?.decimalPlaces !== undefined;
+    const wholeOnly = opt?.wholeNumbersOnly === true;
 
     // Reduce precision to 1 significant figure for very large magnitudes
     let effectiveDecimalPlaces = decimalPlaces;
@@ -143,20 +144,22 @@ export function formatNumber(value, formatType = 'standard', opt = {}) {
             return `${isNegative ? '-' : ''}${formattedMantissa}e${exponent}`;
         } else {
             // For exponents < 3, use regular decimal format
+            const dp = wholeOnly && absNum < 1000 ? 0 : effectiveDecimalPlaces;
             return `${isNegative ? '-' : ''}${
                 keepTrailingZeros ?
-                absNum.toFixed(effectiveDecimalPlaces) :
-                absNum.toFixed(effectiveDecimalPlaces).replace(/\.?0+$/, '')
+                absNum.toFixed(dp) :
+                absNum.toFixed(dp).replace(/\.?0+$/, '')
             }`;
         }
     }
 
     if (formatType === 'alphabetical') {
         if (absNum < 1000) {
+            const dp = wholeOnly ? 0 : effectiveDecimalPlaces;
             return `${isNegative ? '-' : ''}${
                 keepTrailingZeros ?
-                absNum.toFixed(effectiveDecimalPlaces) :
-                absNum.toFixed(effectiveDecimalPlaces).replace(/\.?0+$/, '')
+                absNum.toFixed(dp) :
+                absNum.toFixed(dp).replace(/\.?0+$/, '')
             }`;
         }
 
@@ -178,10 +181,11 @@ export function formatNumber(value, formatType = 'standard', opt = {}) {
 
     // Standard format (default)
     if (absNum < 1000) {
+        const dp = wholeOnly ? 0 : effectiveDecimalPlaces;
         return `${isNegative ? '-' : ''}${
             keepTrailingZeros ?
-            absNum.toFixed(effectiveDecimalPlaces) :
-            absNum.toFixed(effectiveDecimalPlaces).replace(/\.?0+$/, '')
+            absNum.toFixed(dp) :
+            absNum.toFixed(dp).replace(/\.?0+$/, '')
         }`;
     }
 

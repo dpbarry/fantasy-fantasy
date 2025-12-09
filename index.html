@@ -38,7 +38,7 @@
 
         :root {
             color-scheme: light dark;
-            --boxGap: 6px;
+            --boxGap: 7px;
             --leftWidth: minmax(24vw, 24vw);
             --rightWidth: minmax(22vw, min-content);
 
@@ -170,43 +170,7 @@
             overflow: hidden;
         }
 
-        @media (width <= 400px) {
-            .box {
-                padding: calc(var(--boxGap) * 0.7);
-            }
-
-            #sections-wrapper {
-                gap: calc(var(--boxGap) * 0.5);
-            }
-
-            .section-nav-arrow {
-                min-width: 1.2em;
-                font-size: 1.2em;
-            }
-
-            .navbar {
-                gap: calc(var(--boxGap) * 0.3);
-            }
-
-            .navbutton img {
-                height: 1.5em;
-            }
-
-            #industry-theurgy {
-                column-gap: calc(0.5em * 0.7);
-                
-                button {
-                    min-width: 0;
-                    padding: 0.2em 0.3em;
-                    font-size: 0.85em;
-                }
-            }
-
-            #industry-resources {
-                column-gap: calc(0.8em * 0.7);
-                grid-template-columns: 1fr;
-            }
-        }
+  
 
         .panel:not(.box).shown {
             display: contents;
@@ -246,7 +210,6 @@
             gap: var(--boxGap);
             overflow-x: scroll;
             overflow-y: hidden;
-            scroll-behavior: smooth;
             will-change: scroll-position;
             scroll-snap-type: x mandatory;
 
@@ -1300,8 +1263,7 @@
                 opacity: 0;
             }
 
-            font-family: SourceSerif,
-            serif;
+            font-family: SourceSerif,  serif;
             transition: opacity 0.1s;
             z-index: 999;
 
@@ -1659,7 +1621,7 @@
 
                 .resource-row {
                     display: grid;
-                    grid-template-columns: 1fr 4.5em 4.5em;
+                    grid-template-columns: 33% 33% 33%;
                     align-items: center;
                     height: fit-content;
                     padding: 0.1em 0.2em;
@@ -1688,8 +1650,7 @@
                 .resource-rate,
                 .resource-value {
                     min-width: 0;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
+                    font-size: clamp(0.75em, 2.95vw, 1em);
                 }
 
                 .resource-value {
@@ -1714,21 +1675,12 @@
                     --cap-percent: unset;
                 }
 
-                .chevron + .resource-row.has-cap::before {
-                    border-top-left-radius: 0.2em;
-                    border-top-right-radius: 0.2em;
-                }
-
-                .resource-row.has-cap:last-of-type::before {
-                    border-bottom-left-radius: 0.2em;
-                    border-bottom-right-radius: 0.2em;
-                }
+           
 
                 .resource-name {
                     text-align: left;
                     position: relative;
                     color: var(--baseColor);
-                    font-size: clamp(0.85em, 2.75vw, 1.05em);
 
                     .resource-text {
                         width: fit-content;
@@ -1752,7 +1704,6 @@
                     }
 
                     opacity: 0.7;
-                    font-size: clamp(0.8em, 2.5vw, 1em);
                 }
             }
 
@@ -1862,6 +1813,10 @@
                     border-bottom-right-radius: 0.55em;
                 }
 
+               .building-row .building-worker-btn:enabled {
+                    background: color-mix(in oklab, var(--bgColor) 75%, var(--accent));
+                }
+
                 .prod-footer {
                     display: flex;
                     justify-content: space-between;
@@ -1915,12 +1870,18 @@
                 }
 
                 @media (hover: hover) and (pointer: fine) {
-                    .building-row button:hover:not(:disabled) {
-                        background: color-mix(in oklab, var(--bgColor) 60%, var(--accent));
-                        .build-progress-fill,
-                        .hire-progress-fill {
-                            background: color-mix(in oklab, var(--bgColor) 60%, var(--accent));
+                    .building-row .building-main-btn:hover:not(:disabled) {
+                        background: color-mix(in oklab, var(--bgColor) 75%, var(--accent));
+                        .build-progress-fill
+                    {
+                            background: color-mix(in oklab, var(--bgColor) 65%, var(--accent));
                         }
+                    }
+                    .building-row .building-worker-btn:hover:not(:disabled) {
+                        background: color-mix(in oklab, var(--bgColor) 65%, var(--accent));
+                    }
+                    .building-row .building-chevron-btn:hover {
+                        background: color-mix(in oklab, var(--bgColor) 80%, var(--accent));
                     }
                 }
 
@@ -1943,7 +1904,7 @@
                     top: 0;
                     bottom: 0;
                     width: 0;
-                    background: color-mix(in oklab, var(--bgColor) 70%, var(--accent));
+                    background: color-mix(in oklab, var(--bgColor) 75%, var(--accent));
                     transition: width 0.05s linear;
                     pointer-events: none;
                     z-index: 0;
@@ -2081,6 +2042,7 @@
 
                             &.dropdown-add-building-btn,
                             &.dropdown-add-worker-btn {
+                                background: color-mix(in oklab, var(--bgColor) 85%, var(--accent));
                                 border-color: color-mix(in oklab, var(--accent) 70%, transparent);
                                 color: var(--baseColor);
                                 max-height: 1em;
@@ -2088,10 +2050,10 @@
                                 @media (hover: hover) and (pointer: fine) {
                                     &:hover:not(:disabled) {
                                         border-color: var(--accent);
-                                        background: color-mix(in oklab, var(--bgColor) 60%, var(--accent));
+                                        background: color-mix(in oklab, var(--bgColor) 75%, var(--accent));
                                         .build-progress-fill,
                                         .hire-progress-fill {
-                                            background: color-mix(in oklab, var(--bgColor) 60%, var(--accent));
+                                            background: color-mix(in oklab, var(--bgColor) 65%, var(--accent));
                                         }
                                     }
                                     &:disabled {
@@ -2100,16 +2062,7 @@
                                 }
                             }
 
-                            &.dropdown-add-building-btn {
-                                background: color-mix(in oklab, var(--bgColor) 85%, var(--accent));
-                            }
-
-                            &.dropdown-add-worker-btn {
-                                background: color-mix(in oklab, var(--bgColor) 85%, var(--accent));
-                                &:disabled {
-                                    background: color-mix(in oklab, var(--bgColor) 85%, var(--accent));
-                                }
-                            }
+        
 
                             &.dropdown-remove-worker-btn,
                             &.dropdown-sell-btn {
@@ -2146,7 +2099,7 @@
                                 top: 0;
                                 bottom: 0;
                                 width: 0;
-                                background: color-mix(in oklab, var(--bgColor) 70%, var(--accent));
+                                background: color-mix(in oklab, var(--bgColor) 75%, var(--accent));
                                 transition: width 0.05s linear;
                                 pointer-events: none;
                                 z-index: 0;

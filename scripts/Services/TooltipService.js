@@ -3,57 +3,79 @@ import createBreakdownBox from "../UI/Components/BreakdownBox.js";
 
 export default function createTooltipService(core) {
     const tooltips = new Map();
+    let observer = null;
+    const activeTips = new Map();
+
     const pointerDismissHandlers = new WeakMap();
-    const pendingTooltips = new WeakMap();
+    const pendingTooltips = new Map();
     const tooltipShownFromHold = new WeakMap();
     const tooltipSections = new WeakMap();
-    let observer = null;
-    let activeElement = null;
-    let activeTooltip = null;
-    let activeTipKeys = [];
+
     let tooltipLocked = false;
     let contextMenuService = null;
     let lastPointer = null;
-    let lastPointerType = null;
     let hoverRefreshQueued = false;
     const createRenderInterval = core.ui.createRenderInterval.bind(core.ui);
     const destroyRenderInterval = core.ui.destroyRenderInterval.bind(core.ui);
 
-    const PADDING = 8, MARGIN = 3, MULTI_GAP = 4;
+    const canHover = window.matchMedia('(hover: hover)').matches;
     const fmt = (val, opt) => core.ui.formatNumber(val, opt);
-    
 
-    
+    const getActiveAnchors = () => {
+        const anchors = new Set();
+        activeTips.forEach(map => map.forEach(el => anchors.add(el)));
+        return [...anchors];
+    };
+
+    const getActiveKeysForElement = (el) => {
+        const keys = [];
+        activeTips.forEach(map => map.forEach((anchor, key) => {
+            if (anchor === el) keys.push(key);
+        }));
+        return keys;
+    };
+
     function checkSectionAndDismiss() {
         if (!window.matchMedia('(width <= 950px)').matches || !core.ui.visibleSection) return;
-        if (activeElement && activeTooltip) {
-            const tooltipSection = tooltipSections.get(activeTooltip);
+        for (const tip of activeTips.keys()) {
+            const tooltipSection = tooltipSections.get(tip);
             if (tooltipSection && tooltipSection !== core.ui.visibleSection) {
-                destroyTooltip(activeElement);
+                cleanupAllTooltips();
+                break;
             }
         }
     }
-    
+
     function setContextMenuService(service) {
         contextMenuService = service;
     }
 
-    function isPointInRect(x, y, rect) {
-        return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+    function isHoveringActive(x, y) {
+        const el = document.elementFromPoint(x, y);
+        if (!el) return false;
+        for (const tip of activeTips.keys()) {
+            if (tip === el || tip.contains(el)) return true;
+        }
+        for (const anchor of getActiveAnchors()) {
+            if (anchor === el || anchor.contains(el)) return true;
+        }
+        return false;
     }
 
     function refreshHoveredTooltip() {
-        if (!lastPointer || tooltipLocked || (lastPointerType && lastPointerType !== 'mouse')) return;
+        if (!canHover) return;
+        if (!lastPointer || tooltipLocked) return;
         if (!document.hasFocus()) return;
         const { x, y } = lastPointer;
         if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) return;
         const hovered = document.elementFromPoint(x, y)?.closest('.hastip');
-        if (!hovered || hovered === activeElement) return;
+        if (!hovered || getActiveAnchors().includes(hovered)) return;
         if (!getTips(hovered).length) return;
         showTooltip(hovered);
     }
 
     function queueHoverRefresh() {
+        if (!canHover) return;
         if (hoverRefreshQueued || !lastPointer) return;
         hoverRefreshQueued = true;
         requestAnimationFrame(() => {
@@ -62,88 +84,33 @@ export default function createTooltipService(core) {
         });
     }
 
-    function clearPointer() {
-        lastPointer = null;
-        lastPointerType = null;
-    }
-
-    window.addEventListener('blur', () => {
-        clearPointer();
-        if (activeElement) destroyTooltip(activeElement);
-    });
-
-    window.addEventListener('mouseleave', clearPointer);
-
-    let tooltipHideTimeout = null;
-
-    document.addEventListener('mousemove', (e) => {
-        lastPointer = { x: e.clientX, y: e.clientY };
-        lastPointerType = 'mouse';
-
-        // Check if mouse is over any tooltip element
-        const elementAtPoint = document.elementFromPoint(e.clientX, e.clientY);
-        const tooltipElement = elementAtPoint?.closest('[data-tips]');
-        const hasTips = tooltipElement && getTips(tooltipElement).length > 0;
-
-        if (hasTips && tooltipElement !== activeElement) {
-            // Mouse is over a different tooltip element, switch to it
-            if (activeElement) {
-                destroyTooltip(activeElement);
-            }
-            showTooltip(tooltipElement);
-            if (tooltipHideTimeout) {
-                clearTimeout(tooltipHideTimeout);
-                tooltipHideTimeout = null;
-            }
-            return;
-        }
-
-        if (!activeElement || !activeTooltip || tooltipLocked) return;
-
-        if (isPointInRect(e.clientX, e.clientY, activeElement.getBoundingClientRect())) {
-            // Mouse is still over the element, cancel any pending hide
-            if (tooltipHideTimeout) {
-                clearTimeout(tooltipHideTimeout);
-                tooltipHideTimeout = null;
-            }
-            return;
-        }
-
-        if (!isPointInRect(e.clientX, e.clientY, activeTooltip.getBoundingClientRect())) {
-            // Mouse left both element and tooltip area, start hide timeout
-            if (tooltipHideTimeout) clearTimeout(tooltipHideTimeout);
-            tooltipHideTimeout = setTimeout(() => {
-                tooltipHideTimeout = null;
-                // Double-check if mouse is still not over any tooltip element
-                const currentElementAtPoint = document.elementFromPoint(e.clientX, e.clientY);
-                const currentTooltipElement = currentElementAtPoint?.closest('[data-tips]');
-                if (!currentTooltipElement || !getTips(currentTooltipElement).length) {
-                    destroyTooltip(activeElement);
-                }
-            }, 50);
-        }
-    }, { passive: true });
-
-    window.addEventListener("scroll", cleanupAllTooltips, true);
 
     function cleanupAllTooltips() {
         document.querySelectorAll(".tooltip").forEach(tip => {
-            if (tip._updateInterval) clearInterval(tip._updateInterval);
-                tip.remove();
-        });
-        document.querySelectorAll('[data-hastooltip="true"]').forEach(el => {
-            const timeout = pendingTooltips.get(el);
-            if (timeout) {
-                clearTimeout(timeout);
-                pendingTooltips.delete(el);
+            if (tip._updateInterval) {
+                destroyRenderInterval(tip._updateInterval);
+                tip._updateInterval = null;
             }
-            tooltipShownFromHold.delete(el);
-            el.dataset.hastooltip = "false";
-            delete el.dataset.tooltipId;
+            tip.remove();
+            const map = activeTips.get(tip);
+            if (map) {
+                map.forEach(anchor => {
+                    const timeout = pendingTooltips.get(anchor);
+                    clearTimeout(timeout);
+                    pendingTooltips.delete(anchor);
+                    tooltipShownFromHold.delete(anchor);
+                    removeDismissHandlers(anchor);
+                });
+            }
         });
-        activeElement = null;
-        activeTooltip = null;
-        activeTipKeys = [];
+        pendingTooltips.forEach((timeout, anchor) => {
+            clearTimeout(timeout);
+            pendingTooltips.delete(anchor);
+            tooltipShownFromHold.delete(anchor);
+            removeDismissHandlers(anchor);
+        });
+        tooltipLocked = false;
+        activeTips.clear();
     }
 
     function registerTip(type, cb) {
@@ -151,7 +118,6 @@ export default function createTooltipService(core) {
     }
 
     function getTip(el, tipKey) {
-        if (!tipKey) return '';
         const cb = tooltips.get(tipKey);
         if (!cb) return '';
         return cb(el);
@@ -166,31 +132,16 @@ export default function createTooltipService(core) {
         const tips = [];
         for (const key of getTipKeys(el)) {
             const content = getTip(el, key);
-            if (content) tips.push({ type: key, content });
+            if (content) tips.push({ key, content });
         }
         return tips;
     }
 
-    function needsUpdate(el) {
-        const tipKeys = getTipKeys(el);
-        const dynamic = ['resource', 'building-effects', 'build-effects-affordable', 'hire-effects-affordable', 'worker-effects', 'time-to-next', 'disabled', 'increment-amount', 'partial'];
-        return tipKeys.some(k => dynamic.some(d => k.includes(d)));
-    }
 
-    function updateTooltipContent(tipBoxes, updatedTips) {
-        let changed = false;
-        tipBoxes.forEach((tipBox, idx) => {
-            if (updatedTips[idx]) {
-                const newContent = updatedTips[idx].content;
-                if (tipBox._lastContent !== newContent) {
-                    tipBox.innerHTML = newContent;
-                    tipBox._lastContent = newContent;
-                    changed = true;
-                }
-            }
-        });
-        return changed;
-    }
+
+    const PADDING = 8, MARGIN = 3, MULTI_GAP = 4;
+    const clampPos = (v, size, max) => Math.max(PADDING, Math.min(v, max - size - PADDING));
+
 
     function calculatePosition(r, tb, vw, vh) {
         const space = {
@@ -219,8 +170,8 @@ export default function createTooltipService(core) {
 
         return {
             pos,
-            top: Math.max(PADDING, Math.min(top, vh - tb.height - PADDING)),
-            left: Math.max(PADDING, Math.min(left, vw - tb.width - PADDING))
+            top: clampPos(top, tb.height, vh),
+            left: clampPos(left, tb.width, vw)
         };
     }
 
@@ -228,7 +179,7 @@ export default function createTooltipService(core) {
         const r = el.getBoundingClientRect();
         const tb = tipBox.getBoundingClientRect();
         const { pos, top, left } = calculatePosition(r, tb, window.innerWidth, window.innerHeight);
-        
+
         tipBox.classList.add(`tooltip-${pos}`);
         tipBox.style.top = `${top}px`;
         tipBox.style.left = `${left}px`;
@@ -239,16 +190,16 @@ export default function createTooltipService(core) {
         const boxes = tipBoxes.map(tb => tb.getBoundingClientRect());
         const vw = window.innerWidth;
         const vh = window.innerHeight;
-        
+
         const totalWidth = boxes.reduce((sum, b) => sum + b.width, 0);
         const totalHeight = boxes.reduce((sum, b) => sum + b.height, 0);
         const maxWidth = Math.max(...boxes.map(b => b.width));
         const maxHeight = Math.max(...boxes.map(b => b.height));
         const avgAspect = boxes.reduce((sum, b) => sum + (b.width / b.height), 0) / boxes.length;
         const stackVertically = avgAspect > 1;
-        
+
         const space = { above: r.top, below: vh - r.bottom, left: r.left, right: vw - r.right };
-        
+
         let pos, closestIdx;
         if (stackVertically) {
             const totalStackHeight = totalHeight + MULTI_GAP * (tipBoxes.length - 1);
@@ -256,20 +207,20 @@ export default function createTooltipService(core) {
             else if (space.below >= totalStackHeight + PADDING) pos = 'below';
             else pos = 'above';
             closestIdx = pos === 'above' ? tipBoxes.length - 1 : 0;
-            
-            let currentTop = pos === 'above' 
+
+            let currentTop = pos === 'above'
                 ? r.top - MARGIN - totalHeight - MULTI_GAP * (tipBoxes.length - 1)
                 : r.bottom + MARGIN;
             let left = r.left + (r.width - maxWidth) / 2;
-            
+
             tipBoxes.forEach((tipBox, idx) => {
                 tipBox.classList.add(`tooltip-${pos}`);
                 if (idx !== closestIdx) tipBox.classList.add('tooltip-no-arrow');
-                
+
                 const tb = boxes[idx];
                 const boxLeft = left + (maxWidth - tb.width) / 2;
-                tipBox.style.top = `${Math.max(PADDING, Math.min(currentTop, vh - tb.height - PADDING))}px`;
-                tipBox.style.left = `${Math.max(PADDING, Math.min(boxLeft, vw - tb.width - PADDING))}px`;
+                tipBox.style.top = `${clampPos(currentTop, tb.height, vh)}px`;
+                tipBox.style.left = `${clampPos(boxLeft, tb.width, vw)}px`;
                 tipBox.style.opacity = '';
                 currentTop += tb.height + MULTI_GAP;
             });
@@ -279,20 +230,20 @@ export default function createTooltipService(core) {
             else if (space.right >= totalStackWidth + PADDING) pos = 'right';
             else pos = 'right';
             closestIdx = pos === 'left' ? tipBoxes.length - 1 : 0;
-            
+
             let currentLeft = pos === 'left'
                 ? r.left - MARGIN - totalWidth - MULTI_GAP * (tipBoxes.length - 1)
                 : r.right + MARGIN;
             let top = r.top + (r.height - maxHeight) / 2;
-            
+
             tipBoxes.forEach((tipBox, idx) => {
                 tipBox.classList.add(`tooltip-${pos}`);
                 if (idx !== closestIdx) tipBox.classList.add('tooltip-no-arrow');
-                
+
                 const tb = boxes[idx];
                 const boxTop = top + (maxHeight - tb.height) / 2;
-                tipBox.style.top = `${Math.max(PADDING, Math.min(boxTop, vh - tb.height - PADDING))}px`;
-                tipBox.style.left = `${Math.max(PADDING, Math.min(currentLeft, vw - tb.width - PADDING))}px`;
+                tipBox.style.top = `${clampPos(boxTop, tb.height, vh)}px`;
+                tipBox.style.left = `${clampPos(currentLeft, tb.width, vw)}px`;
                 tipBox.style.opacity = '';
                 currentLeft += tb.width + MULTI_GAP;
             });
@@ -303,41 +254,20 @@ export default function createTooltipService(core) {
         if (!el || !tipBoxes?.length) return;
         if (tipBoxes.length === 1) {
             positionSingleTooltip(el, tipBoxes[0]);
+        } else {
+            positionMultiTooltips(el, tipBoxes);
         }
     }
 
-    function cleanupTooltip() {
-        if (activeTooltip?._updateInterval) {
-            const tipKeys = activeElement ? getTipKeys(activeElement) : [];
-            const isIncrement = tipKeys.some(k => k.includes('increment-amount'));
-            if (isIncrement) clearInterval(activeTooltip._updateInterval);
-            else destroyRenderInterval(activeTooltip._updateInterval);
-            activeTooltip._updateInterval = null;
-        }
-        if (activeTooltip?._siblings) {
-            activeTooltip._siblings.forEach(s => s?.remove());
-        }
-        activeTooltip?.remove();
-        activeTooltip = null;
-    }
 
     function showTooltip(el, opts = {}) {
         const keys = getTipKeys(el);
-        const sameEl = activeElement === el;
-        const sameKeys = keys.join('@') === activeTipKeys.join('@');
-        if (sameEl && sameKeys && !opts.refresh) return;
+        const currentKeys = getActiveKeysForElement(el);
+        const sameKeys = currentKeys.length && keys.join('@') === currentKeys.join('@');
+        if (currentKeys.length && sameKeys && !opts.refresh) return;
 
         tooltipLocked = true;
-        cleanupTooltip();
-
-        if (activeElement) {
-            activeElement.dataset.hastooltip = "false";
-            delete activeElement.dataset.tooltipId;
-        }
-
-        activeElement = el;
-        activeTipKeys = keys;
-        el.dataset.hastooltip = "true";
+        cleanupAllTooltips();
 
         const tips = getTips(el);
         if (tips.length === 0) {
@@ -349,7 +279,7 @@ export default function createTooltipService(core) {
         const tipBoxes = tips.map(tip => {
             const tipBox = document.createElement('div');
             tipBox.className = 'tooltip';
-            tipBox.dataset.tip = tip.type;
+            tipBox.dataset.tip = tip.key;
             tipBox.style.opacity = '0';
             tipBox.innerHTML = tip.content;
             tipBox._lastContent = tip.content;
@@ -362,131 +292,61 @@ export default function createTooltipService(core) {
 
         if (tipBoxes.length === 1) {
             const tipBox = tipBoxes[0];
-            tipBox.dataset.owner = Math.random().toString(36);
-            el.dataset.tooltipId = tipBox.dataset.owner;
             positionSingleTooltip(el, tipBox);
             tipBox.style.opacity = '';
-            activeTooltip = tipBox;
         } else {
             positionMultiTooltips(el, tipBoxes);
-            activeTooltip = tipBoxes[0];
-            activeTooltip._siblings = tipBoxes.slice(1);
         }
-        
+
+        tipBoxes.forEach((tipBox, idx) => {
+            const key = tips[idx].key;
+            activeTips.set(tipBox, new Map([[key, el]]));
+        });
+
         tooltipLocked = false;
 
-        if (needsUpdate(el)) {
+        const clearTipInterval = (box) => {
+            if (box?._updateInterval) {
+                destroyRenderInterval(box._updateInterval);
+                box._updateInterval = null;
+            }
+        };
+
+        tipBoxes.forEach((tipBox, idx) => {
+            const key = tips[idx].key;
             const updaterFn = () => {
                 try {
-                    if (!document.body.contains(activeTooltip) || activeElement !== el) {
-                        if (activeTooltip?._updateInterval) {
-                            destroyRenderInterval(activeTooltip._updateInterval);
-                            activeTooltip._updateInterval = null;
-                        }
+                    const tipMap = activeTips.get(tipBox);
+                    if (!document.body.contains(tipBox) || !tipMap || tipMap.get(key) !== el) {
+                        clearTipInterval(tipBox);
                         return;
                     }
-                    
+
                     const updatedTips = getTips(el);
-                    const tipKeys = getTipKeys(el);
-                    const hasDisabledTip = tipKeys.some(k => k.includes('disabled'));
+                    const updatedTip = updatedTips.find(t => t.key === key);
 
-                    if (updatedTips.length !== tipBoxes.length) {
-                        const oldTipBoxes = tipBoxes.slice();
-                        const oldActive = activeTooltip;
-                        const elementSection = getElementSection(el);
-
-                        const newTipBoxes = updatedTips.map(tip => {
-                            const tipBox = document.createElement('div');
-                            tipBox.className = 'tooltip';
-                            tipBox.dataset.tip = tip.type;
-                            tipBox.style.opacity = '';
-                            tipBox.innerHTML = tip.content;
-                            tipBox._lastContent = tip.content;
-                            document.body.appendChild(tipBox);
-                            if (elementSection) {
-                                tooltipSections.set(tipBox, elementSection);
-                            }
-                            return tipBox;
-                        });
-
-                        if (newTipBoxes.length === 1) {
-                            const tipBox = newTipBoxes[0];
-                            tipBox.dataset.owner = oldActive?.dataset?.owner || Math.random().toString(36);
-                            el.dataset.tooltipId = tipBox.dataset.owner;
-                            positionSingleTooltip(el, tipBox);
-                            activeTooltip = tipBox;
-                        } else {
-                            positionMultiTooltips(el, newTipBoxes);
-                            activeTooltip = newTipBoxes[0];
-                            activeTooltip._siblings = newTipBoxes.slice(1);
-                        }
-
-                        if (oldActive?._updateInterval) {
-                            destroyRenderInterval(oldActive._updateInterval);
-                            oldActive._updateInterval = null;
-                        }
-                        if (oldActive?._siblings) oldActive._siblings.forEach(s => s?.remove());
-                        oldTipBoxes.forEach(b => b?.remove());
-
-                        tipBoxes.length = 0;
-                        newTipBoxes.forEach(b => tipBoxes.push(b));
-                        activeTipKeys = tipKeys;
-                        tooltipLocked = false;
+                    if (updatedTips.length !== tipBoxes.length || !updatedTip) {
+                        clearTipInterval(tipBox);
+                        cleanupAllTooltips();
+                        if (updatedTips.length > 0) showTooltip(el);
                         return;
                     }
-                    
-                    if (hasDisabledTip && updatedTips.length < tipBoxes.length) {
-                        if (activeTooltip._updateInterval) {
-                            destroyRenderInterval(activeTooltip._updateInterval);
-                            activeTooltip._updateInterval = null;
-                        }
-                        tipBoxes.forEach(box => box?.remove());
-                        
-                        if (updatedTips.length > 0) {
-                            activeTooltip = null;
-                            activeElement = null;
-                            tooltipLocked = false;
-                            showTooltip(el);
-                        } else {
-                            cleanupTooltip();
-                            if (activeElement) {
-                                activeElement.dataset.hastooltip = "false";
-                                delete activeElement.dataset.tooltipId;
-                            }
-                            activeElement = null;
-                            tooltipLocked = false;
-                        }
-                        return;
-                    }
-                    
-                    if (updateTooltipContent(tipBoxes, updatedTips)) {
+
+
+                    if (tipBox._lastContent !== updatedTip.content) {
+                        tipBox.innerHTML = updatedTip.content;
+                        tipBox._lastContent = updatedTip.content;
                         repositionTooltips(el, tipBoxes);
                     }
+
+                    activeTips.set(tipBox, new Map([[key, el]]));
                 } catch {
-                    if (activeTooltip?._updateInterval) {
-                        destroyRenderInterval(activeTooltip._updateInterval);
-                        activeTooltip._updateInterval = null;
-                    }
+                    clearTipInterval(tipBox);
                 }
             };
-            
-            activeTooltip._updateInterval = createRenderInterval(updaterFn);
-        }
-    }
 
-    function destroyTooltip(el) {
-        if (activeElement !== el) return;
-        
-        tooltipLocked = false;
-        tooltipShownFromHold.delete(el);
-        cleanupTooltip();
-        
-        if (activeElement) {
-            activeElement.dataset.hastooltip = "false";
-            delete activeElement.dataset.tooltipId;
-            activeElement = null;
-        }
-        activeTipKeys = [];
+            tipBox._updateInterval = createRenderInterval(updaterFn);
+        });
     }
 
     function addDismissHandlers(el, cb) {
@@ -507,9 +367,9 @@ export default function createTooltipService(core) {
         if (!el) return false;
         const tag = el.tagName.toLowerCase();
         return ['button', 'a', 'input', 'select', 'textarea'].includes(tag) ||
-               el.getAttribute('role') === 'button' ||
-               el.onclick || el.getAttribute('onclick') ||
-               el.classList.contains('button') || el.classList.contains('btn');
+            el.getAttribute('role') === 'button' ||
+            el.onclick || el.getAttribute('onclick') ||
+            el.classList.contains('button') || el.classList.contains('btn');
     }
 
     function attach(el) {
@@ -528,51 +388,47 @@ export default function createTooltipService(core) {
         el.removeEventListener('mouseleave', onMouseLeave);
         el.removeEventListener('pointerdown', onPointerDown);
         el.removeEventListener('pointerup', onPointerUp);
-        
+
         const timeout = pendingTooltips.get(el);
-        if (timeout) {
-            clearTimeout(timeout);
-            pendingTooltips.delete(el);
-        }
+        clearTimeout(timeout);
+        pendingTooltips.delete(el);
         tooltipShownFromHold.delete(el);
         removeDismissHandlers(el);
-        destroyTooltip(el);
+        cleanupAllTooltips();
     }
 
     function onMouseEnter(e) {
+        if (!canHover) return;
         showTooltip(e.currentTarget);
     }
 
-    function onMouseLeave(e) {
-        destroyTooltip(e.currentTarget);
+    function onMouseLeave() {
+        if (!canHover) return;
+        cleanupAllTooltips();
     }
 
     function onPointerDown(e) {
         const el = e.currentTarget;
         if (e.pointerType === 'mouse') return;
 
-        if (activeElement === el && activeTooltip) {
+        if (getActiveKeysForElement(el).length > 0) {
             const timeout = pendingTooltips.get(el);
-            if (timeout) {
-                clearTimeout(timeout);
-                pendingTooltips.delete(el);
-            }
-            destroyTooltip(el);
+            clearTimeout(timeout);
+            pendingTooltips.delete(el);
+            cleanupAllTooltips();
             return;
         }
 
         const existingTimeout = pendingTooltips.get(el);
-        if (existingTimeout) {
-            clearTimeout(existingTimeout);
-            pendingTooltips.delete(el);
-        }
+        clearTimeout(existingTimeout);
+        pendingTooltips.delete(el);
 
         const delay = isInteractive(el) ? 900 : 350;
         const timeout = setTimeout(() => {
             if (pendingTooltips.get(el) !== timeout) return;
-            
+
             pendingTooltips.delete(el);
-            
+
             if (contextMenuService?.hasMenu(el)) {
                 const rect = el.getBoundingClientRect();
                 if (contextMenuService.handleHold(el, rect.left + rect.width / 2, rect.top + rect.height / 2)) {
@@ -580,13 +436,13 @@ export default function createTooltipService(core) {
                     return;
                 }
             }
-            
+
             tooltipShownFromHold.set(el, true);
             showTooltip(el);
 
             const dismiss = (ev) => {
                 if (el.contains(ev.target)) return;
-                destroyTooltip(el);
+                cleanupAllTooltips();
                 removeDismissHandlers(el);
                 tooltipShownFromHold.delete(el);
             };
@@ -598,10 +454,8 @@ export default function createTooltipService(core) {
 
         const cancelOnUp = () => {
             const timeout = pendingTooltips.get(el);
-            if (timeout) {
-                clearTimeout(timeout);
-                pendingTooltips.delete(el);
-            }
+            clearTimeout(timeout);
+            pendingTooltips.delete(el);
             el.removeEventListener('pointerup', cancelOnUp);
             el.removeEventListener('pointercancel', cancelOnUp);
         };
@@ -647,10 +501,10 @@ export default function createTooltipService(core) {
                     else if (m.attributeName === 'class') detach(tgt);
                     shouldRefreshHover = true;
 
-                    if (tgt === activeElement && activeTooltip) {
+                    const activeKeys = getActiveKeysForElement(tgt);
+                    if (activeKeys.length) {
                         const newKeys = getTipKeys(tgt);
-                        if (newKeys.join('@') !== activeTipKeys.join('@')) {
-                            activeTipKeys = newKeys;
+                        if (newKeys.join('@') !== activeKeys.join('@')) {
                             showTooltip(tgt, { refresh: true });
                         }
                     }
@@ -669,6 +523,39 @@ export default function createTooltipService(core) {
 
     // Initialize tooltips
     (function initialize() {
+        window.addEventListener('blur', () => {
+            lastPointer = null;
+            if (activeTips.size) cleanupAllTooltips();
+        });
+
+        window.addEventListener('mouseleave', () => {
+            lastPointer = null;
+            if (activeTips.size) cleanupAllTooltips();
+        });
+
+        document.addEventListener('pointermove', (e) => {
+            if (e.pointerType !== 'mouse') return;
+            lastPointer = { x: e.clientX, y: e.clientY };
+            if (!canHover) return;
+
+            const elementAtPoint = document.elementFromPoint(e.clientX, e.clientY);
+            const tooltipElement = elementAtPoint?.closest('[data-tips]');
+            const hasTips = tooltipElement && getTips(tooltipElement).length > 0;
+
+            const anchors = getActiveAnchors();
+            if (hasTips && !anchors.includes(tooltipElement)) {
+                if (anchors.length) cleanupAllTooltips();
+                showTooltip(tooltipElement);
+                return;
+            }
+
+            if (!anchors.length || !activeTips.size || tooltipLocked) return;
+
+            if (!isHoveringActive(e.clientX, e.clientY)) cleanupAllTooltips();
+        }, { passive: true });
+
+        window.addEventListener("scroll", cleanupAllTooltips, true);
+
         registerTip('savvy', () => `
       <p><i>Measures economic know-how.</i></p>
       <p>Each point of <span class="savvyWord term">Savvy</span> grants a +1% boost to all Production profits.</p>
@@ -686,13 +573,13 @@ export default function createTooltipService(core) {
       <p>Each point of <span class="wisdomWord term">Wisdom</span> grants a +1% boost to all Research bonuses.</p>
       <p>Current boost: +${core.city.ruler.wisdom}%</p>
     `);
-        
-        registerTip('theurgy-plant', () => `<p style="color: var(--gainColor); font-weight: 500">+1 crops</p>`);
+
+        registerTip('theurgy-plant', () => `<p style="color: var(--gainColor);">+1 crops</p>`);
 
         registerTip('theurgy-harvest', () => {
             const canHarvest = core.industry.canPerformTheurgy('harvest');
             if (!canHarvest) return `<p style="opacity: 0.7; font-style: italic">Requires 1 crop</p>`;
-            return `<p style="color: var(--drainColor); font-weight: 500">-1 crops</p><p style="color: var(--gainColor); font-weight: 500">+1 food</p>`;
+            return `<p style="color: var(--drainColor);">-1 crops</p><p style="color: var(--gainColor);">+1 food</p>`;
         });
 
         registerTip('increment-amount', () => {
@@ -729,10 +616,10 @@ export default function createTooltipService(core) {
         registerTip('resource-name', (el) => {
             const res = el.dataset.resource;
             if (!res || !core.industry.resources[res]) return '';
-            
+
             const resObj = core.industry.resources[res];
             let capHtml = '';
-            
+
             const cap = resObj.effectiveCap;
             if (cap !== undefined) {
                 const capVal = cap.toNumber();
@@ -740,7 +627,7 @@ export default function createTooltipService(core) {
                 const percent = ((currentVal / capVal) * 100).toFixed(1);
                 capHtml = `<p style="opacity: 0.8; margin-top: 0.3em">Cap: ${fmt(capVal)} (${percent}%)</p>`;
             }
-            
+
             const breakdown = core.industry.getResourceProductionBreakdown(res);
             if (!breakdown || (breakdown.baseGain === 0 && breakdown.baseDrain === 0 && breakdown.workerGain === 0 && breakdown.workerDrain === 0)) {
                 return `<p style="opacity: 0.7; font-style: italic">No production</p>` + capHtml;
@@ -872,18 +759,18 @@ export default function createTooltipService(core) {
                 if (!details) return '';
 
                 const items = [];
-                        if (details.costs?.length) {
-                            details.costs.forEach(c => {
-                                items.push(`<span style="color: var(--drainColor)">-${fmt(c.amt)} ${c.res}</span>`);
-                            });
-                        }
-                        if (details.effects?.length) {
-                            details.effects.forEach(e => {
-                                const sign = e.type === 'gain' ? '+' : '-';
-                                const color = e.type === 'gain' ? 'var(--gainColor)' : 'var(--drainColor)';
-                                items.push(`<span style="color: ${color}">${sign}${fmt(e.val)} ${e.res}/s</span>`);
-                            });
-                        }
+                if (details.costs?.length) {
+                    details.costs.forEach(c => {
+                        items.push(`<span style="color: var(--drainColor)">-${fmt(c.amt)} ${c.res}</span>`);
+                    });
+                }
+                if (details.effects?.length) {
+                    details.effects.forEach(e => {
+                        const sign = e.type === 'gain' ? '+' : '-';
+                        const color = e.type === 'gain' ? 'var(--gainColor)' : 'var(--drainColor)';
+                        items.push(`<span style="color: ${color}">${sign}${fmt(e.val)} ${e.res}/s</span>`);
+                    });
+                }
                 if (details.capChanges?.length) {
                     const capItems = [];
                     details.capChanges.forEach(c => {
@@ -958,11 +845,11 @@ export default function createTooltipService(core) {
                 // Show partial hire info (what can actually be hired)
                 const multiplier = plan.actual;
                 // For worker hiring, all effects are in result.effects and we separate based on sign
-                const {costs, effects} = Object.entries(result.effects || {}).reduce((acc, [res, val]) => {
-                    const item = {res, val: Math.abs(val) * multiplier, type: val < 0 ? 'drain' : 'gain'};
+                const { costs, effects } = Object.entries(result.effects || {}).reduce((acc, [res, val]) => {
+                    const item = { res, val: Math.abs(val) * multiplier, type: val < 0 ? 'drain' : 'gain' };
                     (val < 0 ? acc.costs : acc.effects).push(item);
                     return acc;
-                }, {costs: [], effects: []});
+                }, { costs: [], effects: [] });
 
                 const items = [];
                 if (costs?.length) {
@@ -984,11 +871,11 @@ export default function createTooltipService(core) {
                 // Show full hire effects (what will be hired at increment)
                 const multiplier = plan.target;
                 // For worker hiring, all effects are in result.effects and we separate based on sign
-                const {costs, effects} = Object.entries(result.effects || {}).reduce((acc, [res, val]) => {
-                    const item = {res, val: Math.abs(val) * multiplier, type: val < 0 ? 'drain' : 'gain'};
+                const { costs, effects } = Object.entries(result.effects || {}).reduce((acc, [res, val]) => {
+                    const item = { res, val: Math.abs(val) * multiplier, type: val < 0 ? 'drain' : 'gain' };
                     (val < 0 ? acc.costs : acc.effects).push(item);
                     return acc;
-                }, {costs: [], effects: []});
+                }, { costs: [], effects: [] });
 
                 const items = [];
                 if (costs?.length) {
@@ -1179,19 +1066,19 @@ export default function createTooltipService(core) {
         registerTip('worker-limit', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-            
+
             const def = core.industry.constructor.BUILDING_DEFS[type];
             const b = core.industry.buildings[type];
             if (!def || !b) return '';
-            
+
             const perBuilding = def.workersPerBuilding || 0;
             const total = perBuilding * b.count;
             const buildingName = def.name.toLowerCase();
-            
+
             let html = `<p style="font-weight: 500">${perBuilding} worker${perBuilding !== 1 ? 's' : ''}/${buildingName}</p>`;
             html += `<p style="opacity: 0.7">× ${b.count} ${buildingName}${b.count !== 1 ? 's' : ''}</p>`;
             html += `<p style="color: var(--accent); font-weight: 600">= ${total} worker${total !== 1 ? 's' : ''}</p>`;
-            
+
             return html;
         });
 
@@ -1317,7 +1204,7 @@ export default function createTooltipService(core) {
     })();
 
     return {
-        registerTip, showTooltip, destroyTooltip, observeTooltips, setContextMenuService,
+        registerTip, showTooltip, cleanupAllTooltips, observeTooltips, setContextMenuService,
         checkSectionAndDismiss
     };
 }

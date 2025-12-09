@@ -28,13 +28,12 @@ export default function setupGlobalBehavior(core) {
         "right": 2
     };
     let isProgrammaticScroll = false;
-
-    function calculateTargetLeft(section, wrapper) {
+    function calculateTargetLeft(section) {
         const sectionLeft = section.offsetLeft;
         const sectionWidth = section.offsetWidth;
-        const wrapperWidth = wrapper.clientWidth;
-        return sectionLeft + (sectionWidth / 2) - (wrapperWidth / 2);
-    }
+        const wrapperWidth = sectionsWrapper.clientWidth;
+        return sectionLeft + (sectionWidth / 2) - (wrapperWidth / 2);  
+      }
 
     function scrollToVisibleSection(smooth = false) {
         if (!matchesMobile() || !sectionsWrapper) return;
@@ -47,16 +46,13 @@ export default function setupGlobalBehavior(core) {
 
         const section = sections[sectionIndex];
 
-        const originalScrollBehavior = sectionsWrapper.style.scrollBehavior;
-        const originalScrollSnapType = sectionsWrapper.style.scrollSnapType;
-        sectionsWrapper.style.scrollBehavior = 'auto';
-        sectionsWrapper.style.scrollSnapType = 'none';
-        sectionsWrapper.style.overflowX = 'scroll';
         isProgrammaticScroll = true;
 
         if (smooth) {
+            sectionsWrapper.style.scrollSnapType = 'none';
             const startLeft = sectionsWrapper.scrollLeft;
-            const distance = calculateTargetLeft(section, sectionsWrapper) - startLeft;
+            const targetLeft = calculateTargetLeft(section);
+            const distance = targetLeft - startLeft;
             const duration = 150;
             const startTime = performance.now();
 
@@ -68,17 +64,14 @@ export default function setupGlobalBehavior(core) {
                 if (progress < 1) {
                     requestAnimationFrame(animate);
                 } else {
-                    sectionsWrapper.style.scrollBehavior = originalScrollBehavior;
-                    sectionsWrapper.style.scrollSnapType = originalScrollSnapType;
                     isProgrammaticScroll = false;
+                    sectionsWrapper.style.scrollSnapType = "x mandatory";
                 }
             };
             requestAnimationFrame(animate);
         } else {
-            sectionsWrapper.scrollLeft = calculateTargetLeft(section, sectionsWrapper);
+            sectionsWrapper.scrollLeft = calculateTargetLeft(section);
             requestAnimationFrame(() => {
-                sectionsWrapper.style.scrollBehavior = originalScrollBehavior;
-                sectionsWrapper.style.scrollSnapType = originalScrollSnapType;
                 isProgrammaticScroll = false;
             });
         }
@@ -107,7 +100,7 @@ export default function setupGlobalBehavior(core) {
         if (!sections[sectionIndex]) return;
 
         const section = sections[sectionIndex];
-        sectionsWrapper.scrollLeft = calculateTargetLeft(section, sectionsWrapper);
+        sectionsWrapper.scrollLeft = calculateTargetLeft(section);
 
         resizeAnimationFrame = requestAnimationFrame(lockScrollPosition);
     };
@@ -181,8 +174,6 @@ export default function setupGlobalBehavior(core) {
     }
 
     const updateScrollBehavior = () => {
-        if (!sectionsWrapper) return;
-        
         const shouldBeMobile = matchesMobile();
         
         if (shouldBeMobile) {
@@ -208,8 +199,8 @@ export default function setupGlobalBehavior(core) {
             if (!wasMobile) {
                 core.ui.visibleSection = "center";
                 core.ui.updateMobileNavArrows();
-                scrollToVisibleSection(false);
                 updateScrollBehavior();
+                scrollToVisibleSection(false);
             } else {
                 if (!isResizing) {
                     isResizing = true;
@@ -248,28 +239,28 @@ export default function setupGlobalBehavior(core) {
     
     const detectVisibleSection = () => {
         if (!sectionsWrapper || isResizing) return;
-        
+
         const sections = sectionsWrapper.querySelectorAll("section");
         if (sections.length !== 3) return;
-        
+
         const scrollLeft = sectionsWrapper.scrollLeft;
         const wrapperWidth = sectionsWrapper.clientWidth;
         const centerX = scrollLeft + wrapperWidth / 2;
-        
+
         let closestSection = null;
         let closestDistance = Infinity;
-        
+
         sections.forEach((section, index) => {
             const sectionLeft = section.offsetLeft;
             const sectionCenter = sectionLeft + section.offsetWidth / 2;
             const distance = Math.abs(centerX - sectionCenter);
-            
+
             if (distance < closestDistance) {
                 closestDistance = distance;
                 closestSection = SECTION_ORDER[index];
             }
         });
-        
+
         if (closestSection && closestSection !== core.ui.visibleSection) {
             core.ui.visibleSection = closestSection;
             core.ui.updateMobileNavArrows();
@@ -293,7 +284,7 @@ export default function setupGlobalBehavior(core) {
         
         const setScrollLeftDirect = (value) => {
             sectionsWrapper.style.overflowX = 'scroll';
-            const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollLeft') || 
+            const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollLeft') ||
                 Object.getOwnPropertyDescriptor(Element.prototype, 'scrollLeft');
             if (descriptor && descriptor.set) {
                 descriptor.set.call(sectionsWrapper, value);
@@ -328,7 +319,7 @@ export default function setupGlobalBehavior(core) {
                 return _scrollLeft;
             },
             set: function(value) {
-                if (isProgrammaticScroll) {
+                if (isProgrammaticScroll || isResizing) {
                     setScrollLeftDirect(value);
                 } else {
                     _scrollLeft = lockedScrollLeft;
@@ -343,10 +334,11 @@ export default function setupGlobalBehavior(core) {
             const now = performance.now();
             if (now - lastScrollTime < 16) return;
             lastScrollTime = now;
-            
+
             if (isProgrammaticScroll) {
                 _scrollLeft = sectionsWrapper.scrollLeft;
                 updateLock();
+            } else {
                 detectVisibleSection();
             }
         };

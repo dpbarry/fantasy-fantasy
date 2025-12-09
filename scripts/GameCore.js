@@ -114,7 +114,7 @@ export default class GameCore {
         this.#lastFrameTime = currentTime;
 
         this.clock.advance(frameTime);
-        this.industry.tick(frameTime);
+        this["industry"].tick(frameTime);
 
         const now = Date.now();
         if (!this.#pendingSave && now - this.#lastSaveTime >= this.#saveThrottleMS) {
