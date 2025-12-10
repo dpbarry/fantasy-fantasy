@@ -145,7 +145,11 @@ export function formatNumber(value, formatType = 'standard', opt = {}) {
             return `${isNegative ? '-' : ''}${formattedMantissa}e${exponent}`;
         } else {
             // For exponents < 3, use regular decimal format
-            const dp = wholeOnly && absNum < 1000 ? 0 : effectiveDecimalPlaces;
+            if (wholeOnly && absNum < 1000) {
+                const floored = Math.floor(absNum);
+                return `${isNegative ? '-' : ''}${floored}`;
+            }
+            const dp = effectiveDecimalPlaces;
             let formatted = keepTrailingZeros ?
                 absNum.toFixed(dp) :
                 absNum.toFixed(dp).replace(/\.?0+$/, '');
@@ -156,7 +160,11 @@ export function formatNumber(value, formatType = 'standard', opt = {}) {
 
     if (formatType === 'alphabetical') {
         if (absNum < 1000) {
-            const dp = wholeOnly ? 0 : effectiveDecimalPlaces;
+            if (wholeOnly) {
+                const floored = Math.floor(absNum);
+                return `${isNegative ? '-' : ''}${floored}`;
+            }
+            const dp = effectiveDecimalPlaces;
             let formatted = keepTrailingZeros ?
                 absNum.toFixed(dp) :
                 absNum.toFixed(dp).replace(/\.?0+$/, '');
@@ -183,7 +191,11 @@ export function formatNumber(value, formatType = 'standard', opt = {}) {
 
     // Standard format (default)
     if (absNum < 1000) {
-        const dp = wholeOnly ? 0 : effectiveDecimalPlaces;
+        if (wholeOnly) {
+            const floored = Math.floor(absNum);
+            return `${isNegative ? '-' : ''}${floored}`;
+        }
+        const dp = effectiveDecimalPlaces;
         let formatted = keepTrailingZeros ?
             absNum.toFixed(dp) :
             absNum.toFixed(dp).replace(/\.?0+$/, '');
