@@ -138,29 +138,30 @@ export function formatNumber(value, formatType = 'standard', opt = {}) {
         // Only use scientific notation for exponents >= 3
         if (exponent >= 3) {
             const mantissa = absNum / Math.pow(10, exponent);
-            const formattedMantissa = keepTrailingZeros ?
+            let formattedMantissa = keepTrailingZeros ?
                 mantissa.toFixed(effectiveDecimalPlaces) :
                 mantissa.toFixed(effectiveDecimalPlaces).replace(/\.?0+$/, '');
+            if (formattedMantissa === '') formattedMantissa = '0';
             return `${isNegative ? '-' : ''}${formattedMantissa}e${exponent}`;
         } else {
             // For exponents < 3, use regular decimal format
             const dp = wholeOnly && absNum < 1000 ? 0 : effectiveDecimalPlaces;
-            return `${isNegative ? '-' : ''}${
-                keepTrailingZeros ?
+            let formatted = keepTrailingZeros ?
                 absNum.toFixed(dp) :
-                absNum.toFixed(dp).replace(/\.?0+$/, '')
-            }`;
+                absNum.toFixed(dp).replace(/\.?0+$/, '');
+            if (formatted === '') formatted = '0';
+            return `${isNegative ? '-' : ''}${formatted}`;
         }
     }
 
     if (formatType === 'alphabetical') {
         if (absNum < 1000) {
             const dp = wholeOnly ? 0 : effectiveDecimalPlaces;
-            return `${isNegative ? '-' : ''}${
-                keepTrailingZeros ?
+            let formatted = keepTrailingZeros ?
                 absNum.toFixed(dp) :
-                absNum.toFixed(dp).replace(/\.?0+$/, '')
-            }`;
+                absNum.toFixed(dp).replace(/\.?0+$/, '');
+            if (formatted === '') formatted = '0';
+            return `${isNegative ? '-' : ''}${formatted}`;
         }
 
         const logValue = Math.log10(absNum);
@@ -169,9 +170,10 @@ export function formatNumber(value, formatType = 'standard', opt = {}) {
         if (index < ALPHABETICAL_ABBREVIATIONS.length) {
             const abbreviation = ALPHABETICAL_ABBREVIATIONS[index];
             const mantissa = absNum / Math.pow(10, (index + 1) * 3);
-            const formattedMantissa = keepTrailingZeros ?
+            let formattedMantissa = keepTrailingZeros ?
                 mantissa.toFixed(effectiveDecimalPlaces) :
                 mantissa.toFixed(effectiveDecimalPlaces).replace(/\.?0+$/, '');
+            if (formattedMantissa === '') formattedMantissa = '0';
             return `${isNegative ? '-' : ''}${formattedMantissa}${abbreviation}`;
         }
 
@@ -182,11 +184,11 @@ export function formatNumber(value, formatType = 'standard', opt = {}) {
     // Standard format (default)
     if (absNum < 1000) {
         const dp = wholeOnly ? 0 : effectiveDecimalPlaces;
-        return `${isNegative ? '-' : ''}${
-            keepTrailingZeros ?
+        let formatted = keepTrailingZeros ?
             absNum.toFixed(dp) :
-            absNum.toFixed(dp).replace(/\.?0+$/, '')
-        }`;
+            absNum.toFixed(dp).replace(/\.?0+$/, '');
+        if (formatted === '') formatted = '0';
+        return `${isNegative ? '-' : ''}${formatted}`;
     }
 
     const logValue = Math.log10(absNum);
@@ -195,9 +197,10 @@ export function formatNumber(value, formatType = 'standard', opt = {}) {
     if (index < STANDARD_ABBREVIATIONS.length) {
         const abbreviation = STANDARD_ABBREVIATIONS[index];
         const mantissa = absNum / Math.pow(10, index * 3);
-        const formattedMantissa = keepTrailingZeros ?
+        let formattedMantissa = keepTrailingZeros ?
             mantissa.toFixed(effectiveDecimalPlaces) :
             mantissa.toFixed(effectiveDecimalPlaces).replace(/\.?0+$/, '');
+        if (formattedMantissa === '') formattedMantissa = '0';
         return `${isNegative ? '-' : ''}${formattedMantissa}${abbreviation}`;
     }
 

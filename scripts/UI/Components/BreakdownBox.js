@@ -1,42 +1,74 @@
-/**
- * BreakdownBox - Shows effects with their modifiers listed underneath
- */
 
 export default function createBreakdownBox(data) {
-    if (!data?.items?.length) return '';
+    if (!data) return '';
 
-    const items = data.items;
-    const mods = data.modifiers || [];
-
-    if (!mods.length) {
-        // Sort: drains first, then gains
-        const sortedItems = [...items].sort((a, b) => {
-            if (a.type === 'drain' && b.type !== 'drain') return -1;
-            if (a.type !== 'drain' && b.type === 'drain') return 1;
-            return 0;
-        });
-        const html = sortedItems.map(it => renderItem(it)).join('');
-        return `<div class="bd">${html}${renderRes(data.result)}</div>`;
+    // Handle simple text-only case (e.g., disabled reasons)
+    if (data.header && !data.items && !data.costs && !data.capChanges) {
+        return `<div class="bd"><p>${data.header}</p></div>`;
     }
 
-    // For each item, show it with its modifiers underneath
-    // Sort items: drains first, then gains
-    const sortedItems = [...items].sort((a, b) => {
-        if (a.type === 'drain' && b.type !== 'drain') return -1;
-        if (a.type !== 'drain' && b.type === 'drain') return 1;
-        return 0;
-    });
+    const parts = [];
 
-    const html = sortedItems.map((item, index) => {
-        // Find applicable modifiers based on original positions
-        const originalIndex = items.indexOf(item);
-        const applicableMods = mods.filter(mod =>
-            originalIndex >= mod.range[0] && originalIndex <= mod.range[1]
-        );
-        return renderItemWithMods(item, applicableMods);
-    }).join('');
+    // Header text
+    if (data.header) {
+        parts.push(`<p>${data.header}</p>`);
+    }
 
-    return `<div class="bd">${html}${renderRes(data.result)}</div>`;
+    // Costs section (one-time resource drains)
+    if (data.costs?.length) {
+        const costsHtml = data.costs.map(c => renderItem(c)).join('');
+        parts.push(costsHtml);
+    }
+
+    // Effects section (ongoing gains/drains)
+    if (data.items?.length) {
+        const items = data.items;
+        const mods = data.modifiers || [];
+
+        if (!mods.length) {
+            const sortedItems = [...items].sort((a, b) => {
+                if (a.type === 'drain' && b.type !== 'drain') return -1;
+                if (a.type !== 'drain' && b.type === 'drain') return 1;
+                return 0;
+            });
+            parts.push(sortedItems.map(it => renderItem(it)).join(''));
+        } else {
+            const sortedItems = [...items].sort((a, b) => {
+                if (a.type === 'drain' && b.type !== 'drain') return -1;
+                if (a.type !== 'drain' && b.type === 'drain') return 1;
+                return 0;
+            });
+
+            const html = sortedItems.map((item) => {
+                const originalIndex = items.indexOf(item);
+                const applicableMods = mods.filter(mod =>
+                    originalIndex >= mod.range[0] && originalIndex <= mod.range[1]
+                );
+                return renderItemWithMods(item, applicableMods);
+            }).join('');
+            parts.push(html);
+        }
+    }
+
+    // Cap changes section
+    if (data.capChanges?.length) {
+        const capHtml = data.capChanges.map(c => renderItem(c)).join('');
+        parts.push(capHtml);
+    }
+
+    // Result section
+    if (data.result) {
+        parts.push(renderRes(data.result));
+    }
+
+    // Footer text
+    if (data.footer) {
+        parts.push(`<p>${data.footer}</p>`);
+    }
+
+    if (parts.length === 0) return '';
+
+    return `<div class="bd">${parts.join('')}</div>`;
 }
 
 function renderItemWithMods(item, mods) {
@@ -84,7 +116,7 @@ function renderRes(r) {
         return 0;
     });
     const parts = sortedItems.map(it =>
-        `<span class="${it.type === 'gain' ? 'bd-g' : it.type === 'drain' ? 'bd-d' : ''}">${it.value} ${it.label}</span>`
+        `<span class="${it.type === 'gain' ? 'bd-g' : it.type === 'drain' ? 'bd-d' : ''}">${it.value} ${it.label ? it.label : ''}</span>`
     ).join(', ');
     return `<div class="bd-res">= ${parts}</div>`;
 }

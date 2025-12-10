@@ -618,8 +618,20 @@ export default function createTooltipService(core) {
             if (!res || !core.industry.resources[res]) return '';
 
             const resObj = core.industry.resources[res];
-            let capHtml = '';
+            const data = core.industry.getResourceProductionTooltipData(res);
+            
+            if (!data) {
+                const cap = resObj.effectiveCap;
+                if (cap !== undefined) {
+                    const capVal = cap.toNumber();
+                    const currentVal = resObj.value.toNumber();
+                    const percent = ((currentVal / capVal) * 100).toFixed(1);
+                    return `<p style="opacity: 0.7; font-style: italic">No production</p><p style="opacity: 0.8; margin-top: 0.3em">Cap: ${fmt(capVal)} (${percent}%)</p>`;
+                }
+                return `<p style="opacity: 0.7; font-style: italic">No production</p>`;
+            }
 
+            let capHtml = '';
             const cap = resObj.effectiveCap;
             if (cap !== undefined) {
                 const capVal = cap.toNumber();
@@ -628,94 +640,36 @@ export default function createTooltipService(core) {
                 capHtml = `<p style="opacity: 0.8; margin-top: 0.3em">Cap: ${fmt(capVal)} (${percent}%)</p>`;
             }
 
-            const breakdown = core.industry.getResourceProductionBreakdown(res);
-            if (!breakdown || (breakdown.baseGain === 0 && breakdown.baseDrain === 0 && breakdown.workerGain === 0 && breakdown.workerDrain === 0)) {
-                return `<p style="opacity: 0.7; font-style: italic">No production</p>` + capHtml;
-            }
-
-            const items = [];
-            for (const [type, data] of Object.entries(breakdown.byBuilding)) {
-                const def = core.industry.constructor.BUILDING_DEFS[type];
-                if (data.baseGain > 0) {
-                    items.push({ value: `+${fmt(data.baseGain)}`, label: '/s', type: 'gain', note: def.name.toLowerCase() });
-                }
-                if (data.baseDrain > 0) {
-                    items.push({ value: `-${fmt(data.baseDrain)}`, label: '/s', type: 'drain', note: def.name.toLowerCase() });
-                }
-            }
-            if (breakdown.workerGain > 0) {
-                items.push({ value: `+${fmt(breakdown.workerGain)}`, label: '/s', type: 'gain', note: 'workers' });
-            }
-            if (breakdown.workerDrain > 0) {
-                items.push({ value: `-${fmt(breakdown.workerDrain)}`, label: '/s', type: 'drain', note: 'workers' });
-            }
-
-            const totalRate = breakdown.baseGain + breakdown.workerGain - breakdown.baseDrain - breakdown.workerDrain;
-            const resultItems = [{
-                value: `${totalRate >= 0 ? '+' : ''}${fmt(totalRate)}`,
-                label: '/s',
-                type: totalRate >= 0 ? 'gain' : 'drain'
-            }];
-
-            return createBreakdownBox({ items, modifiers: [], result: { items: resultItems } }) + capHtml;
+            return createBreakdownBox(data) + capHtml;
         });
 
         registerTip('resource-rate', (el) => {
             const res = el.dataset.resource;
             if (!res || !core.industry.resources[res]) return '';
 
-            const breakdown = core.industry.getResourceProductionBreakdown(res);
-            if (!breakdown || (breakdown.baseGain === 0 && breakdown.baseDrain === 0 && breakdown.workerGain === 0 && breakdown.workerDrain === 0)) {
+            const data = core.industry.getResourceProductionTooltipData(res);
+            if (!data) {
                 return `<p style="opacity: 0.7; font-style: italic">No production</p>`;
             }
 
-            const items = [];
-
-            for (const [type, data] of Object.entries(breakdown.byBuilding)) {
-                const def = core.industry.constructor.BUILDING_DEFS[type];
-                if (data.baseGain > 0) {
-                    items.push({ value: `+${fmt(data.baseGain)}`, label: '/s', type: 'gain', note: def.name.toLowerCase() });
-                }
-                if (data.baseDrain > 0) {
-                    items.push({ value: `-${fmt(data.baseDrain)}`, label: '/s', type: 'drain', note: def.name.toLowerCase() });
-                }
-            }
-            if (breakdown.workerGain > 0) {
-                items.push({ value: `+${fmt(breakdown.workerGain)}`, label: '/s', type: 'gain', note: 'workers' });
-            }
-            if (breakdown.workerDrain > 0) {
-                items.push({ value: `-${fmt(breakdown.workerDrain)}`, label: '/s', type: 'drain', note: 'workers' });
-            }
-
-            if (!items.length) {
-                return `<p style="opacity: 0.7; font-style: italic">No production</p>`;
-            }
-
-            const totalRate = breakdown.baseGain + breakdown.workerGain - breakdown.baseDrain - breakdown.workerDrain;
-            const resultItems = [{
-                value: `${totalRate >= 0 ? '+' : ''}${fmt(totalRate)}`,
-                label: '/s',
-                type: totalRate >= 0 ? 'gain' : 'drain'
-            }];
-
-            return createBreakdownBox({ items, modifiers: [], result: { items: resultItems } });
+            return createBreakdownBox(data);
         });
 
 
-        registerTip('build-disabled', (el) => {
+        registerTip('build', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-            const panel = core.ui.panels.industry;
-            const reason = panel.getBuildDisabledReason(type, core.industry.constructor.BUILDING_DEFS[type]);
-            return reason ? `<p>${reason}</p>` : '';
+            const data = core.industry.getBuildTooltipData(type);
+            if (!data) return '';
+            return createBreakdownBox(data);
         });
 
-        registerTip('demolish-disabled', (el) => {
+        registerTip('demolish', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-            const panel = core.ui.panels.industry;
-            const reason = panel.getDemolishDisabledReason(type);
-            return reason ? `<p>${reason}</p>` : '';
+            const data = core.industry.getDemolishTooltipData(type);
+            if (!data) return '';
+            return createBreakdownBox(data);
         });
 
         registerTip('demolish-warning', (el) => {
@@ -726,304 +680,37 @@ export default function createTooltipService(core) {
             return warning ? `<p>${warning}</p>` : '';
         });
 
-        registerTip('hire-disabled', (el) => {
+        registerTip('hire', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-            const panel = core.ui.panels.industry;
-            const reason = panel.getHireDisabledReason(type);
-            return reason ? `<p>${reason}</p>` : '';
-        });
-
-        registerTip('build-partial', (el) => {
-            const type = el.dataset.buildingType;
-            if (!type) return '';
-            const panel = core.ui.panels.industry;
-            const text = panel.getBuildPartialText(type);
-            return text ? `<p>${text}</p>` : '';
-        });
-
-        registerTip('build-effects-affordable', (el) => {
-            const type = el.dataset.buildingType;
-            if (!type) return '';
-            const panel = core.ui.panels.industry;
-            const result = core.industry.getBuildEffects(type);
-            if (!result) return '';
-
-            const plan = panel.getActionPlanDetails('build', type);
-            const isPartial = plan.actual > 0 && plan.actual < plan.target;
-
-            if (isPartial) {
-                // Show partial build info (what can actually be built)
-                const multiplier = plan.actual;
-                const details = panel.getButtonDetailsWithMultiplier(result, multiplier);
-                if (!details) return '';
-
-                const items = [];
-                if (details.costs?.length) {
-                    details.costs.forEach(c => {
-                        items.push(`<span style="color: var(--drainColor)">-${fmt(c.amt)} ${c.res}</span>`);
-                    });
-                }
-                if (details.effects?.length) {
-                    details.effects.forEach(e => {
-                        const sign = e.type === 'gain' ? '+' : '-';
-                        const color = e.type === 'gain' ? 'var(--gainColor)' : 'var(--drainColor)';
-                        items.push(`<span style="color: ${color}">${sign}${fmt(e.val)} ${e.res}/s</span>`);
-                    });
-                }
-                if (details.capChanges?.length) {
-                    const capItems = [];
-                    details.capChanges.forEach(c => {
-                        const isPositive = c.val >= 0;
-                        const sign = isPositive ? '+' : '';
-                        const color = isPositive ? 'var(--gainColor)' : 'var(--drainColor)';
-                        capItems.push(`<span style="color: ${color}">${sign}${fmt(c.val, { decimalPlaces: 2 })} ${c.res} cap</span>`);
-                    });
-                    if (capItems.length > 0) {
-                        items.push(`<br>${capItems.join(' ')}`);
-                    }
-                }
-
-                if (items.length === 0) return '';
-                return `<p>Can build ${multiplier}</p><p style="font-weight: 600">${items.join(', ')}</p>`;
-            } else {
-                // Show full build effects (what will be built at increment)
-                const multiplier = plan.target;
-                const details = panel.getButtonDetailsWithMultiplier(result, multiplier);
-                if (!details) return '';
-
-                const items = [];
-                if (details.costs?.length) {
-                    details.costs.forEach(c => {
-                        items.push(`<span style="color: var(--drainColor)">-${fmt(c.amt)} ${c.res}</span>`);
-                    });
-                }
-                if (details.effects?.length) {
-                    details.effects.forEach(e => {
-                        const sign = e.type === 'gain' ? '+' : '-';
-                        const color = e.type === 'gain' ? 'var(--gainColor)' : 'var(--drainColor)';
-                        items.push(`<span style="color: ${color}">${sign}${fmt(e.val)} ${e.res}/s</span>`);
-                    });
-                }
-                if (details.capChanges?.length) {
-                    const capItems = [];
-                    details.capChanges.forEach(c => {
-                        const isPositive = c.val >= 0;
-                        const sign = isPositive ? '+' : '';
-                        const color = isPositive ? 'var(--gainColor)' : 'var(--drainColor)';
-                        capItems.push(`<span style="color: ${color}">${sign}${fmt(c.val, { decimalPlaces: 2 })} ${c.res} cap</span>`);
-                    });
-                    if (capItems.length > 0) {
-                        items.push(`<br>${capItems.join(' ')}`);
-                    }
-                }
-
-                if (items.length === 0) return '';
-                return `<p style="font-weight: 600">${items.join(', ')}</p>`;
-            }
-        });
-
-        registerTip('hire-partial', (el) => {
-            const type = el.dataset.buildingType;
-            if (!type) return '';
-            const panel = core.ui.panels.industry;
-            const text = panel.getHirePartialText(type);
-            return text ? `<p>${text}</p>` : '';
-        });
-
-        registerTip('hire-effects-affordable', (el) => {
-            const type = el.dataset.buildingType;
-            if (!type) return '';
-            const panel = core.ui.panels.industry;
-            const result = core.industry.getHireWorkerEffects(type);
-            if (!result) return '';
-
-            const plan = panel.getActionPlanDetails('hire', type);
-            const isPartial = plan.actual > 0 && plan.actual < plan.target;
-
-            if (isPartial) {
-                // Show partial hire info (what can actually be hired)
-                const multiplier = plan.actual;
-                // For worker hiring, all effects are in result.effects and we separate based on sign
-                const { costs, effects } = Object.entries(result.effects || {}).reduce((acc, [res, val]) => {
-                    const item = { res, val: Math.abs(val) * multiplier, type: val < 0 ? 'drain' : 'gain' };
-                    (val < 0 ? acc.costs : acc.effects).push(item);
-                    return acc;
-                }, { costs: [], effects: [] });
-
-                const items = [];
-                if (costs?.length) {
-                    costs.forEach(c => {
-                        items.push(`<span style="color: var(--drainColor)">-${fmt(c.val, { decimalPlaces: 2 })} ${c.res}</span>`);
-                    });
-                }
-                if (effects?.length) {
-                    effects.forEach(e => {
-                        const sign = e.type === 'gain' ? '+' : '-';
-                        const color = e.type === 'gain' ? 'var(--gainColor)' : 'var(--drainColor)';
-                        items.push(`<span style="color: ${color}">${sign}${fmt(e.val, { decimalPlaces: 2 })} ${e.res}/s</span>`);
-                    });
-                }
-
-                if (items.length === 0) return '';
-                return `<p>Can hire ${multiplier}</p><p style="font-weight: 600">${items.join(', ')}</p>`;
-            } else {
-                // Show full hire effects (what will be hired at increment)
-                const multiplier = plan.target;
-                // For worker hiring, all effects are in result.effects and we separate based on sign
-                const { costs, effects } = Object.entries(result.effects || {}).reduce((acc, [res, val]) => {
-                    const item = { res, val: Math.abs(val) * multiplier, type: val < 0 ? 'drain' : 'gain' };
-                    (val < 0 ? acc.costs : acc.effects).push(item);
-                    return acc;
-                }, { costs: [], effects: [] });
-
-                const items = [];
-                if (costs?.length) {
-                    costs.forEach(c => {
-                        items.push(`<span style="color: var(--drainColor)">-${fmt(c.val, { decimalPlaces: 2 })} ${c.res}</span>`);
-                    });
-                }
-                if (effects?.length) {
-                    effects.forEach(e => {
-                        const sign = e.type === 'gain' ? '+' : '-';
-                        const color = e.type === 'gain' ? 'var(--gainColor)' : 'var(--drainColor)';
-                        items.push(`<span style="color: ${color}">${sign}${fmt(e.val, { decimalPlaces: 2 })} ${e.res}/s</span>`);
-                    });
-                }
-
-                if (items.length === 0) return '';
-                return `<p style="font-weight: 600">${items.join(', ')}</p>`;
-            }
+            const data = core.industry.getHireTooltipData(type);
+            if (!data) return '';
+            return createBreakdownBox(data);
         });
 
 
-        registerTip('furlough-disabled', (el) => {
+        registerTip('furlough', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-            const panel = core.ui.panels.industry;
-            const reason = panel.getFurloughDisabledReason(type);
-            return reason ? `<p>${reason}</p>` : '';
+            const data = core.industry.getFurloughTooltipData(type);
+            if (!data) return '';
+            return createBreakdownBox(data);
         });
 
         registerTip('building-effects', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-
-            const def = core.industry.constructor.BUILDING_DEFS[type];
-            const b = core.industry.buildings[type];
-            if (!def || !b || b.count === 0) return '';
-
-            const buildingName = def.name.toLowerCase();
-            const wisdom = core.city?.ruler?.wisdom || 0;
-            const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
-
-            const sections = [];
-            for (const [res, eff] of Object.entries(def.effects)) {
-                if (!eff.base) continue;
-
-                const items = [];
-                const gainItems = [];
-                let baseGain = 0, baseDrain = 0;
-
-                if (eff.base.gain) {
-                    baseGain = eff.base.gain.toNumber?.() ?? eff.base.gain;
-                    gainItems.push({ value: `+${fmt(baseGain)}`, label: `${res}/s`, type: 'gain' });
-                }
-                items.push(...gainItems);
-
-                if (eff.base.drain) {
-                    baseDrain = eff.base.drain.toNumber?.() ?? eff.base.drain;
-                    items.push({ value: `-${fmt(baseDrain)}`, label: `${res}/s`, type: 'drain' });
-                }
-
-                const mods = [];
-                if (wisdom > 0 && gainItems.length > 0) {
-                    mods.push({ value: `×${fmt(wisdomMult)}`, label: 'wisdom', range: [0, gainItems.length - 1] });
-                }
-                mods.push({ value: '×', label: `${b.count} ${buildingName}${b.count !== 1 ? 's' : ''}`, range: [0, items.length - 1] });
-
-                const finalTotal = (baseGain * wisdomMult - baseDrain) * b.count;
-                const resultItems = [{
-                    value: `${finalTotal >= 0 ? '+' : ''}${fmt(finalTotal)}`,
-                    label: `${res}/s`,
-                    type: finalTotal >= 0 ? 'gain' : 'drain'
-                }];
-
-                sections.push(createBreakdownBox({ items, modifiers: mods, result: { items: resultItems } }));
-            }
-
-            return sections.join('');
+            const sections = core.industry.getBuildingEffectsTooltipData(type);
+            if (!sections || sections.length === 0) return '';
+            return sections.map(s => createBreakdownBox(s)).join('');
         });
 
         registerTip('worker-effects', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-
-            const def = core.industry.constructor.BUILDING_DEFS[type];
-            const b = core.industry.buildings[type];
-            if (!def || !b || !b.workers || b.workers === 0) return '';
-
-            const scale = core.industry.getWorkerScalingFactor();
-            const wisdom = core.city?.ruler?.wisdom || 0;
-            const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
-
-            const gains = {}, drains = {};
-            for (const [res, eff] of Object.entries(def.effects)) {
-                if (!eff.worker) continue;
-                if (eff.worker.gain) {
-                    const v = eff.worker.gain.toNumber?.() ?? eff.worker.gain;
-                    gains[res] = (gains[res] || 0) + v;
-                }
-                if (eff.worker.drain) {
-                    const v = eff.worker.drain.toNumber?.() ?? eff.worker.drain;
-                    drains[res] = (drains[res] || 0) + v;
-                }
-            }
-
-            if (!Object.keys(gains).length && !Object.keys(drains).length) return '';
-
-            const items = [];
-            const gainItems = [];
-            for (const [res, v] of Object.entries(gains)) {
-                gainItems.push({ value: `+${fmt(v)}`, label: `${res}/s`, type: 'gain' });
-            }
-            items.push(...gainItems);
-
-            for (const [res, v] of Object.entries(drains)) {
-                const note = gains[res] ? 'pay' : 'input';
-                items.push({ value: `-${fmt(v)}`, label: `${res}/s`, type: 'drain', note });
-            }
-
-            const mods = [];
-            let modIdx = 0;
-            if (wisdom > 0 && gainItems.length > 0) {
-                mods.push({ value: `×${fmt(wisdomMult)}`, label: 'wisdom', range: [0, gainItems.length - 1] });
-                modIdx++;
-            }
-
-            let workersLabel = `${b.workers} worker${b.workers !== 1 ? 's' : ''}`;
-            if (scale < 1) {
-                workersLabel += ` × ${(scale * 100).toFixed(0)}%`;
-            }
-            mods.push({ value: '×', label: workersLabel, range: [0, items.length - 1] });
-
-            const finals = {};
-            for (const [res, v] of Object.entries(gains)) {
-                finals[res] = (finals[res] || 0) + v * wisdomMult * b.workers * scale;
-            }
-            for (const [res, v] of Object.entries(drains)) {
-                finals[res] = (finals[res] || 0) - v * b.workers * scale;
-            }
-
-            const resultItems = Object.entries(finals)
-                .filter(([, v]) => v !== 0)
-                .map(([res, v]) => ({
-                    value: `${v > 0 ? '+' : ''}${fmt(v)}`,
-                    label: `${res}/s`,
-                    type: v > 0 ? 'gain' : 'drain'
-                }));
-
-            return createBreakdownBox({ items, modifiers: mods, result: { items: resultItems } });
+            const data = core.industry.getWorkerEffectsTooltipData(type);
+            if (!data) return '';
+            return createBreakdownBox(data);
         });
 
         registerTip('time-to-next', (el) => {
@@ -1038,7 +725,7 @@ export default function createTooltipService(core) {
             if (target <= 0) return '';
 
             const resources = core.industry.resources;
-            let html = '';
+            const dataArray = [];
 
             for (const [res, cost] of Object.entries(def.buildCost)) {
                 if (!resources[res]) continue;
@@ -1051,16 +738,43 @@ export default function createTooltipService(core) {
 
                 const rate = resources[res].netGrowthRate.toNumber();
                 if (rate <= 0) {
-                    html += `<p style="color: var(--drainColor); font-weight: 500">${res}: <span style="opacity: 0.7">no gain</span></p>`;
+                    dataArray.push({
+                        items: [{
+                            value: fmt(needed),
+                            label: res,
+                            type: 'drain',
+                            note: 'no gain'
+                        }]
+                    });
                     continue;
                 }
 
                 const time = needed / rate;
-                html += `<p style="font-weight: 500">${fmt(needed)} ${res} / ${fmt(rate)}/s</p>`;
-                html += `<p style="color: var(--accent); margin-left: 0.5em">= ${panel.formatTime(time)}</p>`;
+                const item = {
+                    value: fmt(needed, { decimalPlaces: 2 }),
+                    label: res,
+                    note: 'remaining'
+                };
+                const mod = {
+                    value: `÷ ${fmt(rate)}/s`,
+                    label: 'prod.',
+                    range: [0, 0]
+                };
+                const result = {
+                    items: [{
+                        value: panel.formatTime(time)
+                    }]
+                };
+
+                dataArray.push({
+                    items: [item],
+                    modifiers: [mod],
+                    result
+                });
             }
 
-            return html;
+            if (dataArray.length === 0) return '';
+            return dataArray.map(data => createBreakdownBox(data)).join('');
         });
 
         registerTip('worker-limit', (el) => {
@@ -1074,12 +788,31 @@ export default function createTooltipService(core) {
             const perBuilding = def.workersPerBuilding || 0;
             const total = perBuilding * b.count;
             const buildingName = def.name.toLowerCase();
+            const buildingNamePlural = `${buildingName}${b.count !== 1 ? 's' : ''}`;
 
-            let html = `<p style="font-weight: 500">${perBuilding} worker${perBuilding !== 1 ? 's' : ''}/${buildingName}</p>`;
-            html += `<p style="opacity: 0.7">× ${b.count} ${buildingName}${b.count !== 1 ? 's' : ''}</p>`;
-            html += `<p style="color: var(--accent); font-weight: 600">= ${total} worker${total !== 1 ? 's' : ''}</p>`;
+            const item = {
+                value: `${perBuilding}`,
+                label: 'worker cap'
+            };
+            const mod = {
+                value: `x ${b.count}`,
+                label: buildingNamePlural,
+                range: [0, 0]
+            };
+            const result = {
+                items: [{
+                    value: `${total}`,
+                    label: 'worker cap'
+                }]
+            };
 
-            return html;
+            const data = {
+                items: [item],
+                modifiers: [mod],
+                result
+            };
+
+            return createBreakdownBox(data);
         });
 
         registerTip('worker-limited', (el) => {
@@ -1114,7 +847,7 @@ export default function createTooltipService(core) {
             }
 
             const potentialEffects = [...negativePotential, ...positivePotential];
-            return potentialEffects.length > 0 ? `<p style="font-weight: 500">Potential: ${potentialEffects.join(', ')}</p>` : '';
+            return potentialEffects.length > 0 ? `<p>Potential: ${potentialEffects.join(', ')}</p>` : '';
         });
 
         const navButtons = document.querySelectorAll(".navbutton");
@@ -1142,62 +875,10 @@ export default function createTooltipService(core) {
 
             if (!actionType) return '';
 
-            const panel = core.ui.panels.industry;
-            let details = null;
-            switch (actionType) {
-                case 'build': details = panel.getBuildingButtonDetails(buildingType); break;
-                case 'demolish': details = panel.getDemolishButtonDetails(buildingType); break;
-                case 'hire': details = panel.getWorkerButtonDetails(buildingType); break;
-                case 'furlough': details = panel.getFurloughButtonDetails(buildingType); break;
-            }
-            if (!details) return '';
+            const data = core.industry.getInfoBoxTooltipData(actionType, buildingType);
+            if (!data) return '';
 
-            const wisdom = core.city?.ruler?.wisdom || 0;
-            const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
-
-            const drainItems = [];
-            const gainItems = [];
-
-            details.costs?.forEach(c => {
-                const v = c.amt || c.val || 0;
-                if (v > 0) drainItems.push({ value: `-${fmt(v)}`, label: c.res + (c.amt !== undefined ? '' : '/s'), type: 'drain' });
-            });
-            details.rewards?.forEach(r => {
-                const v = r.amt || 0;
-                if (v > 0) gainItems.push({ value: `+${fmt(v)}`, label: r.res, type: 'gain' });
-            });
-            details.effects?.forEach(e => {
-                const v = e.val || 0;
-                if (v > 0) {
-                    const item = { value: `${e.type === 'gain' ? '+' : '-'}${fmt(v)}`, label: `${e.res}/s`, type: e.type };
-                    (e.type === 'gain' ? gainItems : drainItems).push(item);
-                }
-            });
-
-            const capDrain = [];
-            const capGain = [];
-            details.capChanges?.forEach(c => {
-                const v = c.val;
-                if (v !== 0) {
-                    const isPos = v > 0;
-                    const item = { value: `${isPos ? '+' : ''}${fmt(v)}`, label: `${c.res} cap`, type: isPos ? 'gain' : 'drain' };
-                    (isPos ? capGain : capDrain).push(item);
-                }
-            });
-
-            const items = [...drainItems, ...gainItems];
-            const capItems = [...capDrain, ...capGain];
-
-            const mods = [];
-            if (wisdom > 0 && gainItems.length > 0) {
-                const start = drainItems.length;
-                mods.push({ value: `×${fmt(wisdomMult)}`, label: 'wisdom', range: [start, start + gainItems.length - 1] });
-            }
-
-            if (capItems.length) {
-                return createBreakdownBox({ items, modifiers: mods }) + createBreakdownBox({ items: capItems });
-            }
-            return createBreakdownBox({ items, modifiers: mods });
+            return createBreakdownBox(data);
         });
 
         observeTooltips();

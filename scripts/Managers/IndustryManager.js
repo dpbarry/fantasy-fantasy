@@ -924,6 +924,610 @@ export default class IndustryManager {
         this.recalculate();
         return new Decimal(this.#cache.rates.get(res));
     }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // TOOLTIP DATA METHODS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    getBuildTooltipData(type) {
+        const plan = this.getActionPlan('build', type);
+        if (plan.actual <= 0) {
+            return { header: this.getBuildDisabledReason(type) };
+        }
+
+        const def = IndustryManager.BUILDING_DEFS[type];
+        if (!def) return { header: 'Cannot build' };
+
+        const fmt = (v, opt) => this.core.ui.formatNumber(v, opt);
+        const wisdom = this.core.city?.ruler?.wisdom || 0;
+        const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
+
+        const isPartial = plan.actual < plan.target;
+        const multiplier = isPartial ? plan.actual : plan.target;
+
+        const costs = def.buildCost ? Object.entries(def.buildCost).map(([res, amt]) => ({
+            value: `-${fmt(amt * multiplier)}`,
+            label: res,
+            type: 'drain',
+            note: 'cost'
+        })) : [];
+
+        const items = [];
+        const gainItems = [];
+        const netEffects = {};
+        for (const [res, eff] of Object.entries(def.effects || {})) {
+            if (!eff.base) continue;
+            const baseGain = eff.base.gain?.toNumber?.() ?? (eff.base.gain || 0);
+            const baseDrain = eff.base.drain?.toNumber?.() ?? (eff.base.drain || 0);
+            
+            if (baseGain !== 0) {
+                const baseVal = baseGain * multiplier;
+                const item = {
+                    value: `+${fmt(baseVal)}`,
+                    label: `${res}/s`,
+                    type: 'gain',
+                    note: 'prod.'
+                };
+                items.push(item);
+                gainItems.push(item);
+                netEffects[res] = (netEffects[res] || 0) + baseVal * wisdomMult;
+            }
+            if (baseDrain !== 0) {
+                const baseVal = baseDrain * multiplier;
+                items.push({
+                    value: `-${fmt(baseVal)}`,
+                    label: `${res}/s`,
+                    type: 'drain'
+                });
+                netEffects[res] = (netEffects[res] || 0) - baseVal;
+            }
+        }
+
+        const mods = [];
+        if (wisdom > 0 && gainItems.length > 0) {
+            const gainIndices = gainItems.map(item => items.indexOf(item));
+            const start = Math.min(...gainIndices);
+            const end = Math.max(...gainIndices);
+            mods.push({
+                value: `×${fmt(wisdomMult)}`,
+                label: 'wisdom',
+                range: [start, end]
+            });
+        }
+
+        const capChanges = [];
+        if (def.capIncrease) {
+            for (const [res, val] of Object.entries(def.capIncrease)) {
+                capChanges.push({
+                    value: `+${fmt(val * multiplier)}`,
+                    label: `${res} cap`,
+                    type: 'gain'
+                });
+            }
+        }
+        if (def.workersPerBuilding) {
+            capChanges.push({
+                value: `+${fmt(def.workersPerBuilding * multiplier)}`,
+                label: 'workers cap',
+                type: 'gain'
+            });
+        }
+
+        const resultItems = Object.entries(netEffects)
+            .filter(([, v]) => v !== 0)
+            .map(([res, v]) => ({
+                value: `${v > 0 ? '+' : ''}${fmt(v)}`,
+                label: `${res}/s`,
+                type: v > 0 ? 'gain' : 'drain'
+            }));
+
+        const header = isPartial ? `Can build ${multiplier}` : null;
+
+        return { header, costs, items, modifiers: mods, capChanges, result: { items: resultItems } };
+    }
+
+    getHireTooltipData(type) {
+        const plan = this.getActionPlan('hire', type);
+        if (plan.actual <= 0) {
+            return { header: this.getHireDisabledReason(type) };
+        }
+
+        const def = IndustryManager.BUILDING_DEFS[type];
+        if (!def?.effects) return { header: 'Cannot hire' };
+
+        const fmt = (v, opt) => this.core.ui.formatNumber(v, opt);
+        const wisdom = this.core.city?.ruler?.wisdom || 0;
+        const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
+        const scale = this.getWorkerScale();
+
+        const isPartial = plan.actual < plan.target;
+        const multiplier = isPartial ? plan.actual : plan.target;
+
+        const gains = {}, drains = {};
+        for (const [res, eff] of Object.entries(def.effects)) {
+            if (!eff.worker) continue;
+            if (eff.worker.gain) {
+                const v = eff.worker.gain.toNumber?.() ?? eff.worker.gain;
+                gains[res] = (gains[res] || 0) + v;
+            }
+            if (eff.worker.drain) {
+                const v = eff.worker.drain.toNumber?.() ?? eff.worker.drain;
+                drains[res] = (drains[res] || 0) + v;
+            }
+        }
+
+        if (!Object.keys(gains).length && !Object.keys(drains).length) {
+            return { header: 'Cannot hire' };
+        }
+
+        const items = [];
+        const gainItems = [];
+        for (const [res, v] of Object.entries(gains)) {
+            const baseVal = v * multiplier;
+            const item = {
+                value: `+${fmt(baseVal)}`,
+                label: `${res}/s`,
+                type: 'gain',
+                note: 'prod.'
+            };
+            gainItems.push(item);
+            items.push(item);
+        }
+
+        for (const [res, v] of Object.entries(drains)) {
+            const baseVal = v * multiplier;
+            const note = gains[res] ? 'pay' : 'input';
+            items.push({
+                value: `-${fmt(baseVal)}`,
+                label: `${res}/s`,
+                type: 'drain',
+                note
+            });
+        }
+
+        const mods = [];
+        if (wisdom > 0 && gainItems.length > 0) {
+            const gainIndices = gainItems.map(item => items.indexOf(item));
+            const start = Math.min(...gainIndices);
+            const end = Math.max(...gainIndices);
+            mods.push({
+                value: `×${fmt(wisdomMult)}`,
+                label: 'wisdom',
+                range: [start, end]
+            });
+        }
+
+        const netEffects = {};
+        for (const [res, v] of Object.entries(gains)) {
+            netEffects[res] = (netEffects[res] || 0) + v * multiplier * wisdomMult * scale;
+        }
+        for (const [res, v] of Object.entries(drains)) {
+            netEffects[res] = (netEffects[res] || 0) - v * multiplier * scale;
+        }
+
+        const resultItems = Object.entries(netEffects)
+            .filter(([, v]) => v !== 0)
+            .map(([res, v]) => ({
+                value: `${v > 0 ? '+' : ''}${fmt(v)}`,
+                label: `${res}/s`,
+                type: v > 0 ? 'gain' : 'drain'
+            }));
+
+        const header = isPartial ? `Can hire ${multiplier}` : null;
+
+        return { header, items, modifiers: mods, result: { items: resultItems } };
+    }
+
+    getDemolishTooltipData(type) {
+        const plan = this.getActionPlan('sell', type);
+        if (plan.actual <= 0) {
+            return { header: this.getDemolishDisabledReason(type) };
+        }
+        if (plan.actual < plan.target) {
+            return { header: `Can only demolish ${plan.actual} (all)` };
+        }
+        return null;
+    }
+
+    getFurloughTooltipData(type) {
+        const plan = this.getActionPlan('furlough', type);
+        if (plan.actual <= 0) {
+            return { header: this.getFurloughDisabledReason(type) };
+        }
+        if (plan.actual < plan.target) {
+            return { header: `Can only furlough ${plan.actual} (all)` };
+        }
+        return null;
+    }
+
+    getBuildingEffectsTooltipData(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        const b = this.buildings[type];
+        if (!def || !b || b.count === 0) return null;
+
+        const fmt = (v, opt) => this.core.ui.formatNumber(v, opt);
+        const buildingName = def.name.toLowerCase();
+        const wisdom = this.core.city?.ruler?.wisdom || 0;
+        const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
+
+        const sections = [];
+        for (const [res, eff] of Object.entries(def.effects)) {
+            if (!eff.base) continue;
+
+            const items = [];
+            const gainItems = [];
+            let baseGain = 0, baseDrain = 0;
+
+            if (eff.base.gain) {
+                baseGain = eff.base.gain.toNumber?.() ?? eff.base.gain;
+                gainItems.push({ value: `+${fmt(baseGain)}`, label: `${res}/s`, type: 'gain', note: 'prod.' });
+            }
+            items.push(...gainItems);
+
+            if (eff.base.drain) {
+                baseDrain = eff.base.drain.toNumber?.() ?? eff.base.drain;
+                items.push({ value: `-${fmt(baseDrain)}`, label: `${res}/s`, type: 'drain' });
+            }
+
+            const mods = [];
+            if (wisdom > 0 && gainItems.length > 0) {
+                mods.push({ value: `×${fmt(wisdomMult)}`, label: 'wisdom', range: [0, gainItems.length - 1] });
+            }
+            mods.push({ value: '×', label: `${b.count} ${buildingName}${b.count !== 1 ? 's' : ''}`, range: [0, items.length - 1] });
+
+            const finalTotal = (baseGain * wisdomMult - baseDrain) * b.count;
+            const resultItems = [{
+                value: `${finalTotal >= 0 ? '+' : ''}${fmt(finalTotal)}`,
+                label: `${res}/s`,
+                type: finalTotal >= 0 ? 'gain' : 'drain'
+            }];
+
+            sections.push({ items, modifiers: mods, result: { items: resultItems } });
+        }
+
+        return sections;
+    }
+
+    getWorkerEffectsTooltipData(type) {
+        const def = IndustryManager.BUILDING_DEFS[type];
+        const b = this.buildings[type];
+        if (!def || !b || !b.workers || b.workers === 0) return null;
+
+        const fmt = (v, opt) => this.core.ui.formatNumber(v, opt);
+        const scale = this.getWorkerScale();
+        const wisdom = this.core.city?.ruler?.wisdom || 0;
+        const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
+
+        const gains = {}, drains = {};
+        for (const [res, eff] of Object.entries(def.effects)) {
+            if (!eff.worker) continue;
+            if (eff.worker.gain) {
+                const v = eff.worker.gain.toNumber?.() ?? eff.worker.gain;
+                gains[res] = (gains[res] || 0) + v;
+            }
+            if (eff.worker.drain) {
+                const v = eff.worker.drain.toNumber?.() ?? eff.worker.drain;
+                drains[res] = (drains[res] || 0) + v;
+            }
+        }
+
+        if (!Object.keys(gains).length && !Object.keys(drains).length) return null;
+
+        const items = [];
+        const gainItems = [];
+        for (const [res, v] of Object.entries(gains)) {
+            gainItems.push({ value: `+${fmt(v)}`, label: `${res}/s`, type: 'gain', note: 'prod.' });
+        }
+        items.push(...gainItems);
+
+        for (const [res, v] of Object.entries(drains)) {
+            const note = gains[res] ? 'pay' : 'input';
+            items.push({ value: `-${fmt(v)}`, label: `${res}/s`, type: 'drain', note });
+        }
+
+        const mods = [];
+        if (wisdom > 0 && gainItems.length > 0) {
+            mods.push({ value: `×${fmt(wisdomMult)}`, label: 'wisdom', range: [0, gainItems.length - 1] });
+        }
+
+        let workersLabel = `${b.workers} worker${b.workers !== 1 ? 's' : ''}`;
+        if (scale < 1) {
+            workersLabel += ` × ${(scale * 100).toFixed(0)}%`;
+        }
+        mods.push({ value: '×', label: workersLabel, range: [0, items.length - 1] });
+
+        const finals = {};
+        for (const [res, v] of Object.entries(gains)) {
+            finals[res] = (finals[res] || 0) + v * wisdomMult * b.workers * scale;
+        }
+        for (const [res, v] of Object.entries(drains)) {
+            finals[res] = (finals[res] || 0) - v * b.workers * scale;
+        }
+
+        const resultItems = Object.entries(finals)
+            .filter(([, v]) => v !== 0)
+            .map(([res, v]) => ({
+                value: `${v > 0 ? '+' : ''}${fmt(v)}`,
+                label: `${res}/s`,
+                type: v > 0 ? 'gain' : 'drain'
+            }));
+
+        return { items, modifiers: mods, result: { items: resultItems } };
+    }
+
+    getResourceProductionTooltipData(resource) {
+        if (!this.resources[resource]) return null;
+
+        const fmt = (v, opt) => this.core.ui.formatNumber(v, opt);
+        const breakdown = this.getResourceProductionBreakdown(resource);
+        if (!breakdown || (breakdown.baseGain === 0 && breakdown.baseDrain === 0 && breakdown.workerGain === 0 && breakdown.workerDrain === 0)) {
+            return null;
+        }
+
+        const items = [];
+        for (const [type, data] of Object.entries(breakdown.byBuilding)) {
+            const def = IndustryManager.BUILDING_DEFS[type];
+            if (data.baseGain > 0) {
+                items.push({ value: `+${fmt(data.baseGain)}`, label: '/s', type: 'gain', note: def.name.toLowerCase() });
+            }
+            if (data.baseDrain > 0) {
+                items.push({ value: `-${fmt(data.baseDrain)}`, label: '/s', type: 'drain', note: def.name.toLowerCase() });
+            }
+        }
+        if (breakdown.workerGain > 0) {
+            items.push({ value: `+${fmt(breakdown.workerGain)}`, label: '/s', type: 'gain', note: 'workers' });
+        }
+        if (breakdown.workerDrain > 0) {
+            items.push({ value: `-${fmt(breakdown.workerDrain)}`, label: '/s', type: 'drain', note: 'workers' });
+        }
+
+        const totalRate = breakdown.baseGain + breakdown.workerGain - breakdown.baseDrain - breakdown.workerDrain;
+        const resultItems = [{
+            value: `${totalRate >= 0 ? '+' : ''}${fmt(totalRate)}`,
+            label: '/s',
+            type: totalRate >= 0 ? 'gain' : 'drain'
+        }];
+
+        return { items, modifiers: [], result: { items: resultItems } };
+    }
+
+    getInfoBoxTooltipData(action, type) {
+        const plan = this.getActionPlan(action, type);
+        const fmt = (v, opt) => this.core.ui.formatNumber(v, opt);
+        const wisdom = this.core.city?.ruler?.wisdom || 0;
+        const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
+        const multiplier = plan.target;
+
+        let result;
+        switch (action) {
+            case 'build':
+                result = this.getBuildEffects(type);
+                if (!result) return null;
+                break;
+            case 'demolish':
+                result = this.getDemolishEffects(type);
+                if (!result) return null;
+                break;
+            case 'hire':
+                result = this.getHireWorkerEffects(type);
+                if (!result) return null;
+                break;
+            case 'furlough':
+                result = this.getFurloughWorkerEffects(type);
+                if (!result) return null;
+                break;
+            default:
+                return null;
+        }
+
+        if (action === 'build') {
+            const def = IndustryManager.BUILDING_DEFS[type];
+            if (!def) return null;
+
+            const costs = def.buildCost ? Object.entries(def.buildCost).map(([res, amt]) => ({
+                value: `-${fmt(amt * multiplier)}`,
+                label: res,
+                type: 'drain',
+                note: 'cost'
+            })) : [];
+
+            const items = [];
+            const gainItems = [];
+            const netEffects = {};
+            for (const [res, eff] of Object.entries(def.effects || {})) {
+                if (!eff.base) continue;
+                const baseGain = eff.base.gain?.toNumber?.() ?? (eff.base.gain || 0);
+                const baseDrain = eff.base.drain?.toNumber?.() ?? (eff.base.drain || 0);
+                
+                if (baseGain !== 0) {
+                    const baseVal = baseGain * multiplier;
+                    const item = {
+                        value: `+${fmt(baseVal)}`,
+                        label: `${res}/s`,
+                        type: 'gain',
+                        note: 'prod.'
+                    };
+                    items.push(item);
+                    gainItems.push(item);
+                    netEffects[res] = (netEffects[res] || 0) + baseVal * wisdomMult;
+                }
+                if (baseDrain !== 0) {
+                    const baseVal = baseDrain * multiplier;
+                    items.push({
+                        value: `-${fmt(baseVal)}`,
+                        label: `${res}/s`,
+                        type: 'drain'
+                    });
+                    netEffects[res] = (netEffects[res] || 0) - baseVal;
+                }
+            }
+
+            const mods = [];
+            if (wisdom > 0 && gainItems.length > 0) {
+                const gainIndices = gainItems.map(item => items.indexOf(item));
+                const start = Math.min(...gainIndices);
+                const end = Math.max(...gainIndices);
+                mods.push({
+                    value: `×${fmt(wisdomMult)}`,
+                    label: 'wisdom',
+                    range: [start, end]
+                });
+            }
+
+            const capChanges = [];
+            if (def.capIncrease) {
+                for (const [res, val] of Object.entries(def.capIncrease)) {
+                    capChanges.push({
+                        value: `+${fmt(val * multiplier)}`,
+                        label: `${res} cap`,
+                        type: 'gain'
+                    });
+                }
+            }
+            if (def.workersPerBuilding) {
+                capChanges.push({
+                    value: `+${fmt(def.workersPerBuilding * multiplier)}`,
+                    label: 'workers cap',
+                    type: 'gain'
+                });
+            }
+
+            return { costs, items, modifiers: mods, capChanges };
+        } else if (action === 'demolish') {
+            const costs = result.rewards?.map(r => ({
+                value: `+${fmt(r.amt * multiplier)}`,
+                label: r.res,
+                type: 'gain'
+            })) || [];
+
+            const items = [];
+            const netEffects = {};
+            for (const [res, val] of Object.entries(result.effects || {})) {
+                if (val !== 0) {
+                    const absVal = Math.abs(val) * multiplier;
+                    items.push({
+                        value: `${val > 0 ? '+' : '-'}${fmt(absVal)}`,
+                        label: `${res}/s`,
+                        type: val > 0 ? 'gain' : 'drain',
+                        note: val > 0 ? 'prod.' : undefined
+                    });
+                    netEffects[res] = val * multiplier;
+                }
+            }
+
+            const capChanges = Object.entries(result.capChanges || {}).map(([res, val]) => ({
+                value: `${val >= 0 ? '+' : ''}${fmt(val * multiplier)}`,
+                label: `${res} cap`,
+                type: val >= 0 ? 'gain' : 'drain'
+            }));
+
+            return { costs, items, modifiers: [], capChanges };
+        } else if (action === 'hire') {
+            const def = IndustryManager.BUILDING_DEFS[type];
+            if (!def?.effects) return null;
+
+            const scale = this.getWorkerScale();
+            const drainItems = [];
+            const gainItems = [];
+            
+            for (const [res, eff] of Object.entries(def.effects)) {
+                if (!eff.worker) continue;
+                const baseGain = eff.worker.gain?.toNumber?.() ?? (eff.worker.gain || 0);
+                const baseDrain = eff.worker.drain?.toNumber?.() ?? (eff.worker.drain || 0);
+                
+                if (baseDrain !== 0) {
+                    const baseVal = baseDrain * multiplier * scale;
+                    const note = baseGain !== 0 ? 'pay' : 'input';
+                    drainItems.push({
+                        value: `-${fmt(baseVal)}`,
+                        label: `${res}/s`,
+                        type: 'drain',
+                        note
+                    });
+                }
+                if (baseGain !== 0) {
+                    const baseVal = baseGain * multiplier * scale;
+                    gainItems.push({
+                        value: `+${fmt(baseVal)}`,
+                        label: `${res}/s`,
+                        type: 'gain',
+                        note: 'prod.'
+                    });
+                }
+            }
+
+            const items = [...drainItems, ...gainItems];
+
+            const mods = [];
+            if (wisdom > 0 && gainItems.length > 0) {
+                const gainIndices = gainItems.map(item => items.indexOf(item));
+                const start = Math.min(...gainIndices);
+                const end = Math.max(...gainIndices);
+                mods.push({
+                    value: `×${fmt(wisdomMult)}`,
+                    label: 'wisdom',
+                    range: [start, end]
+                });
+            }
+
+            return { items, modifiers: mods };
+        } else if (action === 'furlough') {
+            const def = IndustryManager.BUILDING_DEFS[type];
+            if (!def?.effects) return null;
+
+            const scale = this.getWorkerScale();
+            const drainItems = [];
+            const gainItems = [];
+            
+            for (const [res, eff] of Object.entries(def.effects)) {
+                if (!eff.worker) continue;
+                const baseGain = eff.worker.gain?.toNumber?.() ?? (eff.worker.gain || 0);
+                const baseDrain = eff.worker.drain?.toNumber?.() ?? (eff.worker.drain || 0);
+                
+                // For furlough, removing a worker reverses the effects:
+                // - Worker gains become drains (removing the gain)
+                // - Worker drains become gains (removing the drain)
+                if (baseGain !== 0) {
+                    const baseVal = baseGain * multiplier * scale;
+                    drainItems.push({
+                        value: `-${fmt(baseVal)}`,
+                        label: `${res}/s`,
+                        type: 'drain',
+                        note: 'prod.'
+                    });
+                }
+                if (baseDrain !== 0) {
+                    const baseVal = baseDrain * multiplier * scale;
+                    const note = baseGain !== 0 ? 'pay' : 'input';
+                    gainItems.push({
+                        value: `+${fmt(baseVal)}`,
+                        label: `${res}/s`,
+                        type: 'gain',
+                        note
+                    });
+                }
+            }
+
+            const items = [...drainItems, ...gainItems];
+
+            const mods = [];
+            if (wisdom > 0 && drainItems.length > 0) {
+                // Wisdom applies to the gains being removed (shown as drains)
+                const drainIndices = drainItems.map(item => items.indexOf(item));
+                const start = Math.min(...drainIndices);
+                const end = Math.max(...drainIndices);
+                mods.push({
+                    value: `×${fmt(wisdomMult)}`,
+                    label: 'wisdom',
+                    range: [start, end]
+                });
+            }
+
+            return { items, modifiers: mods };
+        }
+
+        return null;
+    }
 }
 
 class Resource {

@@ -14,9 +14,9 @@ export default function setupGlobalBehavior(core) {
     const settingsButton = document.querySelector("#settingsnav");
     if (!settingsButton) return;
 
-    settingsButton.addEventListener("click", () => {
+    settingsButton.addEventListener("click", async () => {
         if (++settingsClicks >= 5) {
-            HackService.show(core);
+            await HackService.show(core);
             settingsClicks = 0;
         }
     });

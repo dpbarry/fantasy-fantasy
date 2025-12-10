@@ -96,7 +96,7 @@ export default class IndustryPanel {
                     const currentVal = v.value.toNumber();
                     const capVal = cap.toNumber();
                     const percent = Math.min(100, (currentVal / capVal) * 100);
-                    row.style.setProperty('--cap-percent', `${percent}%`);
+                    row.style.setProperty('--cap-percent', percent / 100);
                     row.classList.add('has-cap');
                 } else {
                     row.classList.remove('has-cap');
@@ -178,44 +178,30 @@ export default class IndustryPanel {
                 const hirePlan = this.getActionPlanDetails('hire', type);
                 const furloughPlan = this.getActionPlanDetails('furlough', type);
 
-                if (card.workerBtn) {
-                    const workerCount = b.workers || 0;
-                    const onStrike = this.core.industry.workersOnStrike;
-                    const isScaled = this.areWorkersScaled();
-
-                    if (card.workerBtnCount) {
-                        card.workerBtnCount.textContent = workerCount;
-                        const classes = { 'on-strike': onStrike && workerCount > 0, 'limited': isScaled && workerCount > 0 };
-                        Object.entries(classes).forEach(([cls, active]) =>
-                            card.workerBtnCount.classList.toggle(cls, active)
-                        );
-                    }
-                    const canHire = hirePlan.actual > 0;
-                    this.updateButtonStateWithTooltip(card.workerBtn, canHire, 'hire-disabled', type);
-
-                }
                 
                 const canBuild = buildPlan.actual > 0;
-                if (card.addBuildingBtn) this.updateButtonStateWithTooltip(card.addBuildingBtn, canBuild, 'build-disabled', type);
-                if (card.mainBtn && def?.buildCost) this.updateButtonStateWithTooltip(card.mainBtn, canBuild, 'build-disabled', type);
+                if (card.addBuildingBtn) this.updateButtonStateWithTooltip(card.addBuildingBtn, canBuild, 'build', type);
+                if (card.mainBtn && def?.buildCost) this.updateButtonStateWithTooltip(card.mainBtn, canBuild, 'build', type);
                 
                 if (card.sellBtn) {
                     const canSell = sellPlan.actual > 0;
-                    this.updateButtonStateWithTooltip(card.sellBtn, canSell, 'demolish-disabled', type);
+                    this.updateButtonStateWithTooltip(card.sellBtn, canSell, 'demolish', type);
                 }
                 
                 if (card.addWorkerBtn) {
                     const canHire = hirePlan.actual > 0;
-                    this.updateButtonStateWithTooltip(card.addWorkerBtn, canHire, 'hire-disabled', type);
+                    this.updateButtonStateWithTooltip(card.addWorkerBtn, canHire, 'hire', type);
                 }
                 
                 if (card.removeWorkerBtn) {
                     const canFurlough = furloughPlan.actual > 0;
-                    this.updateButtonStateWithTooltip(card.removeWorkerBtn, canFurlough, 'furlough-disabled', type);
+                    this.updateButtonStateWithTooltip(card.removeWorkerBtn, canFurlough, 'furlough', type);
                 }
                 
-                this.updateBuildButton(card, type, def);
                 this.updateMainButton(card, type, def);
+                this.updateWorkerButton(card, type, b);
+
+                this.updateBuildButton(card, type);
                 this.updateDemolishButton(card, type);
                 this.updateHireButton(card, type);
                 this.updateFurloughButton(card, type);
@@ -450,7 +436,7 @@ export default class IndustryPanel {
         }
     }
 
-    updateBuildButton(card, type, def) {
+    updateBuildButton(card, type) {
         const button = card.dropdown?.querySelector('.dropdown-building .dropdown-add-building-btn');
         if (!button) return;
         
@@ -482,12 +468,14 @@ export default class IndustryPanel {
         const progress = this.core.industry.getBuildProgress(type);
         this.updateProgressFill(progressFill, progress);
         
+        button.dataset.buildingType = type;
+        
         const plan = this.getActionPlanDetails('build', type);
-        if (plan.actual > 0 && plan.actual < plan.target) {
-            this.core.ui.hookTip(button, 'build-partial');
-            button.dataset.buildingType = type;
+        const shouldShowTooltip = plan.actual <= 0 || (plan.actual > 0 && plan.actual < plan.target);
+        if (shouldShowTooltip) {
+            this.core.ui.hookTip(button, 'build');
         } else {
-            this.core.ui.unhookTip(button, 'build-partial');
+            this.core.ui.unhookTip(button, 'build');
         }
     }
 
@@ -518,13 +506,55 @@ export default class IndustryPanel {
             this.updateProgressFill(progressFill, progress);
         }
         
-        const resourceProgressIndicator = button.querySelector('.resource-progress-indicator');
-        if (resourceProgressIndicator && def && def.buildCost) {
+        const costIndicator = button.querySelector('.cost-indicator');
+        if (costIndicator && def && def.buildCost) {
             const progressText = this.getResourceProgressText(type);
-            resourceProgressIndicator.textContent = progressText || '';
-            resourceProgressIndicator.style.display = progressText ? 'inline' : 'none';
+            costIndicator.textContent = progressText || '';
+            costIndicator.style.display = progressText ? 'inline' : 'none';
         }
         
+        const buildPlan = this.getActionPlanDetails('build', type);
+        const dropdown = card?.dropdown;
+        const isDropdownOpen = dropdown?.classList.contains('dropped');
+        const shouldShowTooltip = buildPlan.actual <= 0 || !isDropdownOpen || (isDropdownOpen && buildPlan.actual < buildPlan.target);
+        if (shouldShowTooltip) {
+            this.core.ui.hookTip(button, 'build');
+            button.dataset.buildingType = type;
+        } else {
+            this.core.ui.unhookTip(button, 'build');
+        }
+    }
+
+    updateWorkerButton(card, type, b) {
+        const button = card.workerBtn;
+        if (!button) return;
+        
+        const workerCount = b.workers || 0;
+        const onStrike = this.core.industry.workersOnStrike;
+        const isScaled = this.areWorkersScaled();
+
+        if (card.workerBtnCount) {
+            card.workerBtnCount.textContent = workerCount;
+            const classes = { 'on-strike': onStrike && workerCount > 0, 'limited': isScaled && workerCount > 0 };
+            Object.entries(classes).forEach(([cls, active]) =>
+                card.workerBtnCount.classList.toggle(cls, active)
+            );
+        }
+        
+        const hirePlan = this.getActionPlanDetails('hire', type);
+        const canHire = hirePlan.actual > 0;
+        button.disabled = !canHire;
+        
+        const dropdown = card?.dropdown;
+        const isDropdownOpen = dropdown?.classList.contains('dropped');
+        const shouldShowTooltip = !canHire || !isDropdownOpen || (isDropdownOpen && hirePlan.actual < hirePlan.target);
+        
+        if (shouldShowTooltip) {
+            this.core.ui.hookTip(button, 'hire');
+            button.dataset.buildingType = type;
+        } else {
+            this.core.ui.unhookTip(button, 'hire');
+        }
     }
 
     updateDemolishButton(card, type) {
@@ -536,11 +566,19 @@ export default class IndustryPanel {
         const sellPlan = this.getActionPlanDetails('sell', type);
         this.updateButtonInfoBox(button, sellPlan.actual > 0 ? details : null);
         
+        button.dataset.buildingType = type;
+        
+        const shouldShowTooltip = sellPlan.actual <= 0 || (sellPlan.actual > 0 && sellPlan.actual < sellPlan.target);
+        if (shouldShowTooltip) {
+            this.core.ui.hookTip(button, 'demolish');
+        } else {
+            this.core.ui.unhookTip(button, 'demolish');
+        }
+        
         const warning = this.getDemolishWorkerWarning(type);
         const hasWarning = warning && sellPlan.actual > 0;
         if (hasWarning) {
             this.core.ui.hookTip(button, 'demolish-warning');
-            button.dataset.buildingType = type;
         } else {
             this.core.ui.unhookTip(button, 'demolish-warning');
         }
@@ -579,12 +617,14 @@ export default class IndustryPanel {
         
         const progress = this.core.industry.getHireProgress(type);
         this.updateProgressFill(progressFill, progress);
-
+        
         const plan = this.getActionPlanDetails('hire', type);
-        if (plan.actual > 0 && plan.actual < plan.target) {
-            this.core.ui.hookTip(button, 'hire-partial');
+        const shouldShowTooltip = plan.actual <= 0 || (plan.actual > 0 && plan.actual < plan.target);
+        if (shouldShowTooltip) {
+            this.core.ui.hookTip(button, 'hire');
+            button.dataset.buildingType = type;
         } else {
-            this.core.ui.unhookTip(button, 'hire-partial');
+            this.core.ui.unhookTip(button, 'hire');
         }
     }
 
@@ -596,16 +636,39 @@ export default class IndustryPanel {
         const details = this.getFurloughButtonDetails(type);
         const furloughPlan = this.getActionPlanDetails('furlough', type);
         this.updateButtonInfoBox(button, furloughPlan.actual > 0 ? details : null);
+        
+        button.dataset.buildingType = type;
+        
+        const shouldShowTooltip = furloughPlan.actual <= 0 || (furloughPlan.actual > 0 && furloughPlan.actual < furloughPlan.target);
+        if (shouldShowTooltip) {
+            this.core.ui.hookTip(button, 'furlough');
+        } else {
+            this.core.ui.unhookTip(button, 'furlough');
+        }
     }
 
     updateButtonStateWithTooltip(button, isEnabled, tipName, buildingType) {
         if (!button) return;
         button.disabled = !isEnabled;
-        if (!isEnabled) {
-            this.core.ui.hookTip(button, tipName);
-            button.dataset.buildingType = buildingType;
+        
+        if (buildingType && (tipName === 'build' || tipName === 'hire' || tipName === 'demolish' || tipName === 'furlough')) {
+            const action = tipName === 'build' ? 'build' : tipName === 'hire' ? 'hire' : tipName === 'demolish' ? 'sell' : 'furlough';
+            const plan = this.getActionPlanDetails(action, buildingType);
+            const shouldShowTooltip = plan.actual <= 0 || (plan.actual > 0 && plan.actual < plan.target);
+            
+            if (shouldShowTooltip) {
+                this.core.ui.hookTip(button, tipName);
+                button.dataset.buildingType = buildingType;
+            } else {
+                this.core.ui.unhookTip(button, tipName);
+            }
         } else {
-            this.core.ui.unhookTip(button, tipName);
+            if (isEnabled) {
+                this.core.ui.unhookTip(button, tipName);
+            } else {
+                this.core.ui.hookTip(button, tipName);
+                if (buildingType) button.dataset.buildingType = buildingType;
+            }
         }
     }
 
@@ -770,11 +833,16 @@ export default class IndustryPanel {
         mainBtn.innerHTML = `
             <div class="build-progress-fill"></div>
             <span class="building-title">${def ? def.name : type} <span class="building-count">(${building.count})</span></span>
-            <span class="resource-progress-indicator" style="display: ${hasBuildCost ? '' : 'none'}"></span>
+            <span class="cost-indicator" style="display: ${hasBuildCost ? '' : 'none'}"></span>
         `;
 
-        this.core.ui.hookTip(mainBtn, 'build-effects-affordable');
-        mainBtn.dataset.buildingType = type;
+        const buildPlan = this.getActionPlanDetails('build', type);
+        const isDropdownOpen = building.dropped === true;
+        const shouldShowBuildTooltip = buildPlan.actual <= 0 || (buildPlan.actual > 0 && buildPlan.actual < buildPlan.target) || (!isDropdownOpen && buildPlan.actual >= buildPlan.target);
+        if (shouldShowBuildTooltip) {
+            this.core.ui.hookTip(mainBtn, 'build');
+            mainBtn.dataset.buildingType = type;
+        }
         mainBtn.onclick = () => this.handleBuildAction(type, def);
 
         const workerBtn = document.createElement('button');
@@ -787,12 +855,11 @@ export default class IndustryPanel {
         const initialHirePlan = this.getActionPlanDetails('hire', type);
         const canHire = initialHirePlan.actual > 0;
         workerBtn.disabled = !canHire;
-        if (!canHire) {
-            this.core.ui.hookTip(workerBtn, 'hire-disabled');
+        const shouldShowHireTooltip = initialHirePlan.actual <= 0 || (initialHirePlan.actual > 0 && initialHirePlan.actual < initialHirePlan.target);
+        if (shouldShowHireTooltip) {
+            this.core.ui.hookTip(workerBtn, 'hire');
+            workerBtn.dataset.buildingType = type;
         }
-
-        // Hook hire effects tooltip to the worker button
-        this.core.ui.hookTip(workerBtn, 'hire-effects-affordable');
         
         workerBtn.onclick = (e) => {
             e.stopPropagation();
@@ -820,6 +887,7 @@ export default class IndustryPanel {
         chevronBtn.onclick = () => {
             building.dropped = !building.dropped;
             dropdown.classList.toggle('dropped', building.dropped);
+            this.updateMainButton(this.buildingCards[type], type, def);
         }
 
         const container = document.createElement('div');
@@ -892,7 +960,7 @@ export default class IndustryPanel {
                             </button>
                         </div>
                         <div class="button-with-info">
-                            <button class="dropdown-sell-btn ${!canSell ? 'hastip' : ''}" ${!canSell ? `disabled data-tips="demolish-disabled" data-building-type="${type}"` : ''}>Demolish</button>
+                            <button class="dropdown-sell-btn" ${!canSell ? 'disabled' : ''} data-building-type="${type}">Demolish</button>
                         </div>
                     </div>
                 </div>
@@ -920,13 +988,13 @@ export default class IndustryPanel {
                 <div class="dropdown-section-body">
                     <div class="action-buttons">
                         <div class="button-with-info">
-                            <button class="dropdown-add-worker-btn ${!canAdd ? 'hastip' : ''}" data-building-type="${type}" ${!canAdd ? `disabled data-tips="hire-disabled"` : ''} style="position: relative;">
+                            <button class="dropdown-add-worker-btn ${!canAdd ? 'hastip' : ''}" data-building-type="${type}" ${!canAdd ? `disabled data-tips="hire"` : ''} style="position: relative;">
                                 <div class="hire-progress-fill"></div>
                                 <span class="hire-btn-label" style="position: relative; z-index: 1;">Hire</span>
                             </button>
                         </div>
                         <div class="button-with-info">
-                            <button class="dropdown-remove-worker-btn ${!canRemove ? 'hastip' : ''}" ${!canRemove ? `disabled data-tips="furlough-disabled" data-building-type="${type}"` : ''}>Furlough</button>
+                            <button class="dropdown-remove-worker-btn" ${!canRemove ? 'disabled' : ''} data-building-type="${type}">Furlough</button>
                         </div>
                     </div>
                     ${onStrike ? `
@@ -990,10 +1058,19 @@ export default class IndustryPanel {
     }
 
     getResourceProgressText(type) {
-        const progress = this.core.industry.getResourceProgress(type);
-        if (!progress) return '';
-
-        return `${this.core.ui.formatNumber(progress.current)}/${this.core.ui.formatNumber(progress.required)}`;
+        const def = this.defs[type];
+        if (!def?.buildCost) return '';
+        
+        const plan = this.getActionPlanDetails('build', type);
+        const multiplier = plan.target || 1;
+        
+        const costs = Object.entries(def.buildCost)
+            .map(([res, amt]) => {
+                const total = this.getTotalAmount(amt, multiplier);
+                return `${this.core.ui.formatNumber(total)} ${res}`;
+            });
+        
+        return costs.join(', ');
     }
 
     getAggregateBuildingEffects(type) {
@@ -1174,78 +1251,6 @@ export default class IndustryPanel {
         return this.core.industry.getHireDisabledReason(type);
     }
 
-    getBuildPartialText(type) {
-        const plan = this.getActionPlanDetails('build', type);
-        if (plan.actual <= 0 || plan.actual >= plan.target) return '';
-
-        const result = this.core.industry.getBuildEffects(type);
-        if (!result) return `Can build ${plan.actual}`;
-
-        const details = this.getButtonDetailsWithMultiplier(result, plan.actual);
-        if (!details) return `Can build ${plan.actual}`;
-
-        const items = [];
-        if (details.costs?.length) {
-            details.costs.forEach(c => {
-                items.push(`<span style="color: var(--drainColor)">-${this.core.ui.formatNumber(c.amt, { decimalPlaces: 2 })} ${c.res}</span>`);
-            });
-        }
-        if (details.effects?.length) {
-            details.effects.forEach(e => {
-                const sign = e.type === 'gain' ? '+' : '-';
-                const color = e.type === 'gain' ? 'var(--gainColor)' : 'var(--drainColor)';
-                items.push(`<span style="color: ${color}">${sign}${this.core.ui.formatNumber(e.val, { decimalPlaces: 2 })} ${e.res}/s</span>`);
-            });
-        }
-        if (details.capChanges?.length) {
-            const capItems = [];
-            details.capChanges.forEach(c => {
-                const isPositive = c.val >= 0;
-                const sign = isPositive ? '+' : '';
-                const color = isPositive ? 'var(--gainColor)' : 'var(--drainColor)';
-                capItems.push(`<span style="color: ${color}">${sign}${this.core.ui.formatNumber(c.val, { decimalPlaces: 2 })} ${c.res} cap</span>`);
-            });
-            if (capItems.length > 0) {
-                items.push(`<br>${capItems.join(' ')}`);
-            }
-        }
-
-        return items.length > 0
-            ? `<p>Can build ${plan.actual}</p><p style="font-weight: 600">${items.join(', ')}</p>`
-            : `Can build ${plan.actual}`;
-    }
-
-    getHirePartialText(type) {
-        const plan = this.getActionPlanDetails('hire', type);
-        if (plan.actual <= 0 || plan.actual >= plan.target) return '';
-
-        const result = this.core.industry.getHireWorkerEffects(type);
-        if (!result) return `Can hire ${plan.actual}`;
-
-        // For worker hiring, all effects are in result.effects and we separate based on sign
-        const multiplier = plan.actual;
-        const {costs, effects} = Object.entries(result.effects || {}).reduce((acc, [res, val]) => {
-            const item = {res, val: Math.abs(val) * multiplier, type: val < 0 ? 'drain' : 'gain'};
-            (val < 0 ? acc.costs : acc.effects).push(item);
-            return acc;
-        }, {costs: [], effects: []});
-
-        const items = [];
-        if (costs?.length) {
-            costs.forEach(c => {
-                items.push(`<span style="color: var(--drainColor)">-${this.core.ui.formatNumber(c.val, { decimalPlaces: 2 })} ${c.res}/s</span>`);
-            });
-        }
-        if (effects?.length) {
-            effects.forEach(e => {
-                items.push(`<span style="color: var(--gainColor)">+${this.core.ui.formatNumber(e.val, { decimalPlaces: 2 })} ${e.res}/s</span>`);
-            });
-        }
-
-        return items.length > 0
-            ? `<p>Can hire ${plan.actual}</p><p style="font-weight: 600">${items.join(', ')}</p>`
-            : `Can hire ${plan.actual}`;
-    }
 
     getFurloughDisabledReason(type) {
         return this.core.industry.getFurloughDisabledReason(type);

@@ -1258,14 +1258,16 @@
             color: var(--baseColor);
             font-size: 0.75em;
             pointer-events: none;
+            font-weight: 425;
+            font-family: SourceSerif,  serif;
+            transition: opacity 0.1s;
+            z-index: 999;
 
             @starting-style {
                 opacity: 0;
             }
 
-            font-family: SourceSerif,  serif;
-            transition: opacity 0.1s;
-            z-index: 999;
+          
 
             p + p {
                 margin-top: 0.05em;
@@ -1620,13 +1622,14 @@
                 }
 
                 .resource-row {
+                    --pad-x: 0.2em;
                     display: grid;
                     grid-template-columns: 33% 33% 33%;
                     align-items: center;
-                    height: fit-content;
-                    padding: 0.1em 0.2em;
-                    border-bottom: 1px solid var(--midBaseColor);
+                    height: 1.75em;
+                    padding: 0 var(--pad-x);
                     min-width: 0;
+                    position: relative;
                 }
 
                 &.animatingWidth {
@@ -1657,21 +1660,22 @@
                     text-align: right;
                     white-space: nowrap;
                 }
-
-                .resource-row.has-cap {
-                    position: relative;
-                    overflow: hidden;
-                }
-
                 .resource-row.has-cap::before {
                     content: '';
                     position: absolute;
-                    inset: 0;
+                    bottom: 0;
+                    left: var(--pad-x);
                     z-index: -1;
-                    width: var(--cap-percent);
-                    background: color-mix(in oklab, var(--accent) 15%, transparent);
-                    transition: width 0.3s ease-out;
+                    height: 0.15em;
+                    border-radius: 0.4em;
+                    width: calc(100% - (var(--pad-x) * 2));
+                    background: linear-gradient(
+                        to right,
+                        var(--accent) calc(var(--cap-percent) * 100%),
+                        light-dark(var(--darkBaseColor), var(--midBaseColor)) calc(var(--cap-percent) * 100%)
+                    );
                     pointer-events: none;
+                    transition: background 0.3s ease-out;
                     --cap-percent: unset;
                 }
 
@@ -1853,11 +1857,11 @@
                     white-space: nowrap;
                 }
 
-                .resource-progress-indicator {
+                .cost-indicator {
                     position: absolute;
                     bottom: 3px;
                     right: 5px;
-                    font-size: 0.7em;
+                    font-size: 0.65em;
                     font-weight: 500;
                     color: var(--baseColor);
                     z-index: 2;
@@ -1865,7 +1869,7 @@
                     line-height: 1;
                 }
 
-                .building-main-btn:disabled .resource-progress-indicator {
+                .building-main-btn:disabled .cost-indicator {
                     color: var(--lightBaseColor);
                 }
 
@@ -2637,11 +2641,10 @@
             box-shadow: 0 0 2px rgba(0, 0, 0, 0.4), 0 0 10px rgba(0, 0, 0, 0.1);
             padding: 5px;
             margin: 0;
-            width: 30vw;
             min-width: fit-content;
 
             .console-input {
-                width: 300px;
+                width: clamp(50px, 50vw, 300px);
                 padding: 4px 2px 2px;
                 color: var(--accent);
                 font-family: SourceSerif;
