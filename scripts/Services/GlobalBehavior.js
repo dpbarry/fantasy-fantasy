@@ -358,9 +358,15 @@ export default function setupGlobalBehavior(core) {
     }
 }
 
+
 export function applyTheme(core) {
     let background = core.settings.configs.background;
     let accent = core.settings.configs.accent;
+
+    // Save to top level localStorage for early page load access
+    localStorage.setItem('theme', background);
+    localStorage.setItem('accent', accent);
+
     const STYLE = document.documentElement.style;
 
     document.documentElement.classList.add("notransition");

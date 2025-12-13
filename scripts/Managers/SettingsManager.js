@@ -28,7 +28,14 @@ export default class SettingsManager {
 
     updateSetting(setting, value) {
         this.configs[setting] = value;
-        if (setting === "background" || setting === "accent") applyTheme(this.core);
+        if (setting === "background") {
+            localStorage.setItem('theme', value);
+            applyTheme(this.core);
+        }
+        if (setting === "accent") {
+            localStorage.setItem('accent', value);
+            applyTheme(this.core);
+        }
         if (setting === "refreshUI") this.core.ui.updateRenderIntervals();
         this.broadcast();
     }

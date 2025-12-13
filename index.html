@@ -12,6 +12,51 @@
     <link as="font" crossorigin href="assets/fonts/SourceSerif.ttf" rel="preload" type="font/ttf">
     <link as="font" crossorigin href="assets/fonts/SourceSerifItalic.ttf" rel="preload" type="font/ttf">
 
+    <script>
+        <!-- Apply theme immediately to prevent flash -->
+    let background = localStorage.getItem('theme') || 'dark';
+    let accent = localStorage.getItem('accent') || 'lightning';
+    const STYLE = document.documentElement.style;
+
+    document.documentElement.classList.add("notransition");
+    switch (background) {
+        case "dark":
+            STYLE.setProperty("--contrastColor", "#000");
+            STYLE.setProperty("--baseColor", "#eee");
+            STYLE.setProperty("--baseFilter", "invert(0.9)");
+            STYLE.setProperty("--alpha", "1");
+            STYLE.colorScheme = "dark";
+            break;
+        case "light":
+            STYLE.setProperty("--contrastColor", "#fff");
+            STYLE.setProperty("--baseColor", "#111");
+            STYLE.setProperty("--baseFilter", "invert(0.1)");
+            STYLE.setProperty("--alpha", "0.15");
+            STYLE.colorScheme = "light";
+            break;
+    }
+    switch (accent) {
+        case "lightning":
+            STYLE.setProperty("--accent", "hsl(190, 82.5%, 45%)");
+            STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(50%) sepia(94%) saturate(2762%) hue-rotate(156deg) brightness(106%) contrast(84%)");
+            break;
+        case "acid":
+            STYLE.setProperty("--accent", "hsl(125, 82.5%, 45%)");
+            STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(50%) sepia(82%) saturate(1810%) hue-rotate(86deg) brightness(110%) contrast(91%)");
+            break;
+        case "amber":
+            STYLE.setProperty("--accent", "hsl(45, 82.5%, 45%)");
+            STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(76%) sepia(85%) saturate(2552%) hue-rotate(4deg) brightness(92%) contrast(84%)");
+            break;
+        case "arcane":
+            STYLE.setProperty("--accent", "hsl(260, 100%, 64%)");
+            STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(29%) sepia(33%) saturate(5426%) hue-rotate(245deg) brightness(107%) contrast(116%)");
+            break;
+    }
+    window.requestAnimationFrame(() => {
+        document.documentElement.classList.remove("notransition");
+    });
+    </script>
 
     <style>
         @font-face {
@@ -1666,7 +1711,7 @@
                     bottom: 0;
                     left: var(--pad-x);
                     z-index: -1;
-                    height: 0.15em;
+                    height: 2px;
                     border-radius: 0.4em;
                     width: calc(100% - (var(--pad-x) * 2));
                     background: linear-gradient(
@@ -2912,7 +2957,6 @@
 
 <script type="module">
     import GameCore from './scripts/GameCore.js';
-
     GameCore.getInstance();
 </script>
 

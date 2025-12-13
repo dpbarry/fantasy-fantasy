@@ -55,13 +55,11 @@ export default class IndustryManager {
 
     #upgrades = new Set();
 
-    // Add an upgrade function. Returns a removal function.
-    // Upgrades receive context and can return: {gain, drain, addGain, addDrain, gainMult, drainMult}
-    // Meta-upgrades check for upgradeFn/upgradeResult in context to target other upgrades
-    // Optional filters: {buildingTypes?: string[], resources?: string[], effectTypes?: string[]}
-    // Optional priority: lower numbers apply first (default: 100)
-    upgrade(fn, filters = null, priority = 100) {
-        const entry = {fn, filters, priority};
+    // Optional priority: lower numbers apply later (default: 0)
+    // Predicate function receives full context: (args) => boolean
+    // args contains: {buildingType, resource, effectType, units, gain, drain, gainMult, drainMult, rates, buildingCount, rangeStart, rangeEnd, isBackwards, currentCount}
+    upgrade(fn, predicate = null, priority = 0) {
+        const entry = {fn, predicate, priority};
         this.#upgrades.add(entry);
         this.#cache.dirty = true;
         return () => {
@@ -72,17 +70,12 @@ export default class IndustryManager {
     }
 
     #sortedUpgrades() {
-        return Array.from(this.#upgrades).sort((a, b) => a.priority - b.priority);
+        return Array.from(this.#upgrades).sort((a, b) => b.priority - a.priority);
     }
 
-    #applies(entry, buildingType, resource, effectType) {
-        if (!entry.filters) return true;
-        const f = entry.filters;
-        if (f.buildingTypes && !f.buildingTypes.includes(buildingType)) return false;
-        if (f.resources && !f.resources.includes(resource)) return false;
-
-        return !(f.effectTypes && !f.effectTypes.includes(effectType));
-
+    #applies(entry, args) {
+        if (!entry.predicate) return true;
+        return entry.predicate(args);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -101,12 +94,12 @@ export default class IndustryManager {
                 
                 for (const [res, eff] of Object.entries(def.effects)) {
                     if (eff.base) {
-                        const rate = this.#computeRate(rawRates, type, res, 'base', eff.base, b.count);
-                        rawRates.set(res, (rawRates.get(res) || 0) + rate);
+                        const result = this.#computeEffectAt(type, res, 'base', b.count);
+                        rawRates.set(res, (rawRates.get(res) || 0) + (result.gain - result.drain));
                     }
                     if (eff.worker && b.workers > 0) {
-                        const rate = this.#computeRate(rawRates, type, res, 'worker', eff.worker, b.workers);
-                        rawRates.set(res, (rawRates.get(res) || 0) + rate);
+                        const result = this.#computeEffectAt(type, res, 'worker', b.workers);
+                        rawRates.set(res, (rawRates.get(res) || 0) + (result.gain - result.drain));
                     }
                 }
             }
@@ -126,55 +119,75 @@ export default class IndustryManager {
             this.#recalculating = false;
         }
     
-    #computeRate(rates, buildingType, resource, effectType, eff, units) {
-        let gain = eff.gain || 0;
-        let drain = eff.drain || 0;
-        let gainMult = 1;
-        let drainMult = 1;
-        
-        for (const entry of this.#sortedUpgrades()) {
-            if (!this.#applies(entry, buildingType, resource, effectType)) continue;
-            
-            const args = {
-                buildingType,
-                resource,
-                effectType,
-                units,
-                gain,
-                drain,
-                gainMult,
-                drainMult,
-                rates
-            };
-            
-            let mod = entry.fn.call(this, args);
-            if (!mod) continue;
-            
-            // Apply meta-upgrades to this result
-            mod = this.#applyMetaUpgrades(mod, entry, args);
-            
-            if (mod.gain !== undefined) gain = mod.gain;
-            if (mod.drain !== undefined) drain = mod.drain;
-            if (mod.addGain !== undefined) gain += mod.addGain;
-            if (mod.addDrain !== undefined) drain += mod.addDrain;
-            if (mod.gainMult !== undefined) gainMult *= mod.gainMult;
-            if (mod.drainMult !== undefined) drainMult *= mod.drainMult;
+ 
+
+    // Compute effect over explicit range [start, end)
+    // Upgrade functions receive range context and handle the calculation themselves
+    // For backwards ranges (start > end), calculates effect from 0->start, subtracts 0->end, and inverts
+    #computeEffectRange(buildingType, resource, effectType, start, end) {
+         const isBackwards = start > end;
+        if (start === end) {
+            return {gain: 0, drain: 0, modifiers: undefined};
         }
         
-        return (gain * gainMult - drain * drainMult) * units;
+        const def = IndustryManager.BUILDING_DEFS[buildingType];
+        if (!def?.effects?.[resource]?.[effectType]) {
+            return {gain: 0, drain: 0, modifiers: undefined};
+        }
+        
+        const eff = def.effects[resource][effectType];
+        const baseGain = eff.gain?.toNumber?.() ?? (eff.gain || 0);
+        const baseDrain = eff.drain?.toNumber?.() ?? (eff.drain || 0);
+        const buildingCount = this.buildings[buildingType]?.count || 0;
+        
+        let totalGain, totalDrain, modifiers;
+        
+        if (isBackwards) {
+            // For backwards: calculate 0->start, subtract 0->end, then invert
+            const toStart = this.#computeEffectRangeInternal(buildingType, resource, effectType, 0, start, baseGain, baseDrain, buildingCount);
+            const toEnd = this.#computeEffectRangeInternal(buildingType, resource, effectType, 0, end, baseGain, baseDrain, buildingCount);
+            totalGain = toStart.gain - toEnd.gain;
+            totalDrain = toStart.drain - toEnd.drain;
+            // Invert for removal (gains become drains, drains become gains)
+            totalGain = -totalGain;
+            totalDrain = -totalDrain;
+            // Use modifiers from the higher position (start)
+            modifiers = toStart.modifiers;
+        } else {
+            // For forwards: calculate start->end normally
+            const result = this.#computeEffectRangeInternal(buildingType, resource, effectType, start, end, baseGain, baseDrain, buildingCount);
+            totalGain = result.gain;
+            totalDrain = result.drain;
+            modifiers = result.modifiers;
+        }
+        
+        return {
+            gain: totalGain,
+            drain: totalDrain,
+            modifiers
+        };
     }
 
-    #computeEffectiveEffects(buildingType, resource, effectType, baseGain, baseDrain, units) {
+    #computeEffectAt(buildingType, resource, effectType, units) {
+        return this.#computeEffectRange(buildingType, resource, effectType, 0, units);
+    }
+
+    #computeEffectFrom(buildingType, resource, effectType, current, change) {
+        return this.#computeEffectRange(buildingType, resource, effectType, current, current + change);
+    }
+    
+    // Internal helper that does the actual calculation without backwards handling
+    #computeEffectRangeInternal(buildingType, resource, effectType, start, end, baseGain, baseDrain, buildingCount) {
+        const units = end - start;
         const rates = new Map();
-        
         let gain = baseGain;
         let drain = baseDrain;
         let gainMult = 1;
         let drainMult = 1;
+        const modifiers = [];
         
+        // Pass range context to upgrade functions - they handle the calculation
         for (const entry of this.#sortedUpgrades()) {
-            if (!this.#applies(entry, buildingType, resource, effectType)) continue;
-            
             const args = {
                 buildingType,
                 resource,
@@ -184,58 +197,51 @@ export default class IndustryManager {
                 drain,
                 gainMult,
                 drainMult,
-                rates
+                rates,
+                buildingCount,
+                rangeStart: start,
+                rangeEnd: end,
+                isBackwards: false,
+                currentCount: start
             };
+            
+            if (!this.#applies(entry, args)) continue;
             
             let mod = entry.fn.call(this, args);
             if (!mod) continue;
             
-            mod = this.#applyMetaUpgrades(mod, entry, args);
+            // Apply meta upgrades
+            let current = mod;
+            for (const metaEntry of this.#sortedUpgrades()) {
+                if (metaEntry === entry) continue;
+                const metaArgs = {...args, upgradeFn: entry.fn, upgradeResult: current};
+                const metaResult = metaEntry.fn.call(this, metaArgs);
+                if (metaResult) {
+                    current = metaResult;
+                }
+            }
+            mod = current;
             
-            if (mod.gain !== undefined) gain = mod.gain;
-            if (mod.drain !== undefined) drain = mod.drain;
-            if (mod.addGain !== undefined) gain += mod.addGain;
-            if (mod.addDrain !== undefined) drain += mod.addDrain;
-            if (mod.gainMult !== undefined) gainMult *= mod.gainMult;
-            if (mod.drainMult !== undefined) drainMult *= mod.drainMult;
+            gain = mod.gain ?? gain;
+            drain = mod.drain ?? drain;
+            gain += mod.addGain ?? 0;
+            drain += mod.addDrain ?? 0;
+            gainMult *= mod.gainMult ?? 1;
+            drainMult *= mod.drainMult ?? 1;
+            
+            // Collect modifiers
+            if (mod.modifiers) {
+                modifiers.push(...mod.modifiers);
+            }
         }
         
         return {
-            gain: gain * units * gainMult,
-            drain: drain * units * drainMult
+            gain: gain * gainMult,
+            drain: drain * drainMult,
+            modifiers: modifiers.length > 0 ? modifiers : undefined
         };
     }
 
-    #applyMetaUpgrades(mod, sourceEntry, baseArgs) {
-        let current = mod;
-        for (const entry of this.#sortedUpgrades()) {
-            if (entry === sourceEntry) continue;
-            
-            // Get what upgrade returns in normal context
-            const normalArgs = {...baseArgs};
-            const normalResult = entry.fn.call(this, normalArgs);
-            
-            // Get what it returns in meta context
-            const metaArgs = {...baseArgs, upgradeFn: sourceEntry.fn, upgradeResult: current};
-            const metaResult = entry.fn.call(this, metaArgs);
-            
-            // Only apply if meta result differs from normal result (meaning it used upgradeResult)
-            if (metaResult && this.#resultsDiffer(metaResult, normalResult)) {
-                current = metaResult;
-            }
-        }
-        return current;
-    }
-
-    #resultsDiffer(a, b) {
-        if (!a && !b) return false;
-        if (!a || !b) return true;
-        const keys = ['gain', 'drain', 'addGain', 'addDrain', 'gainMult', 'drainMult'];
-        for (const key of keys) {
-            if (a[key] !== b[key]) return true;
-        }
-        return false;
-    }
 
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -272,7 +278,7 @@ export default class IndustryManager {
                 const def = IndustryManager.BUILDING_DEFS[type];
                 const eff = def?.effects?.[res];
                 if (eff?.base?.gain) {
-                    const {gain} = this.#computeEffectiveEffects(type, res, 'base', eff.base.gain, 0, b.count);
+                    const {gain} = this.#computeEffectAt(type, res, 'base', b.count);
                     production += gain;
                 }
             }
@@ -472,11 +478,9 @@ export default class IndustryManager {
     }
 
     broadcast() {
-        this.recalculate();
-        
         for (const [res, resource] of Object.entries(this.resources)) {
             const rate = this.#cache.rates.get(res);
-            resource.rate = new Decimal(rate);
+            resource.rate = new Decimal(rate || 0);
         }
         this.core.ui.panels.industry.render(this.getData());
     }
@@ -503,23 +507,41 @@ export default class IndustryManager {
             this.core.ui.panels.industry.toggleView();
         }
         this.#setupGrowthFns();
+        this.#setupAllUpgrades();
+    }
+
+    #setupAllUpgrades() {
         this.#setupWisdomUpgrade();
+    }
+
+    #setupTest() {
+        this.upgrade(() => {
+            return {
+                addGain: 3,
+                modifiers: [{value: '+3', label: 'test'}]
+            };
+        });
     }
 
     #setupWisdomUpgrade() {
         this.upgrade(() => {
             const wisdom = this.core.city?.ruler?.wisdom || 0;
-            if (wisdom <= 0) return null;
-            return {gainMult: 1 + wisdom * 0.01};
-        }, null, 50);
+            if (wisdom == 0) return null; 
+            const mult = 1 + wisdom * 0.01;
+            return {
+                gainMult: mult,
+                modifiers: [{value: `x${mult}`, label: 'wisdom'}]
+            };
+        }, (args) => {
+            return args.gain > 0;
+        });
     }
 
     #setupGrowthFns() {
         for (const [res, resource] of Object.entries(this.resources)) {
             resource.growthFns = {};
             resource.addGrowthFn('industry', () => {
-                this.recalculate();
-                return new Decimal(this.#cache.rates.get(res));
+                return new Decimal(this.#cache.rates.get(res) || 0);
             });
             if (resource.cap !== undefined) {
                 resource.capFn = () => this.getCap(res);
@@ -621,11 +643,10 @@ export default class IndustryManager {
         const effects = {};
         const capChanges = {};
         if (def.effects) {
+            const currentCount = this.buildings[type]?.count || 0;
             for (const [res, eff] of Object.entries(def.effects)) {
                 if (eff.base) {
-                    const baseGain = eff.base.gain || 0;
-                    const baseDrain = eff.base.drain || 0;
-                    const {gain, drain} = this.#computeEffectiveEffects(type, res, 'base', baseGain, baseDrain, 1);
+                    const {gain, drain} = this.#computeEffectFrom(type, res, 'base', currentCount, 1);
                     const net = gain - drain;
                     if (net !== 0) effects[res] = net;
                 }
@@ -646,13 +667,12 @@ export default class IndustryManager {
         const rewards = def.sellReward ? Object.entries(def.sellReward).map(([res, amt]) => ({res, amt})) : [];
         const effects = {};
         const capChanges = {};
+        const currentCount = this.buildings[type]?.count || 0;
         if (def.effects) {
             for (const [res, eff] of Object.entries(def.effects)) {
                 if (eff.base) {
-                    const baseGain = eff.base.gain || 0;
-                    const baseDrain = eff.base.drain || 0;
-                    const {gain, drain} = this.#computeEffectiveEffects(type, res, 'base', baseGain, baseDrain, 1);
-                    const net = drain - gain;
+                    const {gain, drain} = this.#computeEffectFrom(type, res, 'base', currentCount, -1);
+                    const net = gain - drain;
                     if (net !== 0) effects[res] = net;
                 }
             }
@@ -671,11 +691,12 @@ export default class IndustryManager {
         if (!def?.effects) return null;
         const scale = this.getWorkerScale();
         const effects = {};
+        const currentWorkers = this.buildings[type]?.workers || 0;
         for (const [res, eff] of Object.entries(def.effects)) {
             if (eff.worker) {
                 const baseGain = eff.worker.gain || 0;
                 const baseDrain = eff.worker.drain || 0;
-                const {gain, drain} = this.#computeEffectiveEffects(type, res, 'worker', baseGain, baseDrain, 1);
+                const {gain, drain} = this.#computeEffectFrom(type, res, 'worker', currentWorkers, 1);
                 const net = (gain - drain) * scale;
                 if (net !== 0) effects[res] = net;
             }
@@ -688,12 +709,11 @@ export default class IndustryManager {
         if (!def?.effects) return null;
         const scale = this.getWorkerScale();
         const effects = {};
+        const currentWorkers = this.buildings[type]?.workers || 0;
         for (const [res, eff] of Object.entries(def.effects)) {
             if (eff.worker) {
-                const baseGain = eff.worker.gain || 0;
-                const baseDrain = eff.worker.drain || 0;
-                const {gain, drain} = this.#computeEffectiveEffects(type, res, 'worker', baseGain, baseDrain, 1);
-                const net = (drain - gain) * scale;
+                const {gain, drain} = this.#computeEffectFrom(type, res, 'worker', currentWorkers, -1);
+                const net = (gain - drain) * scale;
                 if (net !== 0) effects[res] = net;
             }
         }
@@ -708,9 +728,7 @@ export default class IndustryManager {
         const effects = {};
         for (const [res, eff] of Object.entries(def.effects)) {
             if (eff.base) {
-                const baseGain = eff.base.gain || 0;
-                const baseDrain = eff.base.drain || 0;
-                const {gain, drain} = this.#computeEffectiveEffects(type, res, 'base', baseGain, baseDrain, count);
+                const {gain, drain} = this.#computeEffectAt(type, res, 'base', count);
                 if (gain || drain) effects[res] = {gain, drain};
             }
         }
@@ -727,9 +745,7 @@ export default class IndustryManager {
         const effects = {};
         for (const [res, eff] of Object.entries(def.effects)) {
             if (eff.worker) {
-                const baseGain = eff.worker.gain || 0;
-                const baseDrain = eff.worker.drain || 0;
-                const {gain, drain} = this.#computeEffectiveEffects(type, res, 'worker', baseGain, baseDrain, workers);
+                const {gain, drain} = this.#computeEffectAt(type, res, 'worker', workers);
                 const net = (gain - drain) * scale;
                 if (net !== 0) effects[res] = net;
             }
@@ -740,10 +756,10 @@ export default class IndustryManager {
     getBuildEffectsForIncrement(type, increment) {
         const result = this.getBuildEffects(type);
         if (!result) return null;
-        const multiplier = increment === 'max' ? this.getActionPlan('build', type).actual : increment;
+        const incrementVal = increment === 'max' ? this.getActionPlan('build', type).actual : increment;
         const effects = {};
         for (const [res, val] of Object.entries(result.effects || {})) {
-            effects[res] = val * multiplier;
+            effects[res] = val * incrementVal;
         }
         return Object.keys(effects).length ? {effects} : null;
     }
@@ -767,9 +783,8 @@ export default class IndustryManager {
             const buildingData = {baseGain: 0, baseDrain: 0, workerGain: 0, workerDrain: 0};
             
             if (eff.base && b.count > 0) {
-                const baseGain = eff.base.gain || 0;
-                const baseDrain = eff.base.drain || 0;
-                const {gain, drain} = this.#computeEffectiveEffects(type, resource, 'base', baseGain, baseDrain, b.count);
+                    
+                const {gain, drain} = this.#computeEffectAt(type, resource, 'base', b.count);
                 buildingData.baseGain = gain;
                 buildingData.baseDrain = drain;
                 breakdown.baseGain += gain;
@@ -777,9 +792,8 @@ export default class IndustryManager {
             }
             
             if (eff.worker && b.workers > 0) {
-                const baseGain = eff.worker.gain || 0;
-                const baseDrain = eff.worker.drain || 0;
-                const {gain, drain} = this.#computeEffectiveEffects(type, resource, 'worker', baseGain, baseDrain, b.workers);
+            
+                const {gain, drain} = this.#computeEffectAt(type, resource, 'worker', b.workers);
                 buildingData.workerGain = gain * scale;
                 buildingData.workerDrain = drain * scale;
                 breakdown.workerGain += buildingData.workerGain;
@@ -921,8 +935,7 @@ export default class IndustryManager {
     getBottleneckResources() { return this.getBottlenecks(); }
     isMultiIncrement() { const i = this.getSelectedIncrement(); return i === 'max' || i > 1; }
     getNetRate(res) {
-        this.recalculate();
-        return new Decimal(this.#cache.rates.get(res));
+        return new Decimal(this.#cache.rates.get(res) || 0);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -939,91 +952,102 @@ export default class IndustryManager {
         if (!def) return { header: 'Cannot build' };
 
         const fmt = (v, opt) => this.core.ui.formatNumber(v, opt);
-        const wisdom = this.core.city?.ruler?.wisdom || 0;
-        const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
-
         const isPartial = plan.actual < plan.target;
-        const multiplier = isPartial ? plan.actual : plan.target;
-
-        const costs = def.buildCost ? Object.entries(def.buildCost).map(([res, amt]) => ({
-            value: `-${fmt(amt * multiplier)}`,
-            label: res,
-            type: 'drain',
-            note: 'cost'
-        })) : [];
+        const increment = isPartial ? plan.actual : plan.target;
+        const currentCount = this.buildings[type]?.count || 0;
 
         const items = [];
-        const gainItems = [];
+
+        // Costs (one-time drains)
+        if (def.buildCost) {
+            for (const [res, amt] of Object.entries(def.buildCost)) {
+                items.push({
+                    value: `-${fmt(amt * increment)}`,
+                    label: res,
+                    type: 'drain',
+                    note: 'cost'
+                });
+            }
+        }
+
+        // Effects (ongoing gains/drains)
         const netEffects = {};
+        const gainItems = [];
         for (const [res, eff] of Object.entries(def.effects || {})) {
             if (!eff.base) continue;
             const baseGain = eff.base.gain?.toNumber?.() ?? (eff.base.gain || 0);
             const baseDrain = eff.base.drain?.toNumber?.() ?? (eff.base.drain || 0);
             
+            if (baseGain === 0 && baseDrain === 0) continue;
+
+            // Calculate per-unit effect with modifiers
+            const perUnitResult = this.#computeEffectFrom(type, res, 'base', currentCount, 1);
+
+            // Calculate total incremental effect (from currentCount to currentCount+increment)
+            const totalResult = this.#computeEffectFrom(type, res, 'base', currentCount, increment);
+
             if (baseGain !== 0) {
-                const baseVal = baseGain * multiplier;
                 const item = {
-                    value: `+${fmt(baseVal)}`,
+                    value: `+${fmt(baseGain)}`,
                     label: `${res}/s`,
                     type: 'gain',
-                    note: 'prod.'
+                    note: 'prod.',
+                    modifiers: perUnitResult.modifiers ? [...perUnitResult.modifiers] : []
                 };
+                if (increment > 1) {
+                    if (!item.modifiers) item.modifiers = [];
+                    item.modifiers.push({value: '×', label: `${increment} buildings`});
+                }
                 items.push(item);
                 gainItems.push(item);
-                netEffects[res] = (netEffects[res] || 0) + baseVal * wisdomMult;
+                netEffects[res] = (netEffects[res] || 0) + totalResult.gain;
             }
             if (baseDrain !== 0) {
-                const baseVal = baseDrain * multiplier;
-                items.push({
-                    value: `-${fmt(baseVal)}`,
+                const item = {
+                    value: `-${fmt(baseDrain)}`,
                     label: `${res}/s`,
-                    type: 'drain'
-                });
-                netEffects[res] = (netEffects[res] || 0) - baseVal;
+                    type: 'drain',
+                    modifiers: perUnitResult.modifiers ? [...perUnitResult.modifiers] : []
+                };
+                if (increment > 1) {
+                    if (!item.modifiers) item.modifiers = [];
+                    item.modifiers.push({value: '×', label: `${increment} buildings`});
+                }
+                items.push(item);
+                netEffects[res] = (netEffects[res] || 0) - totalResult.drain;
             }
         }
 
-        const mods = [];
-        if (wisdom > 0 && gainItems.length > 0) {
-            const gainIndices = gainItems.map(item => items.indexOf(item));
-            const start = Math.min(...gainIndices);
-            const end = Math.max(...gainIndices);
-            mods.push({
-                value: `×${fmt(wisdomMult)}`,
-                label: 'wisdom',
-                range: [start, end]
-            });
-        }
-
-        const capChanges = [];
+        // Cap changes
         if (def.capIncrease) {
             for (const [res, val] of Object.entries(def.capIncrease)) {
-                capChanges.push({
-                    value: `+${fmt(val * multiplier)}`,
+                items.push({
+                    value: `+${fmt(val * increment)}`,
                     label: `${res} cap`,
                     type: 'gain'
                 });
             }
         }
         if (def.workersPerBuilding) {
-            capChanges.push({
-                value: `+${fmt(def.workersPerBuilding * multiplier)}`,
+            items.push({
+                value: `+${fmt(def.workersPerBuilding * increment)}`,
                 label: 'workers cap',
                 type: 'gain'
             });
         }
 
-        const resultItems = Object.entries(netEffects)
-            .filter(([, v]) => v !== 0)
-            .map(([res, v]) => ({
+        // Result - show net effects
+        const header = isPartial ? `Can build ${increment}` : null;
+        const resultEntries = Object.entries(netEffects).filter(([, v]) => Math.abs(v) >= 0.0001);
+        const result = resultEntries.length > 0 ? {
+            items: resultEntries.map(([res, v]) => ({
                 value: `${v > 0 ? '+' : ''}${fmt(v)}`,
                 label: `${res}/s`,
                 type: v > 0 ? 'gain' : 'drain'
-            }));
+            }))
+        } : null;
 
-        const header = isPartial ? `Can build ${multiplier}` : null;
-
-        return { header, costs, items, modifiers: mods, capChanges, result: { items: resultItems } };
+        return { header, items, result };
     }
 
     getHireTooltipData(type) {
@@ -1036,86 +1060,100 @@ export default class IndustryManager {
         if (!def?.effects) return { header: 'Cannot hire' };
 
         const fmt = (v, opt) => this.core.ui.formatNumber(v, opt);
-        const wisdom = this.core.city?.ruler?.wisdom || 0;
-        const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
         const scale = this.getWorkerScale();
-
         const isPartial = plan.actual < plan.target;
-        const multiplier = isPartial ? plan.actual : plan.target;
+        const increment = isPartial ? plan.actual : plan.target;
+        const b = this.buildings[type];
+        const currentWorkers = b?.workers || 0;
+        const buildingCount = b?.count || 0;
 
-        const gains = {}, drains = {};
+        const items = [];
+        const netEffects = {};
+
+        const gainItems = [];
         for (const [res, eff] of Object.entries(def.effects)) {
             if (!eff.worker) continue;
-            if (eff.worker.gain) {
-                const v = eff.worker.gain.toNumber?.() ?? eff.worker.gain;
-                gains[res] = (gains[res] || 0) + v;
+            const baseGain = eff.worker.gain?.toNumber?.() ?? (eff.worker.gain || 0);
+            const baseDrain = eff.worker.drain?.toNumber?.() ?? (eff.worker.drain || 0);
+            
+            if (baseGain === 0 && baseDrain === 0) continue;
+
+            // Calculate per-unit effect with modifiers
+            const perUnitResult = this.#computeEffectFrom(type, res, 'worker', currentWorkers, 1);
+
+            // Calculate total incremental effect (from currentWorkers to currentWorkers+increment)
+            const totalResult = this.#computeEffectFrom(type, res, 'worker', currentWorkers, increment);
+
+            if (baseGain !== 0) {
+                const item = {
+                    value: `+${fmt(baseGain)}`,
+                    label: `${res}/s`,
+                    type: 'gain',
+                    note: 'prod.',
+                    modifiers: perUnitResult.modifiers ? [...perUnitResult.modifiers] : []
+                };
+                if (increment > 1) {
+                    if (!item.modifiers) item.modifiers = [];
+                    item.modifiers.push({value: '×', label: `${increment} workers`});
+                }
+                if (scale < 1) {
+                    if (!item.modifiers) item.modifiers = [];
+                    item.modifiers.push({value: `×${(scale * 100).toFixed(0)}%`, label: 'throttled'});
+                }
+                items.push(item);
+                gainItems.push(item);
+                netEffects[res] = (netEffects[res] || 0) + totalResult.gain * scale;
             }
-            if (eff.worker.drain) {
-                const v = eff.worker.drain.toNumber?.() ?? eff.worker.drain;
-                drains[res] = (drains[res] || 0) + v;
+            if (baseDrain !== 0) {
+                const note = baseGain !== 0 ? 'pay' : 'input';
+                const item = {
+                    value: `-${fmt(baseDrain)}`,
+                    label: `${res}/s`,
+                    type: 'drain',
+                    note,
+                    modifiers: perUnitResult.modifiers ? [...perUnitResult.modifiers] : []
+                };
+                if (increment > 1) {
+                    if (!item.modifiers) item.modifiers = [];
+                    item.modifiers.push({value: '×', label: `${increment} workers`});
+                }
+                if (scale < 1) {
+                    if (!item.modifiers) item.modifiers = [];
+                    item.modifiers.push({value: `×${(scale * 100).toFixed(0)}%`, label: 'throttled'});
+                }
+                items.push(item);
+                netEffects[res] = (netEffects[res] || 0) - totalResult.drain * scale;
             }
         }
 
-        if (!Object.keys(gains).length && !Object.keys(drains).length) {
+        if (items.length === 0) {
             return { header: 'Cannot hire' };
         }
 
-        const items = [];
-        const gainItems = [];
-        for (const [res, v] of Object.entries(gains)) {
-            const baseVal = v * multiplier;
-            const item = {
-                value: `+${fmt(baseVal)}`,
-                label: `${res}/s`,
-                type: 'gain',
-                note: 'prod.'
+        const header = isPartial ? `Can hire ${increment}` : null;
+        const hasEffects = items.some(item => item.note === 'prod.' || item.note === 'pay' || item.note === 'input');
+        const resultEntries = Object.entries(netEffects).filter(([, v]) => Math.abs(v) >= 0.0001);
+        let result = null;
+        if (resultEntries.length > 0) {
+            result = {
+                items: resultEntries.map(([res, v]) => ({
+                    value: `${v > 0 ? '+' : ''}${fmt(v)}`,
+                    label: `${res}/s`,
+                    type: v > 0 ? 'gain' : 'drain'
+                }))
             };
-            gainItems.push(item);
-            items.push(item);
+        } else if (hasEffects && Object.keys(netEffects).length > 0) {
+            const zeroRes = Object.keys(netEffects)[0];
+            result = {
+                items: [{
+                    value: '0',
+                    label: `${zeroRes}/s`,
+                    type: ''
+                }]
+            };
         }
 
-        for (const [res, v] of Object.entries(drains)) {
-            const baseVal = v * multiplier;
-            const note = gains[res] ? 'pay' : 'input';
-            items.push({
-                value: `-${fmt(baseVal)}`,
-                label: `${res}/s`,
-                type: 'drain',
-                note
-            });
-        }
-
-        const mods = [];
-        if (wisdom > 0 && gainItems.length > 0) {
-            const gainIndices = gainItems.map(item => items.indexOf(item));
-            const start = Math.min(...gainIndices);
-            const end = Math.max(...gainIndices);
-            mods.push({
-                value: `×${fmt(wisdomMult)}`,
-                label: 'wisdom',
-                range: [start, end]
-            });
-        }
-
-        const netEffects = {};
-        for (const [res, v] of Object.entries(gains)) {
-            netEffects[res] = (netEffects[res] || 0) + v * multiplier * wisdomMult * scale;
-        }
-        for (const [res, v] of Object.entries(drains)) {
-            netEffects[res] = (netEffects[res] || 0) - v * multiplier * scale;
-        }
-
-        const resultItems = Object.entries(netEffects)
-            .filter(([, v]) => v !== 0)
-            .map(([res, v]) => ({
-                value: `${v > 0 ? '+' : ''}${fmt(v)}`,
-                label: `${res}/s`,
-                type: v > 0 ? 'gain' : 'drain'
-            }));
-
-        const header = isPartial ? `Can hire ${multiplier}` : null;
-
-        return { header, items, modifiers: mods, result: { items: resultItems } };
+        return { header, items, result };
     }
 
     getDemolishTooltipData(type) {
@@ -1147,42 +1185,71 @@ export default class IndustryManager {
 
         const fmt = (v, opt) => this.core.ui.formatNumber(v, opt);
         const buildingName = def.name.toLowerCase();
-        const wisdom = this.core.city?.ruler?.wisdom || 0;
-        const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
 
         const sections = [];
         for (const [res, eff] of Object.entries(def.effects)) {
             if (!eff.base) continue;
 
+            const baseGain = eff.base.gain?.toNumber?.() ?? (eff.base.gain || 0);
+            const baseDrain = eff.base.drain?.toNumber?.() ?? (eff.base.drain || 0);
+            
+            if (baseGain === 0 && baseDrain === 0) continue;
+
+            // Compute per-unit effect with modifiers
+            const currentCount = b.count;
+            const perUnitResult = this.#computeEffectFrom(type, res, 'base', currentCount, -1);
+
+            // Compute total effect for all buildings
+            const totalResult = this.#computeEffectAt(type, res, 'base', b.count);
+
             const items = [];
-            const gainItems = [];
-            let baseGain = 0, baseDrain = 0;
-
-            if (eff.base.gain) {
-                baseGain = eff.base.gain.toNumber?.() ?? eff.base.gain;
-                gainItems.push({ value: `+${fmt(baseGain)}`, label: `${res}/s`, type: 'gain', note: 'prod.' });
+            if (baseGain !== 0) {
+                const item = {
+                    value: `+${fmt(baseGain)}`,
+                    label: `${res}/s`,
+                    type: 'gain',
+                    note: 'prod.',
+                    modifiers: perUnitResult.modifiers ? [...perUnitResult.modifiers] : []
+                };
+                if (b.count > 1) {
+                    if (!item.modifiers) item.modifiers = [];
+                    item.modifiers.push({
+                        value: '×',
+                        label: `${b.count} ${buildingName}${b.count !== 1 ? 's' : ''}`
+                    });
+                }
+                items.push(item);
             }
-            items.push(...gainItems);
-
-            if (eff.base.drain) {
-                baseDrain = eff.base.drain.toNumber?.() ?? eff.base.drain;
-                items.push({ value: `-${fmt(baseDrain)}`, label: `${res}/s`, type: 'drain' });
+            if (baseDrain !== 0) {
+                const item = {
+                    value: `-${fmt(baseDrain)}`,
+                    label: `${res}/s`,
+                    type: 'drain',
+                    modifiers: perUnitResult.modifiers ? [...perUnitResult.modifiers] : []
+                };
+                if (b.count > 1) {
+                    if (!item.modifiers) item.modifiers = [];
+                    item.modifiers.push({
+                        value: '×',
+                        label: `${b.count} ${buildingName}${b.count !== 1 ? 's' : ''}`
+                    });
+                }
+                items.push(item);
             }
 
-            const mods = [];
-            if (wisdom > 0 && gainItems.length > 0) {
-                mods.push({ value: `×${fmt(wisdomMult)}`, label: 'wisdom', range: [0, gainItems.length - 1] });
+            if (items.length > 0) {
+                const finalTotal = totalResult.gain - totalResult.drain;
+                sections.push({
+                    items,
+                    result: {
+                        items: [{
+                            value: `${finalTotal >= 0 ? '+' : ''}${fmt(finalTotal)}`,
+                            label: `${res}/s`,
+                            type: finalTotal >= 0 ? 'gain' : 'drain'
+                        }]
+                    }
+                });
             }
-            mods.push({ value: '×', label: `${b.count} ${buildingName}${b.count !== 1 ? 's' : ''}`, range: [0, items.length - 1] });
-
-            const finalTotal = (baseGain * wisdomMult - baseDrain) * b.count;
-            const resultItems = [{
-                value: `${finalTotal >= 0 ? '+' : ''}${fmt(finalTotal)}`,
-                label: `${res}/s`,
-                type: finalTotal >= 0 ? 'gain' : 'drain'
-            }];
-
-            sections.push({ items, modifiers: mods, result: { items: resultItems } });
         }
 
         return sections;
@@ -1195,64 +1262,72 @@ export default class IndustryManager {
 
         const fmt = (v, opt) => this.core.ui.formatNumber(v, opt);
         const scale = this.getWorkerScale();
-        const wisdom = this.core.city?.ruler?.wisdom || 0;
-        const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
-
-        const gains = {}, drains = {};
-        for (const [res, eff] of Object.entries(def.effects)) {
-            if (!eff.worker) continue;
-            if (eff.worker.gain) {
-                const v = eff.worker.gain.toNumber?.() ?? eff.worker.gain;
-                gains[res] = (gains[res] || 0) + v;
-            }
-            if (eff.worker.drain) {
-                const v = eff.worker.drain.toNumber?.() ?? eff.worker.drain;
-                drains[res] = (drains[res] || 0) + v;
-            }
-        }
-
-        if (!Object.keys(gains).length && !Object.keys(drains).length) return null;
+        const buildingCount = b.count || 0;
 
         const items = [];
-        const gainItems = [];
-        for (const [res, v] of Object.entries(gains)) {
-            gainItems.push({ value: `+${fmt(v)}`, label: `${res}/s`, type: 'gain', note: 'prod.' });
-        }
-        items.push(...gainItems);
+        const netEffects = {};
 
-        for (const [res, v] of Object.entries(drains)) {
-            const note = gains[res] ? 'pay' : 'input';
-            items.push({ value: `-${fmt(v)}`, label: `${res}/s`, type: 'drain', note });
+        for (const [res, eff] of Object.entries(def.effects)) {
+            if (!eff.worker) continue;
+            const baseGain = eff.worker.gain?.toNumber?.() ?? (eff.worker.gain || 0);
+            const baseDrain = eff.worker.drain?.toNumber?.() ?? (eff.worker.drain || 0);
+            
+            if (baseGain === 0 && baseDrain === 0) continue;
+
+            const result = this.#computeEffectAt(type, res, 'worker', b.workers);
+
+            if (result.gain > 0) {
+                const item = {
+                    value: `+${fmt(result.gain / b.workers)}`,
+                    label: `${res}/s`,
+                    type: 'gain',
+                    note: 'prod.',
+                    modifiers: result.modifiers ? [...result.modifiers] : []
+                };
+                if (b.workers > 1) {
+                    item.modifiers.push({ value: '×', label: `${b.workers} workers` });
+                }
+                if (scale < 1) {
+                    item.modifiers.push({ value: `×${(scale * 100).toFixed(0)}%`, label: 'throttled' });
+                }
+                items.push(item);
+                netEffects[res] = (netEffects[res] || 0) + result.gain * scale;
+            }
+            if (result.drain > 0) {
+                const note = baseGain !== 0 ? 'pay' : 'input';
+                const item = {
+                    value: `-${fmt(result.drain / b.workers)}`,
+                    label: `${res}/s`,
+                    type: 'drain',
+                    note,
+                    modifiers: result.modifiers ? [...result.modifiers] : []
+                };
+                if (b.workers > 1) {
+                    if (!item.modifiers) item.modifiers = [];
+                    item.modifiers.push({ value: '×', label: `${b.workers} workers` });
+                }
+                if (scale < 1) {
+                    if (!item.modifiers) item.modifiers = [];
+                    item.modifiers.push({ value: `×${(scale * 100).toFixed(0)}%`, label: 'throttled' });
+                }
+                items.push(item);
+                netEffects[res] = (netEffects[res] || 0) - result.drain * scale;
+            }
         }
 
-        const mods = [];
-        if (wisdom > 0 && gainItems.length > 0) {
-            mods.push({ value: `×${fmt(wisdomMult)}`, label: 'wisdom', range: [0, gainItems.length - 1] });
-        }
+        if (items.length === 0) return null;
 
-        let workersLabel = `${b.workers} worker${b.workers !== 1 ? 's' : ''}`;
-        if (scale < 1) {
-            workersLabel += ` × ${(scale * 100).toFixed(0)}%`;
-        }
-        mods.push({ value: '×', label: workersLabel, range: [0, items.length - 1] });
-
-        const finals = {};
-        for (const [res, v] of Object.entries(gains)) {
-            finals[res] = (finals[res] || 0) + v * wisdomMult * b.workers * scale;
-        }
-        for (const [res, v] of Object.entries(drains)) {
-            finals[res] = (finals[res] || 0) - v * b.workers * scale;
-        }
-
-        const resultItems = Object.entries(finals)
-            .filter(([, v]) => v !== 0)
-            .map(([res, v]) => ({
-                value: `${v > 0 ? '+' : ''}${fmt(v)}`,
-                label: `${res}/s`,
-                type: v > 0 ? 'gain' : 'drain'
-            }));
-
-        return { items, modifiers: mods, result: { items: resultItems } };
+        const resultEntries = Object.entries(netEffects).filter(([, v]) => v !== 0);
+        return {
+            items,
+            result: resultEntries.length > 0 ? {
+                items: resultEntries.map(([res, v]) => ({
+                    value: `${v > 0 ? '+' : ''}${fmt(v)}`,
+                    label: `${res}/s`,
+                    type: v > 0 ? 'gain' : 'drain'
+                }))
+            } : null
+        };
     }
 
     getResourceProductionTooltipData(resource) {
@@ -1294,9 +1369,8 @@ export default class IndustryManager {
     getInfoBoxTooltipData(action, type) {
         const plan = this.getActionPlan(action, type);
         const fmt = (v, opt) => this.core.ui.formatNumber(v, opt);
-        const wisdom = this.core.city?.ruler?.wisdom || 0;
-        const wisdomMult = wisdom > 0 ? 1 + wisdom * 0.01 : 1;
-        const multiplier = plan.target;
+    
+        const increment = plan.target;
 
         let result;
         switch (action) {
@@ -1324,206 +1398,259 @@ export default class IndustryManager {
             const def = IndustryManager.BUILDING_DEFS[type];
             if (!def) return null;
 
-            const costs = def.buildCost ? Object.entries(def.buildCost).map(([res, amt]) => ({
-                value: `-${fmt(amt * multiplier)}`,
-                label: res,
-                type: 'drain',
-                note: 'cost'
-            })) : [];
-
             const items = [];
-            const gainItems = [];
             const netEffects = {};
+            const currentCount = this.buildings[type]?.count || 0;
+
+            // Costs (one-time drains)
+            if (def.buildCost) {
+                for (const [res, amt] of Object.entries(def.buildCost)) {
+                    items.push({
+                        value: `-${fmt(amt * increment)}`,
+                        label: res,
+                        type: 'drain',
+                        note: 'cost'
+                    });
+                }
+            }
+
+            // Effects (ongoing gains/drains)
             for (const [res, eff] of Object.entries(def.effects || {})) {
                 if (!eff.base) continue;
                 const baseGain = eff.base.gain?.toNumber?.() ?? (eff.base.gain || 0);
                 const baseDrain = eff.base.drain?.toNumber?.() ?? (eff.base.drain || 0);
                 
+                if (baseGain === 0 && baseDrain === 0) continue;
+
+                // Calculate per-unit effect with modifiers
+                const perUnitResult = this.#computeEffectFrom(type, res, 'base', currentCount, 1);
+
+                // Calculate total incremental effect
+                const totalResult = this.#computeEffectFrom(type, res, 'base', currentCount, increment);
+
                 if (baseGain !== 0) {
-                    const baseVal = baseGain * multiplier;
                     const item = {
-                        value: `+${fmt(baseVal)}`,
+                        value: `+${fmt(baseGain)}`,
                         label: `${res}/s`,
                         type: 'gain',
-                        note: 'prod.'
+                        note: 'prod.',
+                        modifiers: perUnitResult.modifiers ? [...perUnitResult.modifiers] : []
                     };
+                    if (increment > 1) {
+                        if (!item.modifiers) item.modifiers = [];
+                        item.modifiers.push({value: '×', label: `${increment} buildings`});
+                    }
                     items.push(item);
-                    gainItems.push(item);
-                    netEffects[res] = (netEffects[res] || 0) + baseVal * wisdomMult;
+                    netEffects[res] = (netEffects[res] || 0) + totalResult.gain;
                 }
                 if (baseDrain !== 0) {
-                    const baseVal = baseDrain * multiplier;
-                    items.push({
-                        value: `-${fmt(baseVal)}`,
+                    const item = {
+                        value: `-${fmt(baseDrain)}`,
                         label: `${res}/s`,
-                        type: 'drain'
-                    });
-                    netEffects[res] = (netEffects[res] || 0) - baseVal;
+                        type: 'drain',
+                        modifiers: perUnitResult.modifiers ? [...perUnitResult.modifiers] : []
+                    };
+                    if (increment > 1) {
+                        if (!item.modifiers) item.modifiers = [];
+                        item.modifiers.push({value: '×', label: `${increment} buildings`});
+                    }
+                    items.push(item);
+                    netEffects[res] = (netEffects[res] || 0) - totalResult.drain;
                 }
             }
 
-            const mods = [];
-            if (wisdom > 0 && gainItems.length > 0) {
-                const gainIndices = gainItems.map(item => items.indexOf(item));
-                const start = Math.min(...gainIndices);
-                const end = Math.max(...gainIndices);
-                mods.push({
-                    value: `×${fmt(wisdomMult)}`,
-                    label: 'wisdom',
-                    range: [start, end]
-                });
-            }
-
-            const capChanges = [];
+            // Cap changes
             if (def.capIncrease) {
                 for (const [res, val] of Object.entries(def.capIncrease)) {
-                    capChanges.push({
-                        value: `+${fmt(val * multiplier)}`,
+                    items.push({
+                        value: `+${fmt(val * increment)}`,
                         label: `${res} cap`,
                         type: 'gain'
                     });
                 }
             }
             if (def.workersPerBuilding) {
-                capChanges.push({
-                    value: `+${fmt(def.workersPerBuilding * multiplier)}`,
+                items.push({
+                    value: `+${fmt(def.workersPerBuilding * increment)}`,
                     label: 'workers cap',
                     type: 'gain'
                 });
             }
 
-            return { costs, items, modifiers: mods, capChanges };
+            return { items };
         } else if (action === 'demolish') {
-            const costs = result.rewards?.map(r => ({
-                value: `+${fmt(r.amt * multiplier)}`,
-                label: r.res,
-                type: 'gain'
-            })) || [];
-
             const items = [];
             const netEffects = {};
+
+            // Rewards (one-time gains)
+            if (result.rewards) {
+                for (const r of result.rewards) {
+                    items.push({
+                        value: `+${fmt(r.amt * increment)}`,
+                        label: r.res,
+                        type: 'gain'
+                    });
+                }
+            }
+
+            // Effects (ongoing gains/drains being removed)
             for (const [res, val] of Object.entries(result.effects || {})) {
                 if (val !== 0) {
-                    const absVal = Math.abs(val) * multiplier;
+                    const absVal = Math.abs(val) * increment;
                     items.push({
                         value: `${val > 0 ? '+' : '-'}${fmt(absVal)}`,
                         label: `${res}/s`,
                         type: val > 0 ? 'gain' : 'drain',
                         note: val > 0 ? 'prod.' : undefined
                     });
-                    netEffects[res] = val * multiplier;
+                    netEffects[res] = val * increment;
                 }
             }
 
-            const capChanges = Object.entries(result.capChanges || {}).map(([res, val]) => ({
-                value: `${val >= 0 ? '+' : ''}${fmt(val * multiplier)}`,
-                label: `${res} cap`,
-                type: val >= 0 ? 'gain' : 'drain'
-            }));
+            // Cap changes
+            for (const [res, val] of Object.entries(result.capChanges || {})) {
+                items.push({
+                    value: `${val >= 0 ? '+' : ''}${fmt(val * increment)}`,
+                    label: `${res} cap`,
+                    type: val >= 0 ? 'gain' : 'drain'
+                });
+            }
 
-            return { costs, items, modifiers: [], capChanges };
+            return { items };
         } else if (action === 'hire') {
             const def = IndustryManager.BUILDING_DEFS[type];
             if (!def?.effects) return null;
 
             const scale = this.getWorkerScale();
-            const drainItems = [];
-            const gainItems = [];
+            const b = this.buildings[type];
+            const currentWorkers = b?.workers || 0;
+            const buildingCount = b?.count || 0;
+            const items = [];
+            const netEffects = {};
             
             for (const [res, eff] of Object.entries(def.effects)) {
                 if (!eff.worker) continue;
                 const baseGain = eff.worker.gain?.toNumber?.() ?? (eff.worker.gain || 0);
                 const baseDrain = eff.worker.drain?.toNumber?.() ?? (eff.worker.drain || 0);
                 
+                if (baseGain === 0 && baseDrain === 0) continue;
+
+                // Calculate per-unit effect with modifiers
+                const perUnitResult = this.#computeEffectFrom(type, res, 'worker', currentWorkers, 1);
+
+                // Calculate total incremental effect
+                const totalResult = this.#computeEffectFrom(type, res, 'worker', currentWorkers, increment);
+
                 if (baseDrain !== 0) {
-                    const baseVal = baseDrain * multiplier * scale;
                     const note = baseGain !== 0 ? 'pay' : 'input';
-                    drainItems.push({
-                        value: `-${fmt(baseVal)}`,
+                    const item = {
+                        value: `-${fmt(baseDrain)}`,
                         label: `${res}/s`,
                         type: 'drain',
-                        note
-                    });
+                        note,
+                        modifiers: perUnitResult.modifiers ? [...perUnitResult.modifiers] : []
+                    };
+                    if (increment > 1) {
+                        if (!item.modifiers) item.modifiers = [];
+                        item.modifiers.push({value: '×', label: `${increment} workers`});
+                    }
+                    if (scale < 1) {
+                        if (!item.modifiers) item.modifiers = [];
+                        item.modifiers.push({value: `×${(scale * 100).toFixed(0)}%`, label: 'throttled'});
+                    }
+                    items.push(item);
+                    netEffects[res] = (netEffects[res] || 0) - totalResult.drain * scale;
                 }
                 if (baseGain !== 0) {
-                    const baseVal = baseGain * multiplier * scale;
-                    gainItems.push({
-                        value: `+${fmt(baseVal)}`,
+                    const item = {
+                        value: `+${fmt(baseGain)}`,
                         label: `${res}/s`,
                         type: 'gain',
-                        note: 'prod.'
-                    });
+                        note: 'prod.',
+                        modifiers: perUnitResult.modifiers ? [...perUnitResult.modifiers] : []
+                    };
+                    if (increment > 1) {
+                        if (!item.modifiers) item.modifiers = [];
+                        item.modifiers.push({value: '×', label: `${increment} workers`});
+                    }
+                    if (scale < 1) {
+                        if (!item.modifiers) item.modifiers = [];
+                        item.modifiers.push({value: `×${(scale * 100).toFixed(0)}%`, label: 'throttled'});
+                    }
+                    items.push(item);
+                    netEffects[res] = (netEffects[res] || 0) + totalResult.gain * scale;
                 }
             }
 
-            const items = [...drainItems, ...gainItems];
-
-            const mods = [];
-            if (wisdom > 0 && gainItems.length > 0) {
-                const gainIndices = gainItems.map(item => items.indexOf(item));
-                const start = Math.min(...gainIndices);
-                const end = Math.max(...gainIndices);
-                mods.push({
-                    value: `×${fmt(wisdomMult)}`,
-                    label: 'wisdom',
-                    range: [start, end]
-                });
-            }
-
-            return { items, modifiers: mods };
+            return { items };
         } else if (action === 'furlough') {
             const def = IndustryManager.BUILDING_DEFS[type];
             if (!def?.effects) return null;
 
             const scale = this.getWorkerScale();
-            const drainItems = [];
-            const gainItems = [];
+            const b = this.buildings[type];
+            const currentWorkers = b?.workers || 0;
+            const buildingCount = b?.count || 0;
+            const items = [];
+            const netEffects = {};
             
             for (const [res, eff] of Object.entries(def.effects)) {
                 if (!eff.worker) continue;
                 const baseGain = eff.worker.gain?.toNumber?.() ?? (eff.worker.gain || 0);
                 const baseDrain = eff.worker.drain?.toNumber?.() ?? (eff.worker.drain || 0);
                 
-                // For furlough, removing a worker reverses the effects:
-                // - Worker gains become drains (removing the gain)
-                // - Worker drains become gains (removing the drain)
+                if (baseGain === 0 && baseDrain === 0) continue;
+
+                // For furlough, we compute the effect of removing workers
+                // This is backward: from currentWorkers to currentWorkers - increment
+                const perUnitResult = this.#computeEffectFrom(type, res, 'worker', currentWorkers, -1);
+
+                // Calculate effect of removing workers (backward from currentWorkers to currentWorkers - increment)
+                const totalResult = this.#computeEffectFrom(type, res, 'worker', currentWorkers, -increment);
+
+                // #computeEffectRange handles backwards ranges by inverting, so gains become drains and drains become gains
                 if (baseGain !== 0) {
-                    const baseVal = baseGain * multiplier * scale;
-                    drainItems.push({
-                        value: `-${fmt(baseVal)}`,
+                    const item = {
+                        value: `-${fmt(baseGain)}`,
                         label: `${res}/s`,
                         type: 'drain',
-                        note: 'prod.'
-                    });
+                        note: 'prod.',
+                        modifiers: perUnitResult.modifiers ? [...perUnitResult.modifiers] : []
+                    };
+                    if (increment > 1) {
+                        if (!item.modifiers) item.modifiers = [];
+                        item.modifiers.push({value: '×', label: `${increment} workers`});
+                    }
+                    if (scale < 1) {
+                        if (!item.modifiers) item.modifiers = [];
+                        item.modifiers.push({value: `×${(scale * 100).toFixed(0)}%`, label: 'throttled'});
+                    }
+                    items.push(item);
+                    netEffects[res] = (netEffects[res] || 0) + totalResult.gain * scale;
                 }
                 if (baseDrain !== 0) {
-                    const baseVal = baseDrain * multiplier * scale;
                     const note = baseGain !== 0 ? 'pay' : 'input';
-                    gainItems.push({
-                        value: `+${fmt(baseVal)}`,
+                    const item = {
+                        value: `+${fmt(baseDrain)}`,
                         label: `${res}/s`,
                         type: 'gain',
-                        note
-                    });
+                        note,
+                        modifiers: perUnitResult.modifiers ? [...perUnitResult.modifiers] : []
+                    };
+                    if (increment > 1) {
+                        if (!item.modifiers) item.modifiers = [];
+                        item.modifiers.push({value: '×', label: `${increment} workers`});
+                    }
+                    if (scale < 1) {
+                        if (!item.modifiers) item.modifiers = [];
+                        item.modifiers.push({value: `×${(scale * 100).toFixed(0)}%`, label: 'throttled'});
+                    }
+                    items.push(item);
+                    netEffects[res] = (netEffects[res] || 0) + totalResult.drain * scale;
                 }
             }
 
-            const items = [...drainItems, ...gainItems];
-
-            const mods = [];
-            if (wisdom > 0 && drainItems.length > 0) {
-                // Wisdom applies to the gains being removed (shown as drains)
-                const drainIndices = drainItems.map(item => items.indexOf(item));
-                const start = Math.min(...drainIndices);
-                const end = Math.max(...drainIndices);
-                mods.push({
-                    value: `×${fmt(wisdomMult)}`,
-                    label: 'wisdom',
-                    range: [start, end]
-                });
-            }
-
-            return { items, modifiers: mods };
+            return { items };
         }
 
         return null;
@@ -1585,4 +1712,5 @@ class Resource {
         return new Resource(data.value, options);
     }
 }
+
 
