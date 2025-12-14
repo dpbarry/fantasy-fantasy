@@ -103,8 +103,8 @@ export default class IndustryPanel {
                 }
 
                 // Calculate throttled rate on-the-fly to match tooltip
-                const breakdown = this.core.industry.getResourceProductionBreakdown(k);
-                const rateNum = breakdown ? breakdown.baseGain + breakdown.workerGain - breakdown.baseDrain - breakdown.workerDrain : 0;
+                const resData = this.core.industry.getResourceEffects(k);
+                const rateNum = resData ? resData.net : 0;
 
                 const showRate = this.isExpanded || window.matchMedia('(width <= 950px)').matches;
                 const prevRate = this.previousRates[k];
@@ -1012,6 +1012,261 @@ export default class IndustryPanel {
     // FORMATTING & CALCULATION HELPERS
     // ============================================================================
 
+    // Sort effects by category and tag for consistent display
+    // Categories: cost, reward, rate, cap
+    // Within rate: input, pay, prod
+    #sortEffects(effects) {
+        const categoryOrder = { cost: 0, reward: 1, rate: 2, cap: 3 };
+        const tagOrder = { input: 0, pay: 1, prod: 2 };
+        return [...effects].sort((a, b) => {
+            const catDiff = (categoryOrder[a.category] ?? 99) - (categoryOrder[b.category] ?? 99);
+            if (catDiff !== 0) return catDiff;
+            // Within rate category, sort by tag
+            if (a.category === 'rate' && b.category === 'rate') {
+                return (tagOrder[a.tag] ?? 99) - (tagOrder[b.tag] ?? 99);
+            }
+            return 0;
+        });
+    }
+
+    // Add contextual modifiers to an effect (units, scale, etc.)
+    #addContextualModifiers(modifiers, category, units, scale, effectType) {
+        const mods = modifiers ? [...modifiers] : [];
+        if (category === 'rate' && units > 1) {
+            const unitLabel = effectType === 'base' ? 'buildings' : 'workers';
+            mods.push({ value: '×', label: `${units} ${unitLabel}` });
+        }
+        if (category === 'rate' && scale < 1) {
+            mods.push({ value: `×${(scale * 100).toFixed(0)}%`, label: 'throttled' });
+        }
+        return mods;
+    }
+
+    // Convert effect data to tooltip format for BreakdownBox
+    formatActionTooltip(action, type) {
+        const plan = this.core.industry.getActionPlan(action, type);
+        
+        // Handle disabled state
+        if (plan.actual <= 0) {
+            return { header: this.getDisabledReason(action, type) };
+        }
+        
+        // For sell/furlough, just show partial header if applicable
+        if (action === 'sell' || action === 'furlough') {
+            if (plan.actual < plan.target) {
+                const actionName = action === 'sell' ? 'demolish' : 'furlough';
+                return { header: `Can only ${actionName} ${plan.actual} (all)` };
+            }
+            return null;
+        }
+
+        const data = this.core.industry.getActionEffects(action, type);
+        if (!data) return null;
+
+        const { effects, scale, units, effectType } = data;
+        const isPartial = plan.actual < plan.target;
+        const items = [];
+        const netRates = {};
+
+        const sorted = this.#sortEffects(effects);
+
+        for (const eff of sorted) {
+            const { category, resource, direction, tag, baseValue, value, modifiers } = eff;
+            const isGain = direction === 'gain';
+            const mods = this.#addContextualModifiers(modifiers, category, units, scale, effectType);
+            
+            // Format effect based on category
+            switch (category) {
+                case 'cost':
+                    items.push({ value: `-${this.fmt(value)}`, label: resource, type: 'drain', note: 'cost', modifiers: mods });
+                    break;
+                case 'reward':
+                    items.push({ value: `+${this.fmt(value)}`, label: resource, type: 'gain', modifiers: mods });
+                    break;
+                case 'cap':
+                    items.push({ value: `${isGain ? '+' : '-'}${this.fmt(value)}`, label: `${resource} cap`, type: isGain ? 'gain' : 'drain', modifiers: mods });
+                    break;
+                case 'rate':
+                    items.push({ value: `${isGain ? '+' : '-'}${this.fmt(baseValue)}`, label: `${resource}/s`, type: isGain ? 'gain' : 'drain', note: tag, modifiers: mods });
+                    netRates[resource] = (netRates[resource] || 0) + (isGain ? value * scale : -value * scale);
+                    break;
+            }
+        }
+
+        const header = isPartial ? `Can ${action} ${units}` : null;
+        const resultEntries = Object.entries(netRates).filter(([, v]) => Math.abs(v) >= 0.0001);
+        const result = resultEntries.length > 0 ? {
+            items: resultEntries.map(([res, v]) => ({
+                value: `${v > 0 ? '+' : ''}${this.fmt(v)}`,
+                label: `${res}/s`,
+                type: v > 0 ? 'gain' : 'drain'
+            }))
+        } : null;
+
+        return { header, items, result };
+    }
+
+    // Format aggregate effects (buildings or workers) for tooltip
+    // Returns a single section with all items and one combined result
+    formatAggregateTooltip(type, effectType) {
+        const data = this.core.industry.getAggregateEffects(type, effectType);
+        if (!data) return null;
+
+        const { effects, units, scale, def } = data;
+        const unitLabel = effectType === 'base' ? `${def.name.toLowerCase()}${units !== 1 ? 's' : ''}` : 'workers';
+
+        // Sort: drains (input, pay) first, then gains (prod)
+        const sorted = this.#sortEffects(effects);
+
+        // Collect all items and calculate net values per resource
+        const items = [];
+        const netByResource = {};
+        
+        for (const eff of sorted) {
+            const { resource, direction, tag, baseValue, value, modifiers } = eff;
+            const isGain = direction === 'gain';
+            const mods = this.#addContextualModifiers(modifiers, 'rate', units, scale, effectType);
+            
+            items.push({
+                value: `${isGain ? '+' : '-'}${this.fmt(baseValue)}`,
+                label: `${resource}/s`,
+                type: isGain ? 'gain' : 'drain',
+                note: tag,
+                modifiers: mods
+            });
+            
+            // Calculate net per resource
+            netByResource[resource] = (netByResource[resource] || 0) + (isGain ? value : -value) * scale;
+        }
+
+        // Create single combined result with all resources
+        const resultItems = Object.entries(netByResource)
+            .filter(([, net]) => Math.abs(net) >= 0.0001)
+            .map(([res, net]) => ({
+                value: `${net >= 0 ? '+' : ''}${this.fmt(net)}`,
+                label: `${res}/s`,
+                type: net >= 0 ? 'gain' : 'drain'
+            }));
+
+        if (items.length === 0) return null;
+
+        return [{
+            items,
+            result: resultItems.length > 0 ? { items: resultItems } : null
+        }];
+    }
+
+    // Format resource effects for tooltip
+    // Shows all sources contributing to a resource's rate
+    formatResourceTooltip(res) {
+        const data = this.core.industry.getResourceEffects(res);
+        if (!data) return null;
+
+        const { effects, net } = data;
+        const items = [];
+
+        // Sort effects for consistent display (drains before gains)
+        const sorted = this.#sortEffects(effects);
+
+        for (const eff of sorted) {
+            const { buildingType, effectType, direction, tag, value, modifiers, scale = 1 } = eff;
+            const def = this.defs[buildingType];
+            const name = effectType === 'base' ? (def?.name?.toLowerCase() || buildingType) : 'workers';
+            const isGain = direction === 'gain';
+            const scaledValue = Math.abs(value) * scale;
+            
+            // Add scale modifier if applicable
+            const mods = modifiers ? [...modifiers] : [];
+            if (scale < 1 && effectType === 'worker') {
+                mods.push({ value: `×${(scale * 100).toFixed(0)}%`, label: 'throttled' });
+            }
+            
+            items.push({
+                value: `${isGain ? '+' : '-'}${this.fmt(scaledValue)}`,
+                label: '/s',
+                type: isGain ? 'gain' : 'drain',
+                note: `${name} (${tag})`,
+                modifiers: mods.length > 0 ? mods : undefined
+            });
+        }
+
+        if (!items.length) return null;
+
+        return {
+            items,
+            result: { items: [{ value: `${net >= 0 ? '+' : ''}${this.fmt(net)}`, label: '/s', type: net >= 0 ? 'gain' : 'drain' }] }
+        };
+    }
+
+    // Get disabled reason for any action
+    getDisabledReason(action, type) {
+        switch (action) {
+            case 'build': return this.core.industry.getBuildDisabledReason(type);
+            case 'sell': return this.core.industry.getDemolishDisabledReason(type);
+            case 'hire': return this.core.industry.getHireDisabledReason(type);
+            case 'furlough': return this.core.industry.getFurloughDisabledReason(type);
+            default: return '';
+        }
+    }
+
+    // Format info box breakdown tooltip (shows effects without header/result)
+    formatInfoBoxTooltip(action, type) {
+        const data = this.core.industry.getActionEffects(action, type);
+        if (!data) return null;
+
+        const { effects, scale, units, effectType } = data;
+        const items = [];
+
+        const sorted = this.#sortEffects(effects);
+
+        for (const eff of sorted) {
+            const { category, resource, direction, tag, baseValue, value, modifiers } = eff;
+            const isGain = direction === 'gain';
+            const mods = this.#addContextualModifiers(modifiers, category, units, scale, effectType);
+
+            // Format effect based on category (no net calculation for info box)
+            switch (category) {
+                case 'cost':
+                    items.push({ value: `-${this.fmt(value)}`, label: resource, type: 'drain', note: 'cost', modifiers: mods });
+                    break;
+                case 'reward':
+                    items.push({ value: `+${this.fmt(value)}`, label: resource, type: 'gain', modifiers: mods });
+                    break;
+                case 'cap':
+                    items.push({ value: `${isGain ? '+' : '-'}${this.fmt(value)}`, label: `${resource} cap`, type: isGain ? 'gain' : 'drain', modifiers: mods });
+                    break;
+                case 'rate':
+                    items.push({ value: `${isGain ? '+' : '-'}${this.fmt(baseValue)}`, label: `${resource}/s`, type: isGain ? 'gain' : 'drain', note: tag, modifiers: mods });
+                    break;
+            }
+        }
+
+        return items.length ? { items } : null;
+    }
+
+    // Format aggregate effects as inline HTML string for headers
+    formatAggregateEffectsInline(type, effectType) {
+        const data = this.core.industry.getAggregateEffects(type, effectType);
+        if (!data) return null;
+
+        const { effects, scale } = data;
+        const byResource = {};
+        for (const eff of effects) {
+            const { resource, direction, value } = eff;
+            const scaledValue = value * scale;
+            byResource[resource] = (byResource[resource] || 0) + (direction === 'gain' ? scaledValue : -scaledValue);
+        }
+        
+        const items = [];
+        for (const [res, net] of Object.entries(byResource)) {
+            if (net !== 0) {
+                const color = net > 0 ? 'gainColor' : 'drainColor';
+                items.push(`<span style="color: var(--${color})">${net > 0 ? '+' : ''}${this.fmt(net)} ${res}/s</span>`);
+            }
+        }
+        return items.length ? items.join(',&nbsp;') : null;
+    }
+
     formatActionLabel(baseText, action, type) {
         if (!this.isMultiIncrementActive()) return baseText;
         const plan = this.getActionPlanDetails(action, type);
@@ -1074,35 +1329,11 @@ export default class IndustryPanel {
     }
 
     getAggregateBuildingEffects(type) {
-        const effects = this.core.industry.getAggregateBuildingEffects(type);
-        if (!effects) return null;
-
-        const items = Object.entries(effects).flatMap(([res, {gain, drain}]) => {
-            const items = [];
-            if (gain) {
-                items.push(`<span style="color: var(--gainColor)">+${this.core.ui.formatNumber(gain)} ${res}/s</span>`);
-            }
-            if (drain) {
-                items.push(`<span style="color: var(--drainColor)">-${this.core.ui.formatNumber(drain)} ${res}/s</span>`);
-            }
-            return items;
-        });
-
-        return items.length > 0 ? items.join(',&nbsp;') : null;
+        return this.formatAggregateEffectsInline(type, 'base');
     }
 
     getAggregateWorkerEffects(type) {
-        const effects = this.core.industry.getAggregateWorkerEffects(type);
-        if (!effects) return null;
-
-        const items = Object.entries(effects)
-            .map(([res, net]) => {
-                const isGain = net > 0;
-                // noinspection CssUnresolvedCustomProperty
-                return `<span style="color: var(--${isGain ? 'gain' : 'drain'}Color)">${isGain ? '+' : ''}${this.core.ui.formatNumber(net)} ${res}/s</span>`;
-            });
-
-        return items.length > 0 ? items.join(',&nbsp;') : null;
+        return this.formatAggregateEffectsInline(type, 'worker');
     }
 
     getTimeUntilNextBuilding(type) {
@@ -1110,62 +1341,43 @@ export default class IndustryPanel {
         return seconds !== null ? this.formatTime(seconds) : null;
     }
 
-    getButtonDetails(type, action, getEffectsFn) {
-        const result = getEffectsFn(type);
-        if (!result) return null;
+    // Get button details from unified action effects
+    getButtonDetailsFromAction(action, type) {
+        const data = this.core.industry.getActionEffects(action, type);
+        if (!data) return null;
 
-        const plan = this.getActionPlanDetails(action, type);
-        return this.getButtonDetailsWithMultiplier(result, plan.actual);
-    }
+        const { effects, scale } = data;
+        
+        // Separate by category
+        const costs = effects.filter(e => e.category === 'cost').map(e => ({ res: e.resource, amt: e.value }));
+        const rewards = effects.filter(e => e.category === 'reward').map(e => ({ res: e.resource, amt: e.value }));
+        const caps = effects.filter(e => e.category === 'cap').map(e => ({ res: e.resource, val: e.direction === 'gain' ? e.value : -e.value }));
+        
+        // Sum net rates by resource
+        const netByRes = {};
+        for (const e of effects.filter(e => e.category === 'rate')) {
+            const scaledValue = e.value * scale;
+            netByRes[e.resource] = (netByRes[e.resource] || 0) + (e.direction === 'gain' ? scaledValue : -scaledValue);
+        }
+        const effectsList = Object.entries(netByRes).filter(([, net]) => net !== 0).map(([res, net]) => ({ res, val: Math.abs(net), type: net > 0 ? 'gain' : 'drain' }));
 
-    getButtonDetailsWithMultiplier(result, multiplier) {
-        const costs = result.costs?.map(c => ({res: c.res, amt: c.amt * multiplier})) || [];
-        const rewards = result.rewards?.map(r => ({res: r.res, amt: r.amt * multiplier})) || [];
-        const effects = Object.entries(result.effects || {}).map(([res, val]) => ({
-            res, val: Math.abs(val) * multiplier, type: val > 0 ? 'gain' : 'drain'
-        }));
-        const capChanges = Object.entries(result.capChanges || {}).map(([res, val]) => ({
-            res, val: val * multiplier
-        }));
-
-        return {costs, rewards, effects, capChanges};
+        return { costs, rewards, effects: effectsList, capChanges: caps };
     }
 
     getBuildingButtonDetails(type) {
-        const result = this.core.industry.getBuildEffects(type);
-        if (!result) return null;
-
-        const plan = this.getActionPlanDetails('build', type);
-        // Show effects for the full selected increment, not just what you can afford
-        const multiplier = plan.target;
-        return this.getButtonDetailsWithMultiplier(result, multiplier);
+        return this.getButtonDetailsFromAction('build', type);
     }
 
     getDemolishButtonDetails(type) {
-        return this.getButtonDetails(type, 'sell', t => this.core.industry.getDemolishEffects(t));
+        return this.getButtonDetailsFromAction('sell', type);
     }
 
     getFurloughButtonDetails(type) {
-        return this.getButtonDetails(type, 'furlough', t => this.core.industry.getFurloughWorkerEffects(t));
+        return this.getButtonDetailsFromAction('furlough', type);
     }
 
     getWorkerButtonDetails(type) {
-        const result = this.core.industry.getHireWorkerEffects(type);
-        if (!result) return null;
-
-        const plan = this.getActionPlanDetails('hire', type);
-
-        // Show effects for the full selected increment, but use x1 when disabled due to no buildings
-        const capacity = this.core.industry.getMaxWorkers(type) - (this.core.industry.buildings[type]?.workers || 0);
-        const multiplier = capacity === 0 ? 1 : plan.target;
-
-        const {costs, effects} = Object.entries(result.effects || {}).reduce((acc, [res, val]) => {
-            const item = {res, val: Math.abs(val) * multiplier, type: val < 0 ? 'drain' : 'gain'};
-            (val < 0 ? acc.costs : acc.effects).push(item);
-            return acc;
-        }, {costs: [], effects: []});
-
-        return {costs, effects};
+        return this.getButtonDetailsFromAction('hire', type);
     }
 
     renderButtonInfoBox(details) {

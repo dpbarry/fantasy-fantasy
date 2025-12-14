@@ -584,34 +584,8 @@ export default function createTooltipService(core) {
         });
 
         registerTip('increment-amount', () => {
-            if (!core.industry || typeof core.industry.getSelectedIncrement !== 'function') {
-                return '<p>Increment by 1</p>';
-            }
-            const inc = core.industry.getSelectedIncrement();
-            if (inc === 'max') {
-                return '<p>Increment by maximum</p>';
-            }
-
-            const activeCard = document.querySelector('.building-card.expanded');
-            if (!activeCard) return `<p>Increment by ${inc}</p>`;
-
-            const type = activeCard.dataset.buildingType;
-            if (!type) return `<p>Increment by ${inc}</p>`;
-
-            const result = core.industry.getBuildEffectsForIncrement(type, inc);
-            if (!result?.effects) return `<p>Increment by ${inc}</p>`;
-
-            const sections = [];
-            for (const [res, val] of Object.entries(result.effects)) {
-                if (val !== 0) {
-                    const sign = val >= 0 ? '+' : '';
-                    const color = val >= 0 ? 'var(--gainColor)' : 'var(--drainColor)';
-                    sections.push(`<span style="color: ${color}">${sign}${fmt(Math.abs(val))} ${res}/s</span>`);
-                }
-            }
-
-            const effectsStr = sections.length > 0 ? ` (${sections.join(', ')})` : '';
-            return `<p>Increment by ${inc}${effectsStr}</p>`;
+            const inc = core.industry?.getSelectedIncrement?.() || 1;
+            return `<p>Increment by ${inc === 'max' ? 'maximum' : inc}</p>`;
         });
 
         registerTip('resource-name', (el) => {
@@ -619,18 +593,8 @@ export default function createTooltipService(core) {
             if (!res || !core.industry.resources[res]) return '';
 
             const resObj = core.industry.resources[res];
-            const data = core.industry.getResourceProductionTooltipData(res);
-
-            if (!data) {
-                const cap = resObj.effectiveCap;
-                if (cap !== undefined) {
-                    const capVal = cap.toNumber();
-                    const currentVal = resObj.value.toNumber();
-                    const percent = ((currentVal / capVal) * 100).toFixed(1);
-                    return `<p style="opacity: 0.7; font-style: italic">No production</p><p style="opacity: 0.8; margin-top: 0.3em">Cap: ${fmt(capVal)} (${percent}%)</p>`;
-                }
-                return `<p style="opacity: 0.7; font-style: italic">No production</p>`;
-            }
+            const panel = core.ui.panels.industry;
+            const data = panel.formatResourceTooltip(res);
 
             let capHtml = '';
             const cap = resObj.effectiveCap;
@@ -641,6 +605,10 @@ export default function createTooltipService(core) {
                 capHtml = `<p style="opacity: 0.8; margin-top: 0.3em">Cap: ${fmt(capVal)} (${percent}%)</p>`;
             }
 
+            if (!data) {
+                return `<p style="opacity: 0.7; font-style: italic">No production</p>${capHtml}`;
+            }
+
             return createBreakdownBox(data) + capHtml;
         });
 
@@ -648,7 +616,8 @@ export default function createTooltipService(core) {
             const res = el.dataset.resource;
             if (!res || !core.industry.resources[res]) return '';
 
-            const data = core.industry.getResourceProductionTooltipData(res);
+            const panel = core.ui.panels.industry;
+            const data = panel.formatResourceTooltip(res);
             if (!data) {
                 return `<p style="opacity: 0.7; font-style: italic">No production</p>`;
             }
@@ -656,11 +625,11 @@ export default function createTooltipService(core) {
             return createBreakdownBox(data);
         });
 
-
         registerTip('build', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-            const data = core.industry.getBuildTooltipData(type);
+            const panel = core.ui.panels.industry;
+            const data = panel.formatActionTooltip('build', type);
             if (!data) return '';
             return createBreakdownBox(data);
         });
@@ -668,7 +637,8 @@ export default function createTooltipService(core) {
         registerTip('demolish', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-            const data = core.industry.getDemolishTooltipData(type);
+            const panel = core.ui.panels.industry;
+            const data = panel.formatActionTooltip('sell', type);
             if (!data) return '';
             return createBreakdownBox(data);
         });
@@ -684,16 +654,17 @@ export default function createTooltipService(core) {
         registerTip('hire', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-            const data = core.industry.getHireTooltipData(type);
+            const panel = core.ui.panels.industry;
+            const data = panel.formatActionTooltip('hire', type);
             if (!data) return '';
             return createBreakdownBox(data);
         });
 
-
         registerTip('furlough', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-            const data = core.industry.getFurloughTooltipData(type);
+            const panel = core.ui.panels.industry;
+            const data = panel.formatActionTooltip('furlough', type);
             if (!data) return '';
             return createBreakdownBox(data);
         });
@@ -701,7 +672,8 @@ export default function createTooltipService(core) {
         registerTip('building-effects', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-            const sections = core.industry.getBuildingEffectsTooltipData(type);
+            const panel = core.ui.panels.industry;
+            const sections = panel.formatAggregateTooltip(type, 'base');
             if (!sections || sections.length === 0) return '';
             return sections.map(s => createBreakdownBox(s)).join('');
         });
@@ -709,9 +681,11 @@ export default function createTooltipService(core) {
         registerTip('worker-effects', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-            const data = core.industry.getWorkerEffectsTooltipData(type);
-            if (!data) return '';
-            return createBreakdownBox(data);
+            const panel = core.ui.panels.industry;
+            const data = panel.formatAggregateTooltip(type, 'worker');
+            if (!data || data.length === 0) return '';
+            // Worker effects returns array of sections, combine them
+            return data.map(s => createBreakdownBox(s)).join('');
         });
 
         registerTip('time-to-next', (el) => {
@@ -827,19 +801,24 @@ export default function createTooltipService(core) {
             const scale = core.industry.getWorkerScalingFactor();
             if (scale >= 1) return '';
 
-            const currentEffects = core.industry.getAggregateWorkerEffects(type);
-            if (!currentEffects) return '';
+            const data = core.industry.getAggregateEffects(type, 'worker');
+            if (!data || !data.effects || data.effects.length === 0) return '';
 
+            // Calculate potential (unthrottled) effects - effects array contains base values
+            // Potential = what the effect would be if scale = 1 (no throttling)
             const potentialByRes = {};
-            for (const [res, net] of Object.entries(currentEffects)) {
-                if (scale > 0) potentialByRes[res] = net / scale;
+            for (const eff of data.effects) {
+                const { resource, direction, value } = eff;
+                const isGain = direction === 'gain';
+                // Effect value is already the full value; potential is just value (as if scale = 1)
+                potentialByRes[resource] = (potentialByRes[resource] || 0) + (isGain ? value : -value);
             }
 
             const negativePotential = [];
             const positivePotential = [];
 
             for (const [res, val] of Object.entries(potentialByRes)) {
-                if (val !== 0) {
+                if (Math.abs(val) >= 0.0001) {
                     const sign = val > 0 ? '+' : '-';
                     const color = val > 0 ? 'var(--gainColor)' : 'var(--drainColor)';
                     const item = `<span style="color: ${color}">${sign}${fmt(Math.abs(val))} ${res}/s</span>`;
@@ -868,15 +847,16 @@ export default function createTooltipService(core) {
             const buildingType = buttonElement.dataset.buildingType;
             if (!buildingType) return '';
 
-            let actionType = null;
-            if (buttonElement.classList.contains('dropdown-add-building-btn')) actionType = 'build';
-            else if (buttonElement.classList.contains('dropdown-sell-btn')) actionType = 'demolish';
-            else if (buttonElement.classList.contains('dropdown-add-worker-btn')) actionType = 'hire';
-            else if (buttonElement.classList.contains('dropdown-remove-worker-btn')) actionType = 'furlough';
+            let action = null;
+            if (buttonElement.classList.contains('dropdown-add-building-btn')) action = 'build';
+            else if (buttonElement.classList.contains('dropdown-sell-btn')) action = 'sell';
+            else if (buttonElement.classList.contains('dropdown-add-worker-btn')) action = 'hire';
+            else if (buttonElement.classList.contains('dropdown-remove-worker-btn')) action = 'furlough';
 
-            if (!actionType) return '';
+            if (!action) return '';
 
-            const data = core.industry.getInfoBoxTooltipData(actionType, buildingType);
+            const panel = core.ui.panels.industry;
+            const data = panel.formatInfoBoxTooltip(action, buildingType);
             if (!data) return '';
 
             return createBreakdownBox(data);
