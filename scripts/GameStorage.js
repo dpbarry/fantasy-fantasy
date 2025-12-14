@@ -156,7 +156,7 @@ export default class GameStorage {
                     },
                     news: {
                         logs: [
-                            {timestamp: Date.now(), message: "Welcome to the game!"}
+                            {timestamp: "18:40", message: "You woke up from a strange dream."}
                         ]
                     },
                     industry: {

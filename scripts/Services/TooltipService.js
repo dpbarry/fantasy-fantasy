@@ -139,113 +139,114 @@ export default function createTooltipService(core) {
 
 
 
-    const PADDING = 8, MARGIN = 3, MULTI_GAP = 4;
-    const clampPos = (v, size, max) => Math.max(PADDING, Math.min(v, max - size - PADDING));
+    const PADDING = 8, MARGIN = 3, MULTI_GAP = 4, ARROW_MIN = 12;
+    const clamp = (v, min, max) => Math.max(min, Math.min(v, max));
 
+    function calcPosition(r, tb, vw, vh) {
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        const space = { above: r.top, below: vh - r.bottom, left: r.left, right: vw - r.right };
 
-    function calculatePosition(r, tb, vw, vh) {
-        const space = {
-            above: r.top,
-            below: vh - r.bottom,
-            left: r.left,
-            right: vw - r.right,
-        };
-        const horizontalBuffer = Math.max(0, (tb.width - r.width) / 2);
-        const canCenter = (r.left - horizontalBuffer) >= PADDING && (r.right + horizontalBuffer) <= (vw - PADDING);
-
+        // Pick best side
         let pos;
-        if (space.above >= tb.height + PADDING && canCenter) pos = 'above';
-        else if (space.below >= tb.height + PADDING && canCenter) pos = 'below';
-        else if ((r.left - tb.width - MARGIN) >= PADDING) pos = 'left';
-        else if ((r.right + tb.width + MARGIN) <= vw - PADDING) pos = 'right';
-        else pos = 'above';
+        if (space.above >= tb.height + PADDING) pos = 'above';
+        else if (space.below >= tb.height + PADDING) pos = 'below';
+        else if (space.right >= tb.width + PADDING) pos = 'right';
+        else if (space.left >= tb.width + PADDING) pos = 'left';
+        else pos = space.above >= space.below ? 'above' : 'below';
 
+        // Initial position centered on element
         let top, left;
-        switch (pos) {
-            case 'above': top = r.top - tb.height - MARGIN; left = r.left + (r.width - tb.width) / 2; break;
-            case 'below': top = r.bottom + MARGIN; left = r.left + (r.width - tb.width) / 2; break;
-            case 'left': top = r.top + (r.height - tb.height) / 2; left = r.left - tb.width - MARGIN; break;
-            case 'right': top = r.top + (r.height - tb.height) / 2; left = r.right + MARGIN; break;
-        }
+        if (pos === 'above') { top = r.top - tb.height - MARGIN; left = cx - tb.width / 2; }
+        else if (pos === 'below') { top = r.bottom + MARGIN; left = cx - tb.width / 2; }
+        else if (pos === 'left') { top = cy - tb.height / 2; left = r.left - tb.width - MARGIN; }
+        else { top = cy - tb.height / 2; left = r.right + MARGIN; }
 
-        return {
-            pos,
-            top: clampPos(top, tb.height, vh),
-            left: clampPos(left, tb.width, vw)
-        };
+        // Clamp to viewport
+        left = clamp(left, PADDING, vw - tb.width - PADDING);
+        top = clamp(top, PADDING, vh - tb.height - PADDING);
+
+        // Arrow offset relative to tooltip
+        const arrowX = (pos === 'above' || pos === 'below') ? clamp(cx - left, ARROW_MIN, tb.width - ARROW_MIN) : undefined;
+        const arrowY = (pos === 'left' || pos === 'right') ? clamp(cy - top, ARROW_MIN, tb.height - ARROW_MIN) : undefined;
+
+        return { pos, top, left, arrowX, arrowY };
     }
 
     function positionSingleTooltip(el, tipBox) {
         const r = el.getBoundingClientRect();
         const tb = tipBox.getBoundingClientRect();
-        const { pos, top, left } = calculatePosition(r, tb, window.innerWidth, window.innerHeight);
+        const result = calcPosition(r, tb, window.innerWidth, window.innerHeight);
 
-        tipBox.classList.add(`tooltip-${pos}`);
-        tipBox.style.top = `${top}px`;
-        tipBox.style.left = `${left}px`;
+        tipBox.className = tipBox.className.replace(/tooltip-(above|below|left|right)/g, '');
+        tipBox.classList.add(`tooltip-${result.pos}`);
+        tipBox.style.top = `${result.top}px`;
+        tipBox.style.left = `${result.left}px`;
+
+        if (result.arrowX !== undefined) tipBox.style.setProperty('--tooltip-arrow-x', `${result.arrowX}px`);
+        if (result.arrowY !== undefined) tipBox.style.setProperty('--tooltip-arrow-y', `${result.arrowY}px`);
     }
 
     function positionMultiTooltips(el, tipBoxes) {
         const r = el.getBoundingClientRect();
         const boxes = tipBoxes.map(tb => tb.getBoundingClientRect());
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
-
-        const totalWidth = boxes.reduce((sum, b) => sum + b.width, 0);
-        const totalHeight = boxes.reduce((sum, b) => sum + b.height, 0);
-        const maxWidth = Math.max(...boxes.map(b => b.width));
-        const maxHeight = Math.max(...boxes.map(b => b.height));
-        const avgAspect = boxes.reduce((sum, b) => sum + (b.width / b.height), 0) / boxes.length;
-        const stackVertically = avgAspect > 1;
-
+        const vw = window.innerWidth, vh = window.innerHeight;
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
         const space = { above: r.top, below: vh - r.bottom, left: r.left, right: vw - r.right };
 
-        let pos, closestIdx;
-        if (stackVertically) {
-            const totalStackHeight = totalHeight + MULTI_GAP * (tipBoxes.length - 1);
-            if (space.above >= totalStackHeight + PADDING) pos = 'above';
-            else if (space.below >= totalStackHeight + PADDING) pos = 'below';
-            else pos = 'above';
-            closestIdx = pos === 'above' ? tipBoxes.length - 1 : 0;
+        const totalW = boxes.reduce((s, b) => s + b.width, 0) + MULTI_GAP * (boxes.length - 1);
+        const totalH = boxes.reduce((s, b) => s + b.height, 0) + MULTI_GAP * (boxes.length - 1);
+        const maxW = Math.max(...boxes.map(b => b.width));
+        const maxH = Math.max(...boxes.map(b => b.height));
+        const vertical = boxes.reduce((s, b) => s + b.width / b.height, 0) / boxes.length > 1;
 
-            let currentTop = pos === 'above'
-                ? r.top - MARGIN - totalHeight - MULTI_GAP * (tipBoxes.length - 1)
-                : r.bottom + MARGIN;
-            let left = r.left + (r.width - maxWidth) / 2;
+        let pos, closestIdx, gTop, gLeft;
 
-            tipBoxes.forEach((tipBox, idx) => {
-                tipBox.classList.add(`tooltip-${pos}`);
-                if (idx !== closestIdx) tipBox.classList.add('tooltip-no-arrow');
+        if (vertical) {
+            pos = space.above >= totalH + PADDING ? 'above' : space.below >= totalH + PADDING ? 'below' : 'above';
+            closestIdx = pos === 'above' ? boxes.length - 1 : 0;
+            gTop = pos === 'above' ? r.top - MARGIN - totalH : r.bottom + MARGIN;
+            gLeft = clamp(cx - maxW / 2, PADDING, vw - maxW - PADDING);
+            gTop = clamp(gTop, PADDING, vh - totalH - PADDING);
 
-                const tb = boxes[idx];
-                const boxLeft = left + (maxWidth - tb.width) / 2;
-                tipBox.style.top = `${clampPos(currentTop, tb.height, vh)}px`;
-                tipBox.style.left = `${clampPos(boxLeft, tb.width, vw)}px`;
-                tipBox.style.opacity = '';
-                currentTop += tb.height + MULTI_GAP;
+            let curTop = gTop;
+            tipBoxes.forEach((tip, i) => {
+                tip.className = tip.className.replace(/tooltip-(above|below|left|right|no-arrow)/g, '');
+                tip.classList.add(`tooltip-${pos}`);
+                if (i !== closestIdx) tip.classList.add('tooltip-no-arrow');
+
+                const boxLeft = gLeft + (maxW - boxes[i].width) / 2;
+                tip.style.top = `${curTop}px`;
+                tip.style.left = `${boxLeft}px`;
+                tip.style.opacity = '';
+
+                if (i === closestIdx) {
+                    tip.style.setProperty('--tooltip-arrow-x', `${clamp(cx - boxLeft, ARROW_MIN, boxes[i].width - ARROW_MIN)}px`);
+                }
+                curTop += boxes[i].height + MULTI_GAP;
             });
         } else {
-            const totalStackWidth = totalWidth + MULTI_GAP * (tipBoxes.length - 1);
-            if (space.left >= totalStackWidth + PADDING) pos = 'left';
-            else if (space.right >= totalStackWidth + PADDING) pos = 'right';
-            else pos = 'right';
-            closestIdx = pos === 'left' ? tipBoxes.length - 1 : 0;
+            pos = space.right >= totalW + PADDING ? 'right' : space.left >= totalW + PADDING ? 'left' : 'right';
+            closestIdx = pos === 'left' ? boxes.length - 1 : 0;
+            gLeft = pos === 'left' ? r.left - MARGIN - totalW : r.right + MARGIN;
+            gTop = clamp(cy - maxH / 2, PADDING, vh - maxH - PADDING);
+            gLeft = clamp(gLeft, PADDING, vw - totalW - PADDING);
 
-            let currentLeft = pos === 'left'
-                ? r.left - MARGIN - totalWidth - MULTI_GAP * (tipBoxes.length - 1)
-                : r.right + MARGIN;
-            let top = r.top + (r.height - maxHeight) / 2;
+            let curLeft = gLeft;
+            tipBoxes.forEach((tip, i) => {
+                tip.className = tip.className.replace(/tooltip-(above|below|left|right|no-arrow)/g, '');
+                tip.classList.add(`tooltip-${pos}`);
+                if (i !== closestIdx) tip.classList.add('tooltip-no-arrow');
 
-            tipBoxes.forEach((tipBox, idx) => {
-                tipBox.classList.add(`tooltip-${pos}`);
-                if (idx !== closestIdx) tipBox.classList.add('tooltip-no-arrow');
+                const boxTop = gTop + (maxH - boxes[i].height) / 2;
+                tip.style.top = `${boxTop}px`;
+                tip.style.left = `${curLeft}px`;
+                tip.style.opacity = '';
 
-                const tb = boxes[idx];
-                const boxTop = top + (maxHeight - tb.height) / 2;
-                tipBox.style.top = `${clampPos(boxTop, tb.height, vh)}px`;
-                tipBox.style.left = `${clampPos(currentLeft, tb.width, vw)}px`;
-                tipBox.style.opacity = '';
-                currentLeft += tb.width + MULTI_GAP;
+                if (i === closestIdx) {
+                    tip.style.setProperty('--tooltip-arrow-y', `${clamp(cy - boxTop, ARROW_MIN, boxes[i].height - ARROW_MIN)}px`);
+                }
+                curLeft += boxes[i].width + MULTI_GAP;
             });
         }
     }
@@ -619,7 +620,7 @@ export default function createTooltipService(core) {
 
             const resObj = core.industry.resources[res];
             const data = core.industry.getResourceProductionTooltipData(res);
-            
+
             if (!data) {
                 const cap = resObj.effectiveCap;
                 if (cap !== undefined) {
