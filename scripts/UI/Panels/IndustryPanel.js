@@ -562,9 +562,9 @@ export default class IndustryPanel {
         if (!button) return;
         
         button.textContent = this.formatActionLabel('Demolish', 'sell', type);
-        const details = this.getDemolishButtonDetails(type);
         const sellPlan = this.getActionPlanDetails('sell', type);
-        this.updateButtonInfoBox(button, sellPlan.actual > 0 ? details : null);
+        const details = this.getDemolishButtonDetails(type);
+        this.updateButtonInfoBox(button, details);
         
         button.dataset.buildingType = type;
         
@@ -634,11 +634,11 @@ export default class IndustryPanel {
         
         button.textContent = this.formatActionLabel('Furlough', 'furlough', type);
         const details = this.getFurloughButtonDetails(type);
-        const furloughPlan = this.getActionPlanDetails('furlough', type);
-        this.updateButtonInfoBox(button, furloughPlan.actual > 0 ? details : null);
+        this.updateButtonInfoBox(button, details);
         
         button.dataset.buildingType = type;
         
+        const furloughPlan = this.getActionPlanDetails('furlough', type);
         const shouldShowTooltip = furloughPlan.actual <= 0 || (furloughPlan.actual > 0 && furloughPlan.actual < furloughPlan.target);
         if (shouldShowTooltip) {
             this.core.ui.hookTip(button, 'furlough');
@@ -1343,7 +1343,16 @@ export default class IndustryPanel {
 
     // Get button details from unified action effects
     getButtonDetailsFromAction(action, type) {
-        const data = this.core.industry.getActionEffects(action, type);
+        const plan = this.getActionPlanDetails(action, type);
+
+        // For demolish/furlough, hide when there is nothing to remove
+        if ((action === 'sell' || action === 'furlough') && (plan?.limit ?? 0) <= 0) {
+            return null;
+        }
+
+        // Use the selected increment (target), regardless of affordability
+        const units = Math.max(1, plan?.target || 1);
+        const data = this.core.industry.getActionEffects(action, type, { forceUnits: units });
         if (!data) return null;
 
         const { effects, scale } = data;

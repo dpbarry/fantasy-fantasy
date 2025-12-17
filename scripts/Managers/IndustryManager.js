@@ -342,18 +342,29 @@ export default class IndustryManager {
 
     // Get all effects for an action (build/sell/hire/furlough)
     // Returns array of Effect objects, each with category, tag, and modifiers
-    getActionEffects(action, type) {
+    // options.forceUnits: if provided, bypasses affordability/limits and uses this unit count
+    getActionEffects(action, type, options = {}) {
         const def = IndustryManager.BUILDING_DEFS[type];
         if (!def) return null;
 
         const plan = this.getActionPlan(action, type);
-        if (plan.actual <= 0) return null;
-        
         const effectType = (action === 'build' || action === 'sell') ? 'base' : 'worker';
         const scale = effectType === 'worker' ? this.getWorkerScale() : 1;
-        const effects = this.#buildActionEffects(action, type, plan.actual);
 
-        return { plan, effects, scale, def, units: plan.actual, effectType };
+        const forcedUnits = options.forceUnits ?? null;
+
+        // For demolish/furlough, nothing to remove -> no effects
+        if ((action === 'sell' || action === 'furlough') && (plan.limit ?? 0) <= 0) {
+            return null;
+        }
+
+        // Use forced units when provided; otherwise fall back to actual affordable amount
+        const units = forcedUnits !== null ? forcedUnits : plan.actual;
+        if (units <= 0) return null;
+
+        const effects = this.#buildActionEffects(action, type, units);
+
+        return { plan, effects, scale, def, units, effectType };
     }
 
     // Get aggregate effects of current buildings or workers
