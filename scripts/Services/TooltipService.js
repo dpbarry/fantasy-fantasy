@@ -284,7 +284,11 @@ export default function createTooltipService(core) {
             tipBox.style.opacity = '0';
             tipBox.innerHTML = tip.content;
             tipBox._lastContent = tip.content;
-            document.body.appendChild(tipBox);
+
+            // Append to open dialog if one exists, otherwise to body
+            const openDialog = document.querySelector('dialog[open]');
+            (openDialog || document.body).appendChild(tipBox);
+
             if (elementSection) {
                 tooltipSections.set(tipBox, elementSection);
             }
@@ -524,6 +528,24 @@ export default function createTooltipService(core) {
 
     // Initialize tooltips
     (function initialize() {
+        // Clean up tooltips when dialogs close (to handle tooltips attached to dialogs)
+        document.addEventListener('dialogclose', () => {
+            // Check if any tooltips are still active and clean up references
+            activeTips.forEach((map, tipBox) => {
+                if (!document.contains(tipBox)) {
+                    map.forEach(anchor => {
+                        const timeout = pendingTooltips.get(anchor);
+                        clearTimeout(timeout);
+                        pendingTooltips.delete(anchor);
+                        tooltipShownFromHold.delete(anchor);
+                        removeDismissHandlers(anchor);
+                    });
+                    activeTips.delete(tipBox);
+                    tooltipSections.delete(tipBox);
+                }
+            });
+        });
+
         window.addEventListener('blur', () => {
             lastPointer = null;
             if (activeTips.size) cleanupAllTooltips();

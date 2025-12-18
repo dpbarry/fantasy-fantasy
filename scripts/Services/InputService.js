@@ -23,47 +23,13 @@ export default class InputService {
         const input = document.createElement("input");
         input.name = "inp";
         input.className = className;
-        input.autocomplete = "off";
-        input.inputMode = "none";
-        input.whiteSpace = "nowrap";
-        input.spellcheck = false;
+        input.inputMode = type === "alpha" ? "none" : "numeric";
         input.oninput = cb;
 
         input._resizeHandle = () => cb({data: "", target: input});
         this.#resizeHandlers.push(input._resizeHandle);
 
-        input.onfocus = () => {
-            cb({data: "", target: input});
-            let keyboardOpen = InputService.#center.classList.contains("alphaactive");
-            InputService.#center.classList.add(type + "active");
-            if (!keyboardOpen && window.matchMedia("(width <= 950px)").matches) window.dispatchEvent(new Event("resize"));
-            // Simulate key pushes
-            const keydownHandler = (e) => {
-                if (document.activeElement.nodeName !== "INPUT") {
-                    document.removeEventListener("keydown", keydownHandler);
-                    return;
-                }
-                const key = e.key.toLowerCase();
-                // Find the corresponding virtual key
-                const virtualKey = [...document.querySelectorAll(".key:not(.nudged)")].find(k => k.innerText.toLowerCase() === key);
-                if (virtualKey) {
-                    virtualKey.classList.add("nudged");
-                    virtualKey.classList.add("forceactive");
-                    // Remove the nudged class after animation
-                    setTimeout(() => {
-                        virtualKey.classList.remove("nudged");
-                        virtualKey.classList.remove("forceactive");
-                    }, 100);
-                }
-            };
-
-            document.addEventListener("keydown", keydownHandler);
-
-            // Clean up event listener when focus is lost
-            input.onblur = () => {
-                document.removeEventListener("keydown", keydownHandler);
-            };
-        };
+        input.onfocus = () => cb({data: "", target: input});
 
 
         input.onanimationend = () => input.classList.remove("invalid");
@@ -127,15 +93,20 @@ export default class InputService {
         p.querySelectorAll(query).forEach(i => {
             i.onblur = null;
             i.onfocus = null;
+            // Remove focus recapture handlers if they exist
+            if (i.blurHandler) {
+                const blurHandler = i.blurHandler;
+                i.removeEventListener("blur", blurHandler);
+                delete i.blurHandler;
+            }
             i.classList.add("settled");
             i.style.transitionDuration = "";
             if (i.closest(".inputwrap")) i.parentNode.style.transitionDuration = "";
             this.#resizeHandlers = this.#resizeHandlers.filter(h => h !== i._resizeHandle);
 
         });
-        InputService.#center.classList.remove("alphaactive");
-        InputService.#center.classList.remove("numactive");
-        InputService.#center.classList.remove("alphanumactive");
+
+
         return new Promise(resolve => {
             const wrap = (e) => {
                 e.target.removeEventListener("transitionend", wrap);
@@ -175,20 +146,10 @@ export default class InputService {
             target.closest("#story").querySelector(".cue").classList.remove("visible");
         }
 
-        const updateKeyboardCase = (isEmpty) => {
-            const keys = document.querySelectorAll("#alphaboard .key:not(.special-key)");
-            keys.forEach(key => {
-                if (key.classList.contains("action")) return;
-                key.innerText = isEmpty ? key.innerText.toUpperCase() : key.innerText.toLowerCase();
-            });
-        };
 
-        if (!e.data) {
-            if (!e.target.value) {
+        if (!e.data && !e.target.value) {
                 resetField(e.target);
-                updateKeyboardCase(true); // Show uppercase when empty
                 return;
-            }
         } else if (!InputService.isAlphabetic(e.data)) {
             let store = e.target.selectionStart - [...e.data].filter(c => !InputService.isAlphabetic(c)).length;
             const inputValue = e.target.value;
@@ -206,7 +167,6 @@ export default class InputService {
             let store = e.target.selectionStart;
 
             e.target.value = e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1).toLowerCase();
-            updateKeyboardCase(false); // Show lowercase when there's content
 
             e.target.selectionStart = store;
             e.target.selectionEnd = store;
@@ -229,7 +189,6 @@ export default class InputService {
 
         } else {
             resetField(e.target);
-            updateKeyboardCase(true); // Show uppercase when empty
         }
     }
 
@@ -256,6 +215,41 @@ export default class InputService {
     }
     
     
+
+    /**
+     * Sets up focus recapture for input elements, returning a cleanup function
+     * @param {HTMLInputElement[]} inputs
+     * @returns {function} cleanup function
+     */
+    static setupFocusRecapture(inputs) {
+        let blurEnabled = true;
+
+        const blurHandler = (e) => {
+            if (!blurEnabled) return;
+            // Don't refocus if we're moving to a dialog or staying within story inputs
+            if (e.srcElement?.closest("dialog") || e.relatedTarget?.closest("#story input") || (e.relatedTarget?.closest(".main-section") && !e.relatedTarget.closest(".main-section").classList.contains("active"))) {
+               return;
+            }
+            // Refocus if focus is lost to something outside the story area
+            if (!e.relatedTarget || !e.relatedTarget.closest("#story")) {
+                e.currentTarget.focus({preventScroll: true});
+            }
+        };
+
+        inputs.forEach(input => {
+            input.addEventListener("blur", blurHandler);
+            // Store cleanup info on the input for clearInput to use
+            input.blurHandler = blurHandler;
+        });
+
+        // Return cleanup function
+        return () => {
+            inputs.forEach(input => {
+                input.removeEventListener("blur", blurHandler);
+                delete input.blurHandler;
+            });
+        };
+    }
 
     static getButton(text, id, cb, className="ripples nudge") {
         const b = document.createElement("button");

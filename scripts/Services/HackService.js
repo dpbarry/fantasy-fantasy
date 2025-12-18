@@ -1,4 +1,5 @@
 import {delay} from "../Utils.js";
+import createModalDialog from "../UI/Components/Dialog.js";
 
 export default class HackService {
     static #sequence = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown'];
@@ -6,22 +7,7 @@ export default class HackService {
     static #lastKeyTime = 0;
     static #consoleElement = null;
     static #isInitialized = false;
-    static #ignoreClick = false;
-
-    static #clickListener = (e) => {
-        const rect = this.#consoleElement.getBoundingClientRect();
-
-        const clickedInDialog = (
-            rect.top <= e.clientY &&
-            e.clientY <= rect.top + rect.height &&
-            rect.left <= e.clientX &&
-            e.clientX <= rect.left + rect.width
-        );
-
-        if (!clickedInDialog && !this.#ignoreClick) {
-            this.hide();
-        }
-    }
+    static #modalDialog = null;
 
     static initialize(core) {
         if (this.#isInitialized) return;
@@ -40,6 +26,9 @@ export default class HackService {
         feedback.className = 'console-feedback';
 
         this.#consoleElement.appendChild(feedback);
+
+        // Create modal dialog component
+        this.#modalDialog = createModalDialog(this.#consoleElement);
 
 
         const handleCommand = async (e) => {
@@ -89,35 +78,33 @@ export default class HackService {
             document.body.appendChild(this.#consoleElement);
         }
 
-        this.#ignoreClick = true;
-        setTimeout(() => {
-            this.#ignoreClick = false;
-        }, 100);
-        this.#consoleElement.show();
         this.#consoleElement.classList.add('visible');
-
 
         const input = this.#consoleElement.querySelector('.console-input');
         input.textContent = '';
-        input.focus();
-        input.onblur = () => input.focus();
+
+        // Use modal dialog component
+        this.#modalDialog.open();
 
         const feedback = this.#consoleElement.querySelector('.console-feedback');
-
         feedback.textContent = "";
 
-        document.addEventListener('click', this.#clickListener);
+        // Focus the input
+        input.focus();
     }
 
     static hide() {
-        document.removeEventListener("click", this.#clickListener);
         const feedback = this.#consoleElement.querySelector('.console-feedback');
         const cueWrapper = this.#consoleElement.querySelector('div[style*="position: absolute"]');
         feedback.classList.remove('visible');
         if (cueWrapper) cueWrapper.remove();
 
         this.#consoleElement.classList.remove('visible');
-        this.#consoleElement.close();
+
+        // Close the modal dialog if it's open
+        if (this.#modalDialog.isOpen) {
+            this.#modalDialog.close();
+        }
     }
 
 

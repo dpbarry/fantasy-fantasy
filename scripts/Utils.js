@@ -2,7 +2,7 @@ export async function delay(ms) {
     return new Promise(res => setTimeout(res, ms));
 }
 
-export async function waitForEvent(el, ev, escape= 0) {
+export async function waitForEvent(el, ev, escape = 0) {
     return new Promise(res => {
         let timeoutId;
 
@@ -25,7 +25,7 @@ export async function waitForEvent(el, ev, escape= 0) {
 
 }
 
-export function verticalScroll(el, moe, respectPadding= false) {
+export function verticalScroll(el, moe, respectPadding = false) {
     el.style.overflowY = "auto";
     let clientHeight = el.clientHeight;
     if (respectPadding) {
@@ -94,130 +94,129 @@ function generateAlphabeticalAbbreviations() {
 
 const ALPHABETICAL_ABBREVIATIONS = generateAlphabeticalAbbreviations();
 
+// Helper functions for consistent formatting operations
+
+function formatMantissa(mantissa, decimalPlaces, keepTrailingZeros) {
+    let formatted = keepTrailingZeros
+        ? mantissa.toFixed(decimalPlaces)
+        : mantissa.toFixed(decimalPlaces).replace(/\.?0+$/, '');
+    return formatted === '' ? '0' : formatted;
+}
+
+function applyRounding(value, decimalPlaces, roundUp) {
+    if (!roundUp) return value;
+    return decimalPlaces === 0
+        ? Math.ceil(value)
+        : Math.ceil(value * Math.pow(10, decimalPlaces)) / Math.pow(10, decimalPlaces);
+}
+
+function calculateEffectiveDecimalPlaces(absNum, formatType, baseDecimalPlaces) {
+    const exponent = Math.floor(Math.log10(absNum));
+
+    // Scientific format: reduce precision for very large exponents
+    if (formatType === 'scientific' && exponent >= 100) {
+        return 1;
+    }
+
+    // Alphabetical format: reduce precision for very large indices
+    if (formatType === 'alphabetical' && absNum >= 1000) {
+        const index = Math.floor((Math.log10(absNum) - 3) / 3);
+        if (index >= 100) return 1;
+    }
+
+    // Standard format: reduce precision for very large indices
+    if (formatType === 'standard' && absNum >= 1000) {
+        const index = Math.floor(Math.log10(absNum) / 3);
+        if (index >= 10) return 1;
+    }
+
+    return baseDecimalPlaces;
+}
+
+function formatSmallNumber(absNum, options, effectiveDp, isNegative) {
+    if (options.wholeOnly) {
+        const floored = Math.floor(absNum);
+        return `${isNegative ? '-' : ''}${floored}`;
+    }
+
+    const numToFormat = applyRounding(absNum, effectiveDp, options.roundUp);
+    const formatted = formatMantissa(numToFormat, effectiveDp, options.keepTrailingZeros);
+    return `${isNegative ? '-' : ''}${formatted}`;
+}
+
+function formatLargeNumber(absNum, formatType, options, effectiveDp, isNegative) {
+    if (formatType === 'scientific') {
+        const exponent = Math.floor(Math.log10(absNum));
+        const mantissa = absNum / Math.pow(10, exponent);
+        const formattedMantissa = formatMantissa(mantissa, effectiveDp, options.keepTrailingZeros);
+        return `${isNegative ? '-' : ''}${formattedMantissa}e${exponent}`;
+    }
+
+    const logValue = Math.log10(absNum);
+
+    if (formatType === 'alphabetical') {
+        const index = Math.floor((logValue - 3) / 3);
+        if (index < ALPHABETICAL_ABBREVIATIONS.length) {
+            const abbreviation = ALPHABETICAL_ABBREVIATIONS[index];
+            const mantissa = absNum / Math.pow(10, (index + 1) * 3);
+            const formattedMantissa = formatMantissa(mantissa, effectiveDp, options.keepTrailingZeros);
+            return `${isNegative ? '-' : ''}${formattedMantissa}${abbreviation}`;
+        }
+    } else if (formatType === 'standard') {
+        const index = Math.floor(logValue / 3);
+        if (index < STANDARD_ABBREVIATIONS.length) {
+            const abbreviation = STANDARD_ABBREVIATIONS[index];
+            const mantissa = absNum / Math.pow(10, index * 3);
+            const formattedMantissa = formatMantissa(mantissa, effectiveDp, options.keepTrailingZeros);
+            return `${isNegative ? '-' : ''}${formattedMantissa}${abbreviation}`;
+        }
+    }
+
+    return null; // Signal fallback needed
+}
+
 export function formatNumber(value, formatType = 'standard', opt = {}) {
-    // Handle Decimal objects from break_infinity
     const num = value && typeof value.toNumber === 'function' ? value.toNumber() : Number(value);
 
     if (isNaN(num)) return 'NaN';
     if (!isFinite(num)) return num > 0 ? '∞' : '-∞';
 
+    const options = {
+        decimalPlaces: opt?.decimalPlaces ?? 2,
+        keepTrailingZeros: opt?.decimalPlaces !== undefined,
+        wholeOnly: opt?.wholeNumbersOnly === true,
+        roundUp: opt?.roundUp === true
+    };
+
     const absNum = Math.abs(num);
     const isNegative = num < 0;
-    const decimalPlaces = opt?.decimalPlaces ?? 2;
-    const keepTrailingZeros = opt?.decimalPlaces !== undefined;
-    const wholeOnly = opt?.wholeNumbersOnly === true;
 
-    // Reduce precision to 1 significant figure for very large magnitudes
-    let effectiveDecimalPlaces = decimalPlaces;
-    const exponent = Math.floor(Math.log10(absNum));
+    const effectiveDp = calculateEffectiveDecimalPlaces(absNum, formatType, options.decimalPlaces);
 
-    if (formatType === 'scientific' && exponent >= 100) {
-        effectiveDecimalPlaces = 1;
-    }
 
-    // For alphabetical format, check the index
-    if (formatType === 'alphabetical' && absNum >= 1000) {
-        const logValue = Math.log10(absNum);
-        const index = Math.floor((logValue - 3) / 3);
-        if (index >= 100) { // Very large alphabetical indices
-            effectiveDecimalPlaces = 1;
-        }
-    }
-
-    // For standard format, check the index
-    if (formatType === 'standard' && absNum >= 1000) {
-        const logValue = Math.log10(absNum);
-        const index = Math.floor(logValue / 3);
-        if (index >= 10) { // Very large standard indices (beyond t, q)
-            effectiveDecimalPlaces = 1;
-        }
-    }
-
-    if (formatType === 'scientific') {
-        const exponent = Math.floor(Math.log10(absNum));
-        // Only use scientific notation for exponents >= 3
-        if (exponent >= 3) {
-            const mantissa = absNum / Math.pow(10, exponent);
-            let formattedMantissa = keepTrailingZeros ?
-                mantissa.toFixed(effectiveDecimalPlaces) :
-                mantissa.toFixed(effectiveDecimalPlaces).replace(/\.?0+$/, '');
-            if (formattedMantissa === '') formattedMantissa = '0';
-            return `${isNegative ? '-' : ''}${formattedMantissa}e${exponent}`;
-        } else {
-            // For exponents < 3, use regular decimal format
-            if (wholeOnly && absNum < 1000) {
-                const floored = Math.floor(absNum);
-                return `${isNegative ? '-' : ''}${floored}`;
-            }
-            const dp = effectiveDecimalPlaces;
-            let formatted = keepTrailingZeros ?
-                absNum.toFixed(dp) :
-                absNum.toFixed(dp).replace(/\.?0+$/, '');
-            if (formatted === '') formatted = '0';
-            return `${isNegative ? '-' : ''}${formatted}`;
-        }
-    }
-
-    if (formatType === 'alphabetical') {
-        if (absNum < 1000) {
-            if (wholeOnly) {
-                const floored = Math.floor(absNum);
-                return `${isNegative ? '-' : ''}${floored}`;
-            }
-            const dp = effectiveDecimalPlaces;
-            let formatted = keepTrailingZeros ?
-                absNum.toFixed(dp) :
-                absNum.toFixed(dp).replace(/\.?0+$/, '');
-            if (formatted === '') formatted = '0';
-            return `${isNegative ? '-' : ''}${formatted}`;
-        }
-
-        const logValue = Math.log10(absNum);
-        const index = Math.floor((logValue - 3) / 3); // Start from 10^3
-
-        if (index < ALPHABETICAL_ABBREVIATIONS.length) {
-            const abbreviation = ALPHABETICAL_ABBREVIATIONS[index];
-            const mantissa = absNum / Math.pow(10, (index + 1) * 3);
-            let formattedMantissa = keepTrailingZeros ?
-                mantissa.toFixed(effectiveDecimalPlaces) :
-                mantissa.toFixed(effectiveDecimalPlaces).replace(/\.?0+$/, '');
-            if (formattedMantissa === '') formattedMantissa = '0';
-            return `${isNegative ? '-' : ''}${formattedMantissa}${abbreviation}`;
-        }
-
-        // Fallback to scientific for very large numbers
-        return formatNumber(num, 'scientific');
-    }
-
-    // Standard format (default)
+    // Handle small numbers (< 1000) - use decimal formatting
     if (absNum < 1000) {
-        if (wholeOnly) {
-            const floored = Math.floor(absNum);
-            return `${isNegative ? '-' : ''}${floored}`;
+        if (formatType === 'scientific') {
+            const exponent = Math.floor(Math.log10(absNum));
+            if (exponent >= 3) {
+                // Use scientific notation even for numbers < 1000 if exponent >= 3
+                const mantissa = absNum / Math.pow(10, exponent);
+                const formattedMantissa = formatMantissa(mantissa, effectiveDp, options.keepTrailingZeros);
+                return `${isNegative ? '-' : ''}${formattedMantissa}e${exponent}`;
+            }
         }
-        const dp = effectiveDecimalPlaces;
-        let formatted = keepTrailingZeros ?
-            absNum.toFixed(dp) :
-            absNum.toFixed(dp).replace(/\.?0+$/, '');
-        if (formatted === '') formatted = '0';
-        return `${isNegative ? '-' : ''}${formatted}`;
+        // All formats use decimal for small numbers (unless scientific with high exponent)
+        return formatSmallNumber(absNum, options, effectiveDp, isNegative);
     }
 
-    const logValue = Math.log10(absNum);
-    const index = Math.floor(logValue / 3);
-
-    if (index < STANDARD_ABBREVIATIONS.length) {
-        const abbreviation = STANDARD_ABBREVIATIONS[index];
-        const mantissa = absNum / Math.pow(10, index * 3);
-        let formattedMantissa = keepTrailingZeros ?
-            mantissa.toFixed(effectiveDecimalPlaces) :
-            mantissa.toFixed(effectiveDecimalPlaces).replace(/\.?0+$/, '');
-        if (formattedMantissa === '') formattedMantissa = '0';
-        return `${isNegative ? '-' : ''}${formattedMantissa}${abbreviation}`;
+    // Handle large numbers (>= 1000) - use appropriate format
+    const result = formatLargeNumber(absNum, formatType, options, effectiveDp, isNegative);
+    if (result !== null) {
+        return result;
     }
 
-    // Fallback to scientific notation for very large numbers
-    return formatNumber(num, 'scientific');
+    // fallback to scientific notation for very large numbers
+    return formatNumber(num, 'scientific', opt);
 }
 
 export function getElementSection(el) {

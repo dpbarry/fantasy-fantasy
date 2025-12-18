@@ -1,6 +1,5 @@
 import createTooltipService from "../Services/TooltipService.js";
 import createContextMenuService from "../Services/ContextMenuService.js";
-import setupKeyboard from "../UI/Components/Keyboard.js";
 import setupGlobalBehavior, {spawnRipple} from "../Services/GlobalBehavior.js";
 import {verticalScroll, formatNumber as baseFormatNumber} from "../Utils.js";
 import StoryPanel from "../UI/Panels/StoryPanel.js";
@@ -116,8 +115,6 @@ export default class UIManager {
             childList: true, subtree: true
         });
 
-        setupKeyboard();
-        
         const updateStoryScroll = () => verticalScroll(this.story, 5, true);
 
         this.story.addEventListener("scroll", updateStoryScroll);
@@ -128,12 +125,14 @@ export default class UIManager {
     show(loc, panel) {
         if (!this.activePanels[loc]|| !panel) return;
 
-        const previousPanel = this.activePanels[loc];
-        if (previousPanel && previousPanel !== panel) {
-            this.panels[previousPanel].updateVisibility(loc, panel);
+        // Hide all panels in this location
+        for (const panelName in this.panels) {
+            if (this.panels[panelName] && typeof this.panels[panelName].updateVisibility === 'function') {
+                this.panels[panelName].updateVisibility(loc, panel);
+            }
         }
+
         this.activePanels[loc] = panel;
-        this.panels[panel].updateVisibility(loc, panel);
 
         document.querySelectorAll(`.navbutton.chosen[data-loc='${loc}']`).forEach(el => el.classList.remove("chosen"));
         const button = document.querySelector(`.navbutton[data-panel='${panel}']`);

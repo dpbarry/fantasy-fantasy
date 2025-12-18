@@ -337,7 +337,7 @@ export default class IndustryManager {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // UNIFIED EFFECT QUERIES (public API for all effect data)
+    // EFFECT QUERIES
     // ═══════════════════════════════════════════════════════════════════════════
 
     // Get all effects for an action (build/sell/hire/furlough)
@@ -358,8 +358,7 @@ export default class IndustryManager {
             return null;
         }
 
-        // Use forced units when provided; otherwise fall back to actual affordable amount
-        const units = forcedUnits !== null ? forcedUnits : plan.actual;
+        const units = forcedUnits ?? plan.actual;
         if (units <= 0) return null;
 
         const effects = this.#buildActionEffects(action, type, units);
@@ -916,10 +915,10 @@ export default class IndustryManager {
         const missing = Object.entries(def.buildCost)
             .map(([res, cost]) => {
                 const have = this.resources[res]?.value.toNumber() || 0;
-                return have < cost ? `${res} (need ${this.core.ui.formatNumber(cost)}, have ${this.core.ui.formatNumber(have, { wholeNumbersOnly: true })})` : null;
+                return have < cost ? `${this.core.ui.formatNumber(cost - have, {decimalPlaces: 0, roundUp: true})} more ${res}` : null;
             })
             .filter(Boolean);
-        return missing.length ? `Not enough: ${missing.join(', ')}` : 'Cannot build';
+        return missing.length ? `${missing.join(', ')}` : 'Cannot build';
     }
 
     getDemolishDisabledReason(type) {

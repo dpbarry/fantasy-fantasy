@@ -173,10 +173,10 @@ export default class IndustryPanel {
                     card.dropdown.classList.toggle('dropped', b.dropped === true);
                 }
                 
-                const buildPlan = this.getActionPlanDetails('build', type);
-                const sellPlan = this.getActionPlanDetails('sell', type);
-                const hirePlan = this.getActionPlanDetails('hire', type);
-                const furloughPlan = this.getActionPlanDetails('furlough', type);
+                const buildPlan = this.core.industry.getActionPlan('build', type);
+                const sellPlan = this.core.industry.getActionPlan('sell', type);
+                const hirePlan = this.core.industry.getActionPlan('hire', type);
+                const furloughPlan = this.core.industry.getActionPlan('furlough', type);
 
                 
                 const canBuild = buildPlan.actual > 0;
@@ -470,7 +470,7 @@ export default class IndustryPanel {
         
         button.dataset.buildingType = type;
         
-        const plan = this.getActionPlanDetails('build', type);
+        const plan = this.core.industry.getActionPlan('build', type);
         const shouldShowTooltip = plan.actual <= 0 || (plan.actual > 0 && plan.actual < plan.target);
         if (shouldShowTooltip) {
             this.core.ui.hookTip(button, 'build');
@@ -486,9 +486,9 @@ export default class IndustryPanel {
         const titleSpan = button.querySelector('.building-title');
         if (titleSpan) {
             let incrementSpan = titleSpan.querySelector('.building-increment');
-            const buildPlan = this.getActionPlanDetails('build', type);
+            const buildPlan = this.core.industry.getActionPlan('build', type);
             const incVal = buildPlan.selected === 'max' ? buildPlan.actual : buildPlan.target;
-            if (this.isMultiIncrementActive() && incVal > 1) {
+            if (this.core.industry.isMultiIncrement() && incVal > 1) {
                 if (!incrementSpan) {
                     incrementSpan = document.createElement('span');
                     incrementSpan.className = 'building-increment';
@@ -506,14 +506,8 @@ export default class IndustryPanel {
             this.updateProgressFill(progressFill, progress);
         }
         
-        const costIndicator = button.querySelector('.cost-indicator');
-        if (costIndicator && def && def.buildCost) {
-            const progressText = this.getResourceProgressText(type);
-            costIndicator.textContent = progressText || '';
-            costIndicator.style.display = progressText ? 'inline' : 'none';
-        }
         
-        const buildPlan = this.getActionPlanDetails('build', type);
+        const buildPlan = this.core.industry.getActionPlan('build', type);
         const dropdown = card?.dropdown;
         const isDropdownOpen = dropdown?.classList.contains('dropped');
         const shouldShowTooltip = buildPlan.actual <= 0 || !isDropdownOpen || (isDropdownOpen && buildPlan.actual < buildPlan.target);
@@ -541,7 +535,7 @@ export default class IndustryPanel {
             );
         }
         
-        const hirePlan = this.getActionPlanDetails('hire', type);
+        const hirePlan = this.core.industry.getActionPlan('hire', type);
         const canHire = hirePlan.actual > 0;
         button.disabled = !canHire;
         
@@ -562,7 +556,7 @@ export default class IndustryPanel {
         if (!button) return;
         
         button.textContent = this.formatActionLabel('Demolish', 'sell', type);
-        const sellPlan = this.getActionPlanDetails('sell', type);
+        const sellPlan = this.core.industry.getActionPlan('sell', type);
         const details = this.getDemolishButtonDetails(type);
         this.updateButtonInfoBox(button, details);
         
@@ -618,7 +612,7 @@ export default class IndustryPanel {
         const progress = this.core.industry.getHireProgress(type);
         this.updateProgressFill(progressFill, progress);
         
-        const plan = this.getActionPlanDetails('hire', type);
+        const plan = this.core.industry.getActionPlan('hire', type);
         const shouldShowTooltip = plan.actual <= 0 || (plan.actual > 0 && plan.actual < plan.target);
         if (shouldShowTooltip) {
             this.core.ui.hookTip(button, 'hire');
@@ -638,7 +632,7 @@ export default class IndustryPanel {
         
         button.dataset.buildingType = type;
         
-        const furloughPlan = this.getActionPlanDetails('furlough', type);
+        const furloughPlan = this.core.industry.getActionPlan('furlough', type);
         const shouldShowTooltip = furloughPlan.actual <= 0 || (furloughPlan.actual > 0 && furloughPlan.actual < furloughPlan.target);
         if (shouldShowTooltip) {
             this.core.ui.hookTip(button, 'furlough');
@@ -653,7 +647,7 @@ export default class IndustryPanel {
         
         if (buildingType && (tipName === 'build' || tipName === 'hire' || tipName === 'demolish' || tipName === 'furlough')) {
             const action = tipName === 'build' ? 'build' : tipName === 'hire' ? 'hire' : tipName === 'demolish' ? 'sell' : 'furlough';
-            const plan = this.getActionPlanDetails(action, buildingType);
+            const plan = this.core.industry.getActionPlan(action, buildingType);
             const shouldShowTooltip = plan.actual <= 0 || (plan.actual > 0 && plan.actual < plan.target);
             
             if (shouldShowTooltip) {
@@ -833,10 +827,9 @@ export default class IndustryPanel {
         mainBtn.innerHTML = `
             <div class="build-progress-fill"></div>
             <span class="building-title">${def ? def.name : type} <span class="building-count">(${building.count})</span></span>
-            <span class="cost-indicator" style="display: ${hasBuildCost ? '' : 'none'}"></span>
         `;
 
-        const buildPlan = this.getActionPlanDetails('build', type);
+        const buildPlan = this.core.industry.getActionPlan('build', type);
         const isDropdownOpen = building.dropped === true;
         const shouldShowBuildTooltip = buildPlan.actual <= 0 || (buildPlan.actual > 0 && buildPlan.actual < buildPlan.target) || (!isDropdownOpen && buildPlan.actual >= buildPlan.target);
         if (shouldShowBuildTooltip) {
@@ -852,7 +845,7 @@ export default class IndustryPanel {
         workerBtn.innerHTML = `
             <span class="worker-btn-count">${workerCount}</span>
         `;
-        const initialHirePlan = this.getActionPlanDetails('hire', type);
+        const initialHirePlan = this.core.industry.getActionPlan('hire', type);
         const canHire = initialHirePlan.actual > 0;
         workerBtn.disabled = !canHire;
         const shouldShowHireTooltip = initialHirePlan.actual <= 0 || (initialHirePlan.actual > 0 && initialHirePlan.actual < initialHirePlan.target);
@@ -940,7 +933,7 @@ export default class IndustryPanel {
     }
 
     getBuildingSection(type, def, b) {
-        const canBuild = this.canBuildBuilding(type);
+        const canBuild = this.core.industry.getActionPlan('build', type).actual > 0;
         const canSell = b.count > 0;
         const aggregateEffects = this.getAggregateBuildingEffects(type);
         const timeToNext = this.getTimeUntilNextBuilding(type);
@@ -970,8 +963,8 @@ export default class IndustryPanel {
 
     getWorkersSection(type, def, b) {
         const workerCount = b.workers || 0;
-        const hirePlan = this.getActionPlanDetails('hire', type);
-        const furloughPlan = this.getActionPlanDetails('furlough', type);
+        const hirePlan = this.core.industry.getActionPlan('hire', type);
+        const furloughPlan = this.core.industry.getActionPlan('furlough', type);
         const canAdd = hirePlan.actual > 0;
         const canRemove = furloughPlan.actual > 0;
         const onStrike = this.core.industry.workersOnStrike;
@@ -1268,8 +1261,8 @@ export default class IndustryPanel {
     }
 
     formatActionLabel(baseText, action, type) {
-        if (!this.isMultiIncrementActive()) return baseText;
-        const plan = this.getActionPlanDetails(action, type);
+        if (!this.core.industry.isMultiIncrement()) return baseText;
+        const plan = this.core.industry.getActionPlan(action, type);
 
         let displayValue;
         if (plan.selected === 'max') {
@@ -1312,21 +1305,6 @@ export default class IndustryPanel {
         return `${Math.ceil(seconds / 86400)}d`;
     }
 
-    getResourceProgressText(type) {
-        const def = this.defs[type];
-        if (!def?.buildCost) return '';
-        
-        const plan = this.getActionPlanDetails('build', type);
-        const multiplier = plan.target || 1;
-        
-        const costs = Object.entries(def.buildCost)
-            .map(([res, amt]) => {
-                const total = this.getTotalAmount(amt, multiplier);
-                return `${this.core.ui.formatNumber(total)} ${res}`;
-            });
-        
-        return costs.join(', ');
-    }
 
     getAggregateBuildingEffects(type) {
         return this.formatAggregateEffectsInline(type, 'base');
@@ -1343,7 +1321,7 @@ export default class IndustryPanel {
 
     // Get button details from unified action effects
     getButtonDetailsFromAction(action, type) {
-        const plan = this.getActionPlanDetails(action, type);
+        const plan = this.core.industry.getActionPlan(action, type);
 
         // For demolish/furlough, hide when there is nothing to remove
         if ((action === 'sell' || action === 'furlough') && (plan?.limit ?? 0) <= 0) {
@@ -1456,26 +1434,11 @@ export default class IndustryPanel {
         return bottlenecks.join(', ') || 'input';
     }
 
-    canBuildBuilding(type) {
-        return this.getActionPlanDetails('build', type).actual > 0;
-    }
-
-    getBuildDisabledReason(type) {
-        return this.core.industry.getBuildDisabledReason(type);
-    }
-
-    getDemolishDisabledReason(type) {
-        return this.core.industry.getDemolishDisabledReason(type);
-    }
-
-    getHireDisabledReason(type) {
-        return this.core.industry.getHireDisabledReason(type);
-    }
 
 
-    getFurloughDisabledReason(type) {
-        return this.core.industry.getFurloughDisabledReason(type);
-    }
+
+
+
 
     getDemolishWorkerWarning(type) {
         const warning = this.core.industry.getDemolishWorkerWarning(type);
@@ -1483,17 +1446,11 @@ export default class IndustryPanel {
     }
 
     getPlanTarget(action, type) {
-        const plan = this.getActionPlanDetails(action, type);
+        const plan = this.core.industry.getActionPlan(action, type);
         return plan.target || 0;
     }
 
-    getActionPlanDetails(action, type) {
-        return this.core.industry.getActionPlan(action, type);
-    }
 
-    isMultiIncrementActive() {
-        return this.core.industry.isMultiIncrement();
-    }
 
     areWorkersScaled() {
         const scale = this.core.industry.getWorkerScalingFactor();

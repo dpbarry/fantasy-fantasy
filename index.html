@@ -3,8 +3,8 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8"/>
-    <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+    <meta charset="UTF-8" />
+    <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport" />
     <title>Fantasy Fantasy</title>
     <link as="image" href="assets/TOURNAMENT.svg" rel="preload" type="image/svg+xml">
     <link href="assets/TOURNAMENT.svg" rel="icon" type="image/svg+xml">
@@ -14,48 +14,48 @@
 
     <script>
         <!-- Apply theme immediately to prevent flash -->
-    let background = localStorage.getItem('theme') || 'dark';
-    let accent = localStorage.getItem('accent') || 'lightning';
-    const STYLE = document.documentElement.style;
+        let background = localStorage.getItem('theme') || 'dark';
+        let accent = localStorage.getItem('accent') || 'lightning';
+        const STYLE = document.documentElement.style;
 
-    document.documentElement.classList.add("notransition");
-    switch (background) {
-        case "dark":
-            STYLE.setProperty("--contrastColor", "#000");
-            STYLE.setProperty("--baseColor", "#eee");
-            STYLE.setProperty("--baseFilter", "invert(0.9)");
-            STYLE.setProperty("--alpha", "1");
-            STYLE.colorScheme = "dark";
-            break;
-        case "light":
-            STYLE.setProperty("--contrastColor", "#fff");
-            STYLE.setProperty("--baseColor", "#111");
-            STYLE.setProperty("--baseFilter", "invert(0.1)");
-            STYLE.setProperty("--alpha", "0.15");
-            STYLE.colorScheme = "light";
-            break;
-    }
-    switch (accent) {
-        case "lightning":
-            STYLE.setProperty("--accent", "hsl(190, 82.5%, 45%)");
-            STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(50%) sepia(94%) saturate(2762%) hue-rotate(156deg) brightness(106%) contrast(84%)");
-            break;
-        case "acid":
-            STYLE.setProperty("--accent", "hsl(125, 82.5%, 45%)");
-            STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(50%) sepia(82%) saturate(1810%) hue-rotate(86deg) brightness(110%) contrast(91%)");
-            break;
-        case "amber":
-            STYLE.setProperty("--accent", "hsl(45, 82.5%, 45%)");
-            STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(76%) sepia(85%) saturate(2552%) hue-rotate(4deg) brightness(92%) contrast(84%)");
-            break;
-        case "arcane":
-            STYLE.setProperty("--accent", "hsl(260, 100%, 64%)");
-            STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(29%) sepia(33%) saturate(5426%) hue-rotate(245deg) brightness(107%) contrast(116%)");
-            break;
-    }
-    window.requestAnimationFrame(() => {
-        document.documentElement.classList.remove("notransition");
-    });
+        document.documentElement.classList.add("notransition");
+        switch (background) {
+            case "dark":
+                STYLE.setProperty("--contrastColor", "#000");
+                STYLE.setProperty("--baseColor", "#eee");
+                STYLE.setProperty("--baseFilter", "invert(0.9)");
+                STYLE.setProperty("--alpha", "1");
+                STYLE.colorScheme = "dark";
+                break;
+            case "light":
+                STYLE.setProperty("--contrastColor", "#fff");
+                STYLE.setProperty("--baseColor", "#111");
+                STYLE.setProperty("--baseFilter", "invert(0.1)");
+                STYLE.setProperty("--alpha", "0.15");
+                STYLE.colorScheme = "light";
+                break;
+        }
+        switch (accent) {
+            case "lightning":
+                STYLE.setProperty("--accent", "hsl(190, 82.5%, 45%)");
+                STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(50%) sepia(94%) saturate(2762%) hue-rotate(156deg) brightness(106%) contrast(84%)");
+                break;
+            case "acid":
+                STYLE.setProperty("--accent", "hsl(125, 82.5%, 45%)");
+                STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(50%) sepia(82%) saturate(1810%) hue-rotate(86deg) brightness(110%) contrast(91%)");
+                break;
+            case "amber":
+                STYLE.setProperty("--accent", "hsl(45, 82.5%, 45%)");
+                STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(76%) sepia(85%) saturate(2552%) hue-rotate(4deg) brightness(92%) contrast(84%)");
+                break;
+            case "arcane":
+                STYLE.setProperty("--accent", "hsl(260, 100%, 64%)");
+                STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(29%) sepia(33%) saturate(5426%) hue-rotate(245deg) brightness(107%) contrast(116%)");
+                break;
+        }
+        window.requestAnimationFrame(() => {
+            document.documentElement.classList.remove("notransition");
+        });
     </script>
 
     <style>
@@ -91,9 +91,10 @@
             --bgColor: color-mix(in oklab, var(--contrastColor), var(--accent) 2%);
             --baseColor: hsl(0, 0%, 90%);
             --baseFilter: invert(0.9);
-            --darkBaseColor: color-mix(in oklab, var(--contrastColor) 93%, var(--baseColor));
-            --darkerBaseColor: color-mix(in oklab, var(--contrastColor) 97%, var(--baseColor));
-            --midBaseColor: color-mix(in oklab, var(--contrastColor) 54%, var(--baseColor));
+            --darkBaseColor: color-mix(in oklab, var(--contrastColor) 83%, var(--baseColor));
+            --darkerBaseColor: color-mix(in oklab, var(--contrastColor) 93%, var(--baseColor));
+            --darkestBaseColor: color-mix(in oklab, var(--contrastColor) 97%, var(--baseColor));
+            --midBaseColor: color-mix(in oklab, var(--contrastColor) 47.5%, var(--baseColor));
             --lightBaseColor: color-mix(in oklab, var(--contrastColor) 20%, var(--baseColor));
             --boxColor: var(--baseColor);
             --accent: hsl(190, 82.5%, 45%);
@@ -161,10 +162,12 @@
 
         #left {
             grid-area: left;
+            overflow: visible;
         }
 
         #right {
             grid-area: right;
+            overflow: visible;
         }
 
         #center {
@@ -188,7 +191,9 @@
             grid-area: left-section;
         }
 
-        #right-section, #left-section, #center-section {
+        #right-section,
+        #left-section,
+        #center-section {
             display: flex;
             flex-direction: column;
             max-height: 100%;
@@ -196,6 +201,7 @@
             min-width: 0;
             min-height: 0;
             overflow: hidden;
+
             .navbar {
                 height: min-content;
                 min-width: 0;
@@ -215,10 +221,12 @@
             overflow: hidden;
         }
 
-  
+
 
         .panel:not(.box).shown {
             display: contents;
+            gap: var(--boxGap);
+
         }
 
 
@@ -260,8 +268,8 @@
 
             touch-action: pan-y pinch-zoom;
             overscroll-behavior-x: contain;
-            
-            @media (width <= 950px) {
+
+            @media (width <=950px) {
                 touch-action: pan-y pinch-zoom;
             }
 
@@ -296,7 +304,7 @@
             display: none;
         }
 
-        @media (width <= 950px) {
+        @media (width <=950px) {
             button.section-nav-arrow {
                 display: flex;
                 padding: 0;
@@ -307,7 +315,7 @@
                 height: 100%;
                 font-weight: 600;
                 position: relative;
-                font-size:  1.9em;
+                font-size: 1.9em;
                 border: 0;
                 font-family: SourceSerif;
                 transition: scale 0.1s, opacity 0.2s, bottom 0.1s;
@@ -329,7 +337,7 @@
 
                 @media (pointer: fine) and (hover: hover) {
                     &:not(:disabled):hover {
-                       scale: 1.4;
+                        scale: 1.25;
                     }
                 }
 
@@ -356,7 +364,7 @@
             min-height: 0;
             overflow: hidden;
 
-            & > .panel:not(.shown) {
+            &>.panel:not(.shown) {
                 display: none !important;
             }
 
@@ -404,7 +412,7 @@
             width: 100%;
         }
 
-        @media (width <= 950px) {
+        @media (width <=950px) {
             .navbar {
                 gap: calc(var(--boxGap) * 0.5);
                 justify-content: space-between;
@@ -472,6 +480,41 @@
             overflow-y: scroll;
         }
 
+        #skip-banner {
+            height: 3em;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9em;
+            color: var(--baseColor);
+            border-top: 1px solid var(--baseColor);
+            cursor: pointer;
+
+            font-weight: 400;
+            transition: font-weight 0.1s;
+
+            @media (pointer: fine) and (hover: hover) {
+                &:hover {
+                    font-weight: 600;
+                }
+            }
+
+            &.hide {
+                animation: fadeOut 0.3s forwards;
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+            }
+        }
+
         .box:has(#story) {
             padding: 0;
         }
@@ -480,7 +523,7 @@
             overflow-y: auto;
             height: 100%;
             margin: 0;
-            font-size: 1.2em;
+            font-size: 1.1em;
             font-weight: 350;
             position: relative;
             padding: var(--boxGap);
@@ -521,12 +564,15 @@
                 border: 0;
                 font-size: 1em;
                 border-bottom: 0.06em solid var(--baseColor);
-                caret-color: var(--baseColor);
                 color: var(--baseColor);
-                border-radius: 2.5px 2.5px 1px 1px;
                 outline: none;
+                height: unset;
                 text-align: center;
                 transition: width 0.25s linear, border-color 0.15s, background 0.15s;
+
+                &:focus {
+                    border-color: var(--accent);
+                }
 
                 &.invalid {
                     animation: invalid 0.18s forwards;
@@ -561,8 +607,6 @@
                 max-width: 8em;
                 font-weight: 600;
                 color: var(--accent);
-                border-color: var(--accent);
-                caret-color: var(--darkAccent);
                 background: transparent
             }
 
@@ -638,19 +682,19 @@
 
             .kingChoice {
 
-                &.selected ~ .queenChoice,
+                &.selected~.queenChoice,
                 &:has(~ .queenChoice.selected) {
                     opacity: 0.8;
                 }
 
-                & ~ span:has(~ .queenChoice).hide {
+                &~span:has(~ .queenChoice).hide {
                     transition: font-size 0.2s;
                     font-size: 0;
                 }
             }
 
-            p:has(.kingChoice.selected) + .cue,
-            p:has(.queenChoice.selected) + .cue {
+            p:has(.kingChoice.selected)+.cue,
+            p:has(.queenChoice.selected)+.cue {
                 opacity: 0.8;
                 cursor: pointer;
                 pointer-events: all;
@@ -676,9 +720,9 @@
                     left: 0;
                     opacity: 0;
                     transition: color 0.05s ease,
-                    padding-left 0.2s ease,
-                    opacity 0.2s ease,
-                    font-weight 0.2s ease;
+                        padding-left 0.2s ease,
+                        opacity 0.2s ease,
+                        font-weight 0.2s ease;
                     will-change: font-size;
                     counter-increment: item;
 
@@ -698,7 +742,7 @@
                         margin-right: 0.75em;
                         color: var(--accent);
                         transition: left 0.2s ease,
-                        opacity 0.25s ease;
+                            opacity 0.25s ease;
                     }
 
                     @media (hover: hover) and (pointer: fine) {
@@ -713,9 +757,9 @@
                         padding-left: 0;
                         pointer-events: none;
                         transition: color 0.05s ease,
-                        padding-left 0.25s cubic-bezier(0.4, 0.0, 0.2, 1),
-                        opacity 0.2s ease,
-                        font-weight 0.2s ease, text-decoration 0.3s 0.2s ease;
+                            padding-left 0.25s cubic-bezier(0.4, 0.0, 0.2, 1),
+                            opacity 0.2s ease,
+                            font-weight 0.2s ease, text-decoration 0.3s 0.2s ease;
 
                         &::before {
                             animation: counterHide 0.2s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
@@ -725,7 +769,7 @@
                     &.unselected {
                         pointer-events: none;
                         transition: filter 0.25s ease, left 0.25s,
-                        font-size 0.3s 0.25s cubic-bezier(0.34, 0, 0.32, 1);
+                            font-size 0.3s 0.25s cubic-bezier(0.34, 0, 0.32, 1);
                         filter: opacity(0);
 
 
@@ -891,6 +935,7 @@
             transition: opacity 1.2s cubic-bezier(0, 0, 0.05, 1), transform 1.2s cubic-bezier(0, 0, 0.05, 1);
             line-height: 1;
         }
+
         .resource-row .rate-indicator {
             transform: translate(10px) scale(1);
         }
@@ -1016,20 +1061,23 @@
             appearance: base-select;
             background: var(--bgColor);
             padding: 0;
+
         }
 
         /*noinspection CssInvalidPseudoSelector*/
 
         ::picker(select) {
-            border: 1.5px solid var(--baseColor);
-            border-radius: 3px;
+            border: 0.5px solid var(--baseColor);
+            border-top: none;
+            border-bottom-left-radius: 3px;
+            border-bottom-right-radius: 3px;
             font-size: 1em;
             filter: drop-shadow(0 0 0.1em light-dark(#ddd, #000));
         }
 
         /*noinspection CssInvalidPseudoSelector*/
         option::checkmark {
-            content: "•";
+            content: "⟶";
         }
 
         option:checked {
@@ -1037,9 +1085,10 @@
         }
 
         @media (hover: hover) and (pointer: fine) {
-            option:hover {
-                background: var(--darkBaseColor);
+            option:not(:checked):hover {
+                background: var(--darkerBaseColor);
             }
+
         }
 
         input,
@@ -1048,11 +1097,38 @@
             font-family: SourceSerif;
             outline: none;
             border: none;
-            background: var(--bgColor);
+            border-radius: 0;
+            background: var(--contrastColor);
             font-size: 0.95em;
-            max-width: 9em;
-            color: var(--accent);
-            font-weight: 800;
+            color: var(--baseColor);
+            font-weight: 650;
+            min-block-size: 1em;
+            height: 1.75em;
+        }
+
+        input,
+        select {
+            padding-left: 1px;
+            caret-color: var(--darkAccent);
+
+            border: none;
+            border-bottom: 0.06em solid var(--baseColor);
+
+            &:focus-visible {
+                border-color: var(--accent);
+            }
+
+        }
+
+        option {
+            font-size: 0.85em;
+            padding: 3px;
+            padding-left: 5px;
+        }
+
+
+        input {
+            padding: 2px;
         }
 
         select,
@@ -1064,28 +1140,70 @@
         #settings {
             display: flex;
             flex-direction: column;
+            height: 100%;
 
-            .setting {
-                margin-bottom: 0.5em;
+            .setting-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 1em;
+
+                &:has+.setting-row {
+                    margin-bottom: 1em;
+                }
+
             }
 
-            .setting:has(+ h2) {
+            .setting-row:has(+ h2) {
                 margin-bottom: 1em;
             }
 
+            .subbox:has(+ :last-child) {
+                flex-grow: 1;
+            }
+
+
             label {
-                align-items: center;
+                flex-basis: 100%;
+                font-size: 0.85em;
+                font-weight: 450;
+                color: var(--lightBaseColor);
+            }
+
+            .setting {
                 display: flex;
-                flex-direction: row;
-                column-gap: 0.5em;
-                white-space: nowrap;
+                flex-direction: column;
+                gap: 0.25em;
+            }
+
+            .theme label {
+                flex-direction: column;
+                align-items: flex-start;
+                padding-bottom: 1px;
+            }
+
+
+            .inputs {
+                display: flex;
+                gap: 0.25em;
+            }
+
+            .theme .inputs {
+                position: relative;
+                gap: 0.5em;
+            }
+
+            select {
+                flex: 1;
+                min-width: 120px;
+
+                background: transparent;
+                color: var(--baseColor);
+                transition: border-color 0.15s;
             }
 
             #about-header {
                 margin-top: auto;
             }
-
-            select {padding-top: 3px;}
 
             #about {
                 text-align: justify;
@@ -1123,13 +1241,14 @@
                     display: inline-block;
                     margin: 0;
                     appearance: none;
-                    height: 1.3em;
-                    width: 1.9em;
+                    height: 1.5em;
+                    border: none;
+                    flex-grow: 1;
                     background-color: #C0C0C0;
                     position: relative;
-                    border-radius: 1px;
+                    border-radius: 2px;
                     cursor: pointer;
-                    transition: filter 0.1s ease;
+                    transition: all 0.15s ease;
                 }
 
                 input:checked {
@@ -1161,6 +1280,7 @@
                 }
             }
         }
+
 
         #news {
             width: 100%;
@@ -1202,96 +1322,6 @@
         }
 
 
-        @media (width <= 950px) and (height > 300px) {
-            #center.alphaactive {
-                #alphaboard {
-                    display: grid;
-                }
-
-                #story {
-                    padding-bottom: 7vh;
-                    /* The keyboard essentially acts as most of the padding */
-                }
-            }
-        }
-
-
-        .keyboard {
-            width: 100%;
-            height: 100%;
-            border-color: var(--accent);
-            display: none;
-            font-family: SourceSerif, serif;
-            min-height: fit-content;
-
-            transition: opacity 0.1s;
-
-            @starting-style {
-                opacity: 0;
-            }
-
-            .key {
-                background: transparent;
-                border: 2px solid var(--accent);
-                border-radius: 3px;
-                color: var(--accent);
-                font-weight: 750;
-                font-size: 3vh;
-                display: flex;
-                padding-top: 2px;
-                padding-bottom: 2px;
-                align-items: center;
-                justify-content: center;
-                cursor: pointer;
-                transition: transform .1s;
-            }
-
-            .key:active,
-            .key.forceactive {
-                transform: translateY(2px);
-            }
-
-            .key.action {
-                grid-column: span 1;
-            }
-
-            .key.bkspc {
-                background-image: url("./assets/ARROW.svg");
-                rotate: 180deg;
-                background-size: 1.2em;
-                background-repeat: no-repeat;
-                background-position: center;
-                filter: var(--accentFilter);
-                color: transparent;
-            }
-
-            .key.enter {
-                background-image: url("./assets/RETURN.svg");
-                background-size: 0.8em;
-                background-repeat: no-repeat;
-                background-position: center;
-                filter: var(--accentFilter);
-                color: transparent;
-            }
-
-            .key.spc {
-                font-size: 0.95em;
-            }
-
-            .key.action:last-of-type {
-                grid-column: span 2;
-            }
-
-        }
-
-        #alphaboard {
-            grid-area: alphaboard;
-
-            grid-template-columns: repeat(6, 1fr);
-            gap: 6px;
-            transition: height 0.15s ease-out, opacity 0.2s;
-            height: 13em;
-        }
 
         .tooltip {
             position: fixed;
@@ -1306,16 +1336,16 @@
             font-size: 0.75em;
             pointer-events: none;
             font-weight: 425;
-            font-family: SourceSerif,  serif;
+            font-family: SourceSerif, serif;
             transition: opacity 0.1s;
-            z-index: 999;
+            z-index: 1000;
 
             @starting-style {
                 opacity: 0;
             }
-        
 
-            p + p {
+
+            p+p {
                 margin-top: 0.05em;
             }
         }
@@ -1375,14 +1405,34 @@
         }
 
         /* Breakdown Box */
-        .bd { display: flex; flex-direction: column; overflow: hidden; }
+        .bd {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
 
-        .bd-r-mod { margin-left: 0.5em; }
+        .bd-r-mod {
+            margin-left: 0.5em;
+        }
 
-        .bd-n { opacity: 0.75; }
-        .bd-g { color: var(--gainColor); }
-        .bd-d { color: var(--drainColor); }
-        .bd-res { margin-top: 0.15em; padding-top: 0.15em; border-top: 1px solid var(--midBaseColor); font-weight: 600; }
+        .bd-n {
+            opacity: 0.75;
+        }
+
+        .bd-g {
+            color: var(--gainColor);
+        }
+
+        .bd-d {
+            color: var(--drainColor);
+        }
+
+        .bd-res {
+            margin-top: 0.15em;
+            padding-top: 0.15em;
+            border-top: 1px solid var(--midBaseColor);
+            font-weight: 600;
+        }
 
         .context-menu {
             position: fixed;
@@ -1487,11 +1537,11 @@
                 color: var(--baseColor);
                 margin: 0;
                 user-select: none;
-                
+
                 p {
                     margin: 0;
                 }
-                
+
                 .info-glyph {
                     font-size: 0.95em;
                     display: inline;
@@ -1606,7 +1656,6 @@
                 "industry-prod industry-prod";
             grid-template-rows: min-content fit-content(15%) 1fr;
             grid-template-columns: var(--industry-resources-width, 12em) 1fr;
-            gap: var(--boxGap);
             width: 100%;
             height: 100%;
             min-width: 0;
@@ -1691,9 +1740,9 @@
 
                     .resource-row .resource-rate {
                         transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-                        font-size 0.32s cubic-bezier(0.4, 0, 0.2, 1),
-                        max-width 0.32s cubic-bezier(0.4, 0, 0.2, 1),
-                        color 0.15s;
+                            font-size 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+                            max-width 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+                            color 0.15s;
                     }
                 }
 
@@ -1712,6 +1761,7 @@
                     text-align: right;
                     white-space: nowrap;
                 }
+
                 .resource-row.has-cap::before {
                     content: '';
                     position: absolute;
@@ -1721,17 +1771,15 @@
                     height: min(0.15em, 3px);
                     border-radius: 0.4em;
                     width: calc(100% - (var(--pad-x) * 2));
-                    background: linear-gradient(
-                        to right,
-                        var(--accent) calc(var(--cap-percent) * 100%),
-                        light-dark(var(--darkBaseColor), var(--midBaseColor)) calc(var(--cap-percent) * 100%)
-                    );
+                    background: linear-gradient(to right,
+                            var(--accent) calc(var(--cap-percent) * 100%),
+                            light-dark(var(--darkerBaseColor), var(--midBaseColor)) calc(var(--cap-percent) * 100%));
                     pointer-events: none;
                     transition: background 0.3s ease-out;
                     --cap-percent: unset;
                 }
 
-           
+
 
                 .resource-name {
                     text-align: left;
@@ -1781,6 +1829,7 @@
                     flex: 1;
                     min-height: 0;
                 }
+
                 .building-container {
                     display: flex;
                     align-items: center;
@@ -1814,15 +1863,15 @@
                         font-weight: 600;
                         line-height: 1;
                         color: var(--baseColor);
-                        
+
                         &.on-strike {
                             color: var(--drainColor);
                         }
-                        
+
                         &.limited {
                             color: var(--warningColor);
                         }
-                        
+
                         &.at-limit {
                             color: var(--accent);
                         }
@@ -1847,8 +1896,8 @@
                     box-shadow: 0 2.5px 0 var(--accent);
                     cursor: pointer;
                     transition: top 0.1s cubic-bezier(0.34, 1, 0.64, 1),
-                    box-shadow 0.1s cubic-bezier(0.34, 1, 0.64, 1),
-                    background 0.15s;
+                        box-shadow 0.1s cubic-bezier(0.34, 1, 0.64, 1),
+                        background 0.15s;
                     border-radius: 0;
                     z-index: 1;
                     isolation: isolate;
@@ -1869,7 +1918,7 @@
                     border-bottom-right-radius: 0.55em;
                 }
 
-               .building-row .building-worker-btn:enabled {
+                .building-row .building-worker-btn:enabled {
                     background: color-mix(in oklab, var(--bgColor) 75%, var(--accent));
                 }
 
@@ -1909,33 +1958,19 @@
                     white-space: nowrap;
                 }
 
-                .cost-indicator {
-                    position: absolute;
-                    bottom: 3px;
-                    right: 5px;
-                    font-size: 0.65em;
-                    font-weight: 500;
-                    color: var(--baseColor);
-                    z-index: 2;
-                    pointer-events: none;
-                    line-height: 1;
-                }
-
-                .building-main-btn:disabled .cost-indicator {
-                    color: var(--lightBaseColor);
-                }
-
                 @media (hover: hover) and (pointer: fine) {
                     .building-row .building-main-btn:hover:not(:disabled) {
                         background: color-mix(in oklab, var(--bgColor) 75%, var(--accent));
-                        .build-progress-fill
-                    {
+
+                        .build-progress-fill {
                             background: color-mix(in oklab, var(--bgColor) 65%, var(--accent));
                         }
                     }
+
                     .building-row .building-worker-btn:hover:not(:disabled) {
                         background: color-mix(in oklab, var(--bgColor) 65%, var(--accent));
                     }
+
                     .building-row .building-chevron-btn:hover {
                         background: color-mix(in oklab, var(--bgColor) 80%, var(--accent));
                     }
@@ -1945,7 +1980,7 @@
                     top: 2px;
                     box-shadow: 0 1px 0 var(--accent);
                     transition: top 0.05s cubic-bezier(0.75, 0, 0.25, 1),
-                    box-shadow 0.05s cubic-bezier(0.75, 0, 0.25, 1);
+                        box-shadow 0.05s cubic-bezier(0.75, 0, 0.25, 1);
                 }
 
                 .building-row button:disabled {
@@ -1991,9 +2026,9 @@
                     position: relative;
                     overflow: hidden;
                     background: color-mix(in oklab, var(--bgColor) 95%, var(--accent));
-                    transition: grid-template-rows 0.15s ease, 
-                                opacity 0.15s ease,
-                                margin-bottom 0.15s ease;
+                    transition: grid-template-rows 0.15s ease,
+                        opacity 0.15s ease,
+                        margin-bottom 0.15s ease;
                     pointer-events: none;
                     margin-bottom: -1em;
 
@@ -2041,12 +2076,13 @@
                             justify-content: flex-end;
                         }
 
-                        .header-time, .header-limit {
+                        .header-time,
+                        .header-limit {
                             font-size: 0.75em;
                             color: var(--baseColor);
                             font-weight: 400;
                         }
-                        
+
                         .header-limit.at-limit {
                             color: var(--accent);
                         }
@@ -2107,18 +2143,20 @@
                                     &:hover:not(:disabled) {
                                         border-color: var(--accent);
                                         background: color-mix(in oklab, var(--bgColor) 75%, var(--accent));
+
                                         .build-progress-fill,
                                         .hire-progress-fill {
                                             background: color-mix(in oklab, var(--bgColor) 65%, var(--accent));
                                         }
                                     }
+
                                     &:disabled {
                                         border-color: color-mix(in oklab, var(--accent) 50%, transparent);
                                     }
                                 }
                             }
 
-        
+
 
                             &.dropdown-remove-worker-btn,
                             &.dropdown-sell-btn {
@@ -2127,7 +2165,7 @@
                                 color: var(--baseColor);
                                 max-height: 1em;
 
-                                & ~ .button-info-box {
+                                &~.button-info-box {
                                     border-color: color-mix(in oklab, var(--midBaseColor) 70%, transparent);
                                 }
 
@@ -2136,17 +2174,18 @@
                                         background: color-mix(in oklab, var(--bgColor) 75%, var(--midBaseColor));
                                         border-color: var(--midBaseColor);
                                     }
-                                    &:disabled { 
+
+                                    &:disabled {
                                         border-color: color-mix(in oklab, var(--midBaseColor) 40%, transparent);
                                         background: color-mix(in oklab, var(--bgColor) 90%, var(--midBaseColor));
                                     }
                                 }
                             }
-                            
+
                             &:disabled {
-                                    cursor: default;   
-                                    color: var(--lightBaseColor);                            
-                                }
+                                cursor: default;
+                                color: var(--lightBaseColor);
+                            }
 
                             .build-progress-fill,
                             .hire-progress-fill {
@@ -2178,7 +2217,7 @@
 
                             .button-info-box {
                                 border: 1px solid var(--darkerAccent);
-                            
+
                                 border-top: none;
                                 width: 100%;
                                 border-bottom-left-radius: 0.3em;
@@ -2535,14 +2574,15 @@
 
                 #industry {
                     grid-template-areas:
-                "industry-theurgy industry-theurgy"
-                "industry-resources industry-prod";
+                        "industry-theurgy industry-theurgy"
+                        "industry-resources industry-prod";
                     grid-template-rows: min-content 1fr;
                     grid-template-columns: var(--industry-resources-width, 12em) 1fr;
 
                     #industry-resources {
                         display: flex;
                         flex-direction: column;
+
                         .resource-row {
                             grid-template-columns: 1fr 0 5em;
                         }
@@ -2593,7 +2633,7 @@
 
             background-color: rgba(0, 0, 0, var(--alpha));
             opacity: 0;
-            transition: opacity .25s cubic-bezier(0.39, 0.58, 0.57, 1);
+            transition: opacity .15s cubic-bezier(0.39, 0.58, 0.57, 1);
         }
 
         html:has(dialog[open]) #dialog-overlay {
@@ -2604,6 +2644,142 @@
         html:has(dialog.hide) #dialog-overlay {
             transition: opacity .1s cubic-bezier(0.39, 0.58, 0.57, 1);
             opacity: 0 !important;
+        }
+
+        dialog {
+            position: fixed;
+            background: var(--bgColor);
+            border: 1px solid var(--midBaseColor);
+            border-radius: 6px;
+            padding: 16px;
+            z-index: 1000;
+
+            &::backdrop {
+                background: transparent;
+            }
+        }
+
+        #skip-dialog {
+            width: 30em;
+            display: flex;
+            height: fit-content;
+            flex-direction: column;
+
+            .caption {
+                font-size: 1em;
+                text-align: center;
+                font-style: italic;
+                color: var(--lightBaseColor);
+                padding-bottom: 2.33em;
+            }
+
+            form {
+                height: 11em;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .input-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 1em;
+                margin-bottom: 1em;
+
+                &:first-of-type {
+                    grid-template-columns: 1fr 1fr 1fr;
+                }
+
+                .input-group.full {
+                    grid-column: 1 / -1;
+                }
+            }
+
+            .input-group {
+                height: 3em;
+
+                label {
+                    display: block;
+                    font-size: 0.85em;
+                    font-weight: 450;
+                    color: var(--midBaseColor);
+                }
+
+                input,
+                select {
+                    width: 100%;
+                    padding: 2px;
+                    padding-left: 1px;
+                    height: 1.75em;
+                    border-bottom: 0.06em solid var(--baseColor);
+                    background: transparent;
+                    color: var(--baseColor);
+                    transition: border-color 0.15s;
+
+                    &:focus-visible {
+                        border-color: var(--accent);
+                    }
+
+
+                    &.invalid {
+                        animation: invalid 0.18s forwards;
+                    }
+                }
+
+
+                select option[disabled][hidden] {
+                    display: none;
+                }
+
+                select#specialty {
+                    min-width: 12em;
+                }
+
+                .specialty-effect {
+                    display: block;
+                    margin-top: 4px;
+                    width: fit-content;
+                    font-size: 0.85em;
+                    font-weight: 300;
+                    color: var(--baseColor);
+                }
+            }
+
+            .button-row {
+                display: flex;
+                gap: 1em;
+                padding-top: 2em;
+                justify-content: flex-start;
+
+                button {
+                    padding: 2px;
+                    border: 0;
+                    border-bottom: 0.06em solid var(--baseColor);
+                    background: transparent;
+                    color: var(--baseColor);
+                    cursor: pointer;
+                    font-family: inherit;
+                    border-radius: 0;
+                    font-size: 0.95em;
+                    font-weight: 500;
+                    transition: border-color 0.15s, color 0.15s;
+
+                    &:hover:not(:disabled) {
+                        border-color: var(--accent);
+                        color: var(--accent);
+                    }
+
+                    &:disabled {
+                        opacity: 0.5;
+                        cursor: default;
+                    }
+
+                    &:focus-visible {
+                        border-color: var(--accent);
+                        color: var(--accent);
+                        outline: none;
+                    }
+                }
+            }
         }
 
         .icon-base {
@@ -2740,225 +2916,126 @@
                 transform: translate(-50%, -50%);
             }
         }
-
     </style>
     <!--  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
 </head>
 
 <body>
-<div id="sections-wrapper">
-    <section id="left-section">
-        <div class="navbar box" id="herobar">
-            <button class="section-nav-arrow" id="nav-arrow-left" aria-label="Previous section" disabled>‹</button>
-            <button class="nudge navbutton locked hastip" data-loc="left" data-panel="team" data-tips="teamnav"
+    <div id="sections-wrapper">
+        <section class="main-section" id="left-section">
+            <div class="navbar box" id="herobar">
+                <button class="section-nav-arrow" id="nav-arrow-left" aria-label="Previous section" disabled>‹</button>
+                <button class="nudge navbutton locked hastip" data-loc="left" data-panel="team" data-tips="teamnav"
                     id="teamnav"><img alt="Team" src="assets/TEAM.svg"></button>
-            <button class="nudge navbutton locked hastip" data-loc="left" data-panel="hero" data-tips="heronav"
+                <button class="nudge navbutton locked hastip" data-loc="left" data-panel="hero" data-tips="heronav"
                     id="heronav"><img alt="Hero" src="assets/HERO.svg"></button>
-            <button class="nudge navbutton locked hastip" data-loc="left" data-panel="equipment"
+                <button class="nudge navbutton locked hastip" data-loc="left" data-panel="equipment"
                     data-tips="equipmentnav" id="equipmentnav"><img alt="Equipment" src="assets/INVENTORY.svg"></button>
-            <button class="nudge navbutton locked hastip" data-loc="left" data-panel="augment" data-tips="augmentnav"
-                    id="augmentnav"><img alt="Augment" src="assets/AUGMENT.svg"></button>
-            <button class="nudge navbutton locked hastip" data-loc="left" data-panel="upgrade" data-tips="upgradenav"
-                    id="upgradenav"><img alt="Upgrade" src="assets/TREE.svg"></button>
-            <button class="section-nav-arrow" id="nav-arrow-center-from-left" aria-label="Next section">›</button>
-        </div>
-        <div class="panel-wrapper sidebar" id="left">
-            <h1 class="lock"> LOCKED </h1>
-        </div>
-    </section>
-    <section id="center-section">
-        <div class="navbar box" id="mainbar">
-            <button class="section-nav-arrow" id="nav-arrow-center-from-right" aria-label="Previous section">‹</button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="city" data-tips="citynav"
+                <button class="nudge navbutton locked hastip" data-loc="left" data-panel="augment"
+                    data-tips="augmentnav" id="augmentnav"><img alt="Augment" src="assets/AUGMENT.svg"></button>
+                <button class="nudge navbutton locked hastip" data-loc="left" data-panel="upgrade"
+                    data-tips="upgradenav" id="upgradenav"><img alt="Upgrade" src="assets/TREE.svg"></button>
+                <button class="section-nav-arrow" id="nav-arrow-center-from-left" aria-label="Next section">›</button>
+            </div>
+            <div class="panel-wrapper sidebar" id="left">
+                <h1 class="lock"> LOCKED </h1>
+            </div>
+        </section>
+        <section class="main-section" id="center-section">
+            <div class="navbar box" id="mainbar">
+                <button class="section-nav-arrow" id="nav-arrow-center-from-right"
+                    aria-label="Previous section">‹</button>
+                <button class="nudge locked navbutton hastip" data-loc="center" data-panel="city" data-tips="citynav"
                     id="citynav"><img alt="City" src="assets/CITY.svg"></button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="industry"
+                <button class="nudge locked navbutton hastip" data-loc="center" data-panel="industry"
                     data-tips="industrynav" id="industrynav"><img alt="Industry" src="assets/INDUSTRY.svg"></button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="research"
+                <button class="nudge locked navbutton hastip" data-loc="center" data-panel="research"
                     data-tips="researchnav" id="researchnav"><img alt="Research" src="assets/RESEARCH.svg"></button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="dungeon"
+                <button class="nudge locked navbutton hastip" data-loc="center" data-panel="dungeon"
                     data-tips="dungeonav" id="dungeonav"><img alt="Dungeon" src="assets/DUNGEON.svg"></button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="trade" data-tips="tradenav"
+                <button class="nudge locked navbutton hastip" data-loc="center" data-panel="trade" data-tips="tradenav"
                     id="tradenav"><img alt="Trade" src="assets/TRADE.svg"></button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="army" data-tips="armynav"
+                <button class="nudge locked navbutton hastip" data-loc="center" data-panel="army" data-tips="armynav"
                     id="armynav"><img alt="Army" src="assets/ARMY.svg"></button>
-            <button class="nudge locked navbutton hastip" data-loc="center" data-panel="tournament"
+                <button class="nudge locked navbutton hastip" data-loc="center" data-panel="tournament"
                     data-tips="tournamentnav" id="tournamentnav"><img alt="Tournament"
-                                                                     src="assets/TOURNAMENT.svg"></button>
-            <button class="section-nav-arrow" id="nav-arrow-right-from-center" aria-label="Next section">›</button>
-        </div>
-        <div class="panel-wrapper" id="center">
-            <div class="box panel" id="story-wrap">
-                <div data-masksize="28" id="story"></div>
+                        src="assets/TOURNAMENT.svg"></button>
+                <button class="section-nav-arrow" id="nav-arrow-right-from-center" aria-label="Next section">›</button>
             </div>
-            <div class="panel" id="industry">
-                <div class="subbox" id="industry-theurgy">
-                    <strong>Theurgy</strong>
-                    <button class="ripples" id="theurgy-plant">Plant Seed</button>
-                    <button class="ripples" id="theurgy-harvest">Harvest Crop</button>
+            <div class="panel-wrapper" id="center">
+                <div class="box panel" id="story-wrap">
+                    <div data-masksize="28" id="story"></div>
+                    <div id="skip-banner">
+                        skip prologue ⟶
+                    </div>
                 </div>
-                <div class="subbox" id="industry-resources">
-                    <strong>Resources</strong>
+                <div class="panel" id="industry">
+                    <div class="subbox" id="industry-theurgy">
+                        <strong>Theurgy</strong>
+                        <button class="ripples" id="theurgy-plant">Plant Seed</button>
+                        <button class="ripples" id="theurgy-harvest">Harvest Crop</button>
+                    </div>
+                    <div class="subbox" id="industry-resources">
+                        <strong>Resources</strong>
+                    </div>
+                    <div class="subbox" id="industry-prod">
+                        <strong>Production</strong>
+                    </div>
                 </div>
-                <div class="subbox" id="industry-prod">
-                    <strong>Production</strong>
-                </div>
             </div>
-            <div class="keyboard" id="alphaboard">
-                <div class="key nudge">A</div>
-                <div class="key nudge">B</div>
-                <div class="key nudge">C</div>
-                <div class="key nudge">D</div>
-                <div class="key nudge">E</div>
-                <div class="key nudge">F</div>
-                <div class="key nudge">G</div>
-                <div class="key nudge">H</div>
-                <div class="key nudge">I</div>
-                <div class="key nudge">J</div>
-                <div class="key nudge">K</div>
-                <div class="key nudge">L</div>
-                <div class="key nudge">M</div>
-                <div class="key nudge">N</div>
-                <div class="key nudge">O</div>
-                <div class="key nudge">P</div>
-                <div class="key nudge">Q</div>
-                <div class="key nudge">R</div>
-                <div class="key nudge">S</div>
-                <div class="key nudge">T</div>
-                <div class="key nudge">U</div>
-                <div class="key nudge">V</div>
-                <div class="key nudge">W</div>
-                <div class="key nudge">X</div>
-                <div class="key nudge">Y</div>
-                <div class="key nudge">Z</div>
-                <div class="key action bkspc nudge">⟵</div>
-                <div class="key action spc nudge">SPC</div>
-                <div class="key action enter nudge">⏎</div>
-            </div>
-            <div class="keyboard" id="numboard">
-                <div class="key nudge">1</div>
-                <div class="key nudge">2</div>
-                <div class="key nudge">3</div>
-                <div class="key nudge">4</div>
-                <div class="key nudge">5</div>
-                <div class="key nudge">6</div>
-                <div class="key nudge">7</div>
-                <div class="key nudge">8</div>
-                <div class="key nudge">9</div>
-                <div class="key nudge">0</div>
-                <div class="key nudge">.</div>
-                <div class="key action bkspc nudge">⟵</div>
-                <div class="key action enter nudge">⏎</div>
-            </div>
-        </div>
-    </section>
-    <section id="right-section">
-        <div class="navbar box" id="citybar">
-            <button class="section-nav-arrow" id="nav-arrow-right-from-left" aria-label="Previous section">‹</button>
-            <button class="nudge navbutton hastip" data-loc="right" data-panel="news"
-                    data-tips="newsnav" id="newsnav"><img alt="News" src="assets/MAIL.svg"></button>
-            <button class="nudge locked navbutton hastip" data-loc="right" data-panel="chart" data-tips="chartnav"
+        </section>
+        <section class="main-section" id="right-section">
+            <div class="navbar box" id="citybar">
+                <button class="section-nav-arrow" id="nav-arrow-right-from-left"
+                    aria-label="Previous section">‹</button>
+                <button class="nudge navbutton hastip" data-loc="right" data-panel="news" data-tips="newsnav"
+                    id="newsnav"><img alt="News" src="assets/MAIL.svg"></button>
+                <button class="nudge locked navbutton hastip" data-loc="right" data-panel="chart" data-tips="chartnav"
                     id="chartnav"><img alt="Charts" src="assets/CHART.svg"></button>
-            <button class="nudge locked navbutton hastip" data-loc="right" data-panel="achievements"
+                <button class="nudge locked navbutton hastip" data-loc="right" data-panel="achievements"
                     data-tips="achievenav" id="achievenav"><img alt="Achievements" src="assets/TROPHY.svg"></button>
-            <button class="nudge navbutton hastip" data-loc="right" data-panel="codex" data-tips="codexnav"
+                <button class="nudge navbutton hastip" data-loc="right" data-panel="codex" data-tips="codexnav"
                     id="codexnav"><img alt="Codex" src="assets/CODEX.svg"></button>
-            <button class="nudge navbutton hastip" data-loc="right" data-panel="settings" data-tips="settingsnav"
+                <button class="nudge navbutton hastip" data-loc="right" data-panel="settings" data-tips="settingsnav"
                     id="settingsnav"><img alt="Settings" src="assets/COG.svg"></button>
-            <button class="section-nav-arrow" id="nav-arrow-right" aria-label="Next section" disabled>›</button>
-        </div>
-        <div class="panel-wrapper sidebar" id="right">
-            <div class="box panel" id="news">
-                <div data-masksize="20" id="update-logs"></div>
+                <button class="section-nav-arrow" id="nav-arrow-right" aria-label="Next section" disabled>›</button>
             </div>
-            <div class="box panel shown" id="settings">
-                <h2 id="appearance-header">Appearance</h2>
-                <div class="setting">
-                    <label class="theme">
-                        Background
-                        <input checked id="dark" name="background" type="radio"/>
-                        <input id="light" name="background" type="radio"/>
-                    </label>
+            <div class="panel-wrapper sidebar" id="right">
+                <div class="box panel" id="news">
+                    <div data-masksize="20" id="update-logs"></div>
                 </div>
-                <div class="setting">
-                    <label class="theme">
-                        Theme
-                        <input checked id="lightning" name="accent" type="radio"/>
-                        <input id="acid" name="accent" type="radio"/>
-                        <input id="amber" name="accent" type="radio"/>
-                        <input id="arcane" name="accent" type="radio"/>
-                    </label>
-                </div>
-                <h2 id="game-header">Game</h2>
-                <div class="setting">
-                    <label>
-                        Number Format
-                        <select id="numformat" name="numformat">
-                            <option selected value="standard">Standard</option>
-                            <option value="scientific">Scientific</option>
-                            <option value="alphabetical">Alphabetical</option>
-                        </select>
-                    </label>
-                </div>
-                <div class="setting">
-                    <label>
-                        Offline Progress
-                        <select id="offlineprogress" name="offlineprogress">
-                            <option selected value="on">On</option>
-                            <option value="off">Off</option>
-                        </select>
-                    </label>
-                </div>
-                <h2 id="system-header">System</h2>
-                <div class="setting">
-                    <label>
-                        UI Refresh Rate
-                        <select id="refreshUI" name="refreshUI">
-                            <option value="100">100</option>
-                            <option value="75">75</option>
-                            <option value="50">50</option>
-                            <option selected value="30">30</option>
-                            <option value="20">20</option>
-                            <option value="10">10</option>
-                            <option value="5">5</option>
-                            <option value="1">1</option>
-                        </select> </label>
-                </div>
-                <h2 id="about-header">About</h2>
-                <div id="about">
-                    This site does not collect any data and is a WIP. Most icons are sourced from <a
-                        href="https://game-icons.net/about.html#:~:text=Authors%20%26%20Contributors">game-icons.net</a>.
-                    <a href="https://github.com/dpbarry/fantasy-fantasy" id="github" rel="noopener noreferrer"
-                       target="_blank"></a>
+                <div class="panel shown" id="settings">
                 </div>
             </div>
-        </div>
-    </section>
-</div>
-<div id="dialog-overlay"></div>
-<div id="loading-overlay">
-    <div class="filling-icon hidden">
-        <svg class="icon-base" role="img"
-             viewBox="41.84208679199219 92.34098815917969 943.2019805908203 936.6300811767578"
-             xmlns="http://www.w3.org/2000/svg">
-            <g transform="rotate(180, 512, 512)">
-                <path
-                        d="M769.936 259.056l137.563 137.563-56.945 56.943c-22.192-43.638-48.741-83.863-78.808-120.959-46.035 45.981-91.367 90.987-136.678 134.831 133.417 141.84 254.131 289.344 346.59 463.725-177.222-98.768-327.164-216.224-471.102-346.742-143.936 130.517-293.878 247.973-471.1 346.742 92.459-174.379 213.171-321.883 346.59-463.725-45.31-43.843-90.642-88.847-136.676-134.829-30.065 37.096-56.616 77.321-78.808 120.959l-56.945-56.945 137.565-137.565c-52.495-87.21-126.819-152.596-211.627-207.494l56.031-56.031c55.518 84.185 123.299 156.119 207.822 211.3l137.241-137.241 56.945 56.945c-41.857 24.183-82.004 50.951-119.653 80.527 44.67 44.585 89.031 88.453 132.617 132.245 43.586-43.791 87.949-87.66 132.619-132.245-37.649-29.577-77.797-56.343-119.653-80.527l56.945-56.945 137.243 137.243c84.523-55.181 152.302-127.113 207.82-211.298l56.031 56.031c-84.807 54.897-159.131 120.282-211.627 207.493z"
-                        fill="currentColor"/>
-            </g>
-        </svg>
-
-        <svg class="icon-fill" role="img"
-             viewBox="41.84208679199219 92.34098815917969 943.2019805908203 936.6300811767578"
-             xmlns="http://www.w3.org/2000/svg">
-            <g transform="rotate(180, 512, 512)">
-                <path
-                        d="M769.936 259.056l137.563 137.563-56.945 56.943c-22.192-43.638-48.741-83.863-78.808-120.959-46.035 45.981-91.367 90.987-136.678 134.831 133.417 141.84 254.131 289.344 346.59 463.725-177.222-98.768-327.164-216.224-471.102-346.742-143.936 130.517-293.878 247.973-471.1 346.742 92.459-174.379 213.171-321.883 346.59-463.725-45.31-43.843-90.642-88.847-136.676-134.829-30.065 37.096-56.616 77.321-78.808 120.959l-56.945-56.945 137.565-137.565c-52.495-87.21-126.819-152.596-211.627-207.494l56.031-56.031c55.518 84.185 123.299 156.119 207.822 211.3l137.241-137.241 56.945 56.945c-41.857 24.183-82.004 50.951-119.653 80.527 44.67 44.585 89.031 88.453 132.617 132.245 43.586-43.791 87.949-87.66 132.619-132.245-37.649-29.577-77.797-56.343-119.653-80.527l56.945-56.945 137.243 137.243c84.523-55.181 152.302-127.113 207.82-211.298l56.031 56.031c-84.807 54.897-159.131 120.282-211.627 207.493z"
-                        fill="currentColor"/>
-            </g>
-        </svg>
+        </section>
     </div>
 
-</div>
+
+    <div id="dialog-overlay"></div>
+    <div id="loading-overlay">
+        <div class="filling-icon hidden">
+            <svg class="icon-base" role="img"
+                viewBox="41.84208679199219 92.34098815917969 943.2019805908203 936.6300811767578"
+                xmlns="http://www.w3.org/2000/svg">
+                <g transform="rotate(180, 512, 512)">
+                    <path
+                        d="M769.936 259.056l137.563 137.563-56.945 56.943c-22.192-43.638-48.741-83.863-78.808-120.959-46.035 45.981-91.367 90.987-136.678 134.831 133.417 141.84 254.131 289.344 346.59 463.725-177.222-98.768-327.164-216.224-471.102-346.742-143.936 130.517-293.878 247.973-471.1 346.742 92.459-174.379 213.171-321.883 346.59-463.725-45.31-43.843-90.642-88.847-136.676-134.829-30.065 37.096-56.616 77.321-78.808 120.959l-56.945-56.945 137.565-137.565c-52.495-87.21-126.819-152.596-211.627-207.494l56.031-56.031c55.518 84.185 123.299 156.119 207.822 211.3l137.241-137.241 56.945 56.945c-41.857 24.183-82.004 50.951-119.653 80.527 44.67 44.585 89.031 88.453 132.617 132.245 43.586-43.791 87.949-87.66 132.619-132.245-37.649-29.577-77.797-56.343-119.653-80.527l56.945-56.945 137.243 137.243c84.523-55.181 152.302-127.113 207.82-211.298l56.031 56.031c-84.807 54.897-159.131 120.282-211.627 207.493z"
+                        fill="currentColor" />
+                </g>
+            </svg>
+
+            <svg class="icon-fill" role="img"
+                viewBox="41.84208679199219 92.34098815917969 943.2019805908203 936.6300811767578"
+                xmlns="http://www.w3.org/2000/svg">
+                <g transform="rotate(180, 512, 512)">
+                    <path
+                        d="M769.936 259.056l137.563 137.563-56.945 56.943c-22.192-43.638-48.741-83.863-78.808-120.959-46.035 45.981-91.367 90.987-136.678 134.831 133.417 141.84 254.131 289.344 346.59 463.725-177.222-98.768-327.164-216.224-471.102-346.742-143.936 130.517-293.878 247.973-471.1 346.742 92.459-174.379 213.171-321.883 346.59-463.725-45.31-43.843-90.642-88.847-136.676-134.829-30.065 37.096-56.616 77.321-78.808 120.959l-56.945-56.945 137.565-137.565c-52.495-87.21-126.819-152.596-211.627-207.494l56.031-56.031c55.518 84.185 123.299 156.119 207.822 211.3l137.241-137.241 56.945 56.945c-41.857 24.183-82.004 50.951-119.653 80.527 44.67 44.585 89.031 88.453 132.617 132.245 43.586-43.791 87.949-87.66 132.619-132.245-37.649-29.577-77.797-56.343-119.653-80.527l56.945-56.945 137.243 137.243c84.523-55.181 152.302-127.113 207.82-211.298l56.031 56.031c-84.807 54.897-159.131 120.282-211.627 207.493z"
+                        fill="currentColor" />
+                </g>
+            </svg>
+        </div>
+
+    </div>
 </body>
 
 

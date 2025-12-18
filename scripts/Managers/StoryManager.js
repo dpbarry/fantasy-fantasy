@@ -28,6 +28,7 @@ export default class StoryManager {
         return this.choices[this.progress - 1];
     }
 
+
     async typeP(text, opts = {}) {
         return await TypingService.typeP(text, this.core.ui.story, opts);
     }
@@ -69,15 +70,17 @@ export default class StoryManager {
     async getName(res) {
         const [p, inputs] = res;
         const [inputFirst, inputSecond] = inputs;
-        inputs.forEach(i => {
-            i.addEventListener("blur", (e) => {
-                if (!e.relatedTarget?.closest("#story input, dialog")) i.focus({preventScroll: true});
-            })
-        });
-        this.core.ui.center.classList.add("alphaactive");
+
+        // Set up focus recapture with cleanup
+        const cleanupFocusRecapture = InputService.setupFocusRecapture(inputs);
 
         const finishGetName = async () => {
+            // Clean up focus recapture listeners
+            cleanupFocusRecapture();
             this.core.city.setRulerName(inputFirst.value, inputSecond.value);
+            // Hide skip prologue banner since user has started the prologue
+            this.core.ui.panels.story.skipBanner.classList.add("hide");
+            this.core.ui.panels.story.skipBanner.onanimationend = () => this.core.ui.panels.story.skipBanner.style.display = "none";
             this.core.clock.resume();
             this.core.ui.show("right", "news");
             this.core.news.update("You woke up from a strange dream.");
@@ -190,11 +193,13 @@ export default class StoryManager {
         this.typeWithInputs("You leave your bedroom and begin walking down the corridor, admiring through the windows the sweeping views of your hometown afforded by the castle's hilltop vantage point. It is a small but proud city (by the name of @), nestled between the forest and the sea.", "5.5em", "getname", InputService.nameValidate).then(res => {
             const [p, inputs] = res;
             name = inputs[0];
-            name.addEventListener("blur", (e) => {
-                if (!e.relatedTarget?.closest("#story input, dialog")) name.focus({preventScroll: true})
-            });
-            this.core.ui.center.classList.add("alphaactive");
-            this.core.ui.story.append(InputService.getCue("Enter", () => this.finishGetCityName(p)));
+
+            // Set up focus recapture with cleanup
+            const cleanupFocusRecapture = InputService.setupFocusRecapture(inputs);
+            this.core.ui.story.append(InputService.getCue("Enter", () => {
+                cleanupFocusRecapture(); // Clean up before finishing
+                this.finishGetCityName(p);
+            }));
             setTimeout(() => name.focus({preventScroll: true}), 0);
         });
     }
@@ -226,12 +231,8 @@ export default class StoryManager {
 
     async cueBegin() {
         this.checkpoint(6);
-        this.core.ui.story.appendChild(InputService.getButton("Begin Game", "beginGame", async () => {
-            await delay(200);
-            this.core.industry.access.basic = true;
-            document.querySelector("#industrynav").classList.remove("locked");
-            this.core.ui.show("center", "industry");
-            this.showProductionInfoBoxes();
+        this.core.ui.story.appendChild(InputService.getButton("Begin Game", "beginGame", () => {
+            this.startGame();
         }));
     }
 
@@ -386,5 +387,22 @@ export default class StoryManager {
         } else {
             this.dismissedInfoBoxes = new Set();
         }
+    }
+
+
+
+    async startGame(fromSkip = false) {
+        this.core.clock.resume();
+
+        if (fromSkip) {
+            this.core.ui.show("right", "news");
+            this.core.news.update("You woke up from a strange dream.");
+        }
+
+        await delay(200);
+        this.core.industry.access.basic = true;
+        document.querySelector("#industrynav").classList.remove("locked");
+        this.core.ui.show("center", "industry");
+        this.showProductionInfoBoxes();
     }
 } 

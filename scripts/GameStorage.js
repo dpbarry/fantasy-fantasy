@@ -150,9 +150,10 @@ export default class GameStorage {
                 isDev: true, // Flag to trigger dev overrides
                 data: {
                     story: {
-                        progress: { Prologue: 6 },
+                        progress: 6,
                         choices: { 2: 2 },
-                        currentEpisode: null
+                        currentEpisode: null,
+                        dismissedInfoBoxes: []
                     },
                     news: {
                         logs: [
