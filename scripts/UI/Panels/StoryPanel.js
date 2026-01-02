@@ -1,6 +1,7 @@
 import InputService from "../../Services/InputService.js";
 import { waitForEvent } from "../../Utils.js";
 import createModalDialog from "../Components/Dialog.js";
+import createSelect from "../Components/Select.js";
 
 export default class StoryPanel {
     constructor(core) {
@@ -8,50 +9,79 @@ export default class StoryPanel {
         this.root = document.getElementById("story");
         this.skipBanner = document.getElementById("skip-banner");
         this.isSubmitting = false;
+        this.dialogSelects = {};
 
-        // auto-scroll on new content
         this.setupAutoScroll();
         this.root._excessPadding = 0;
 
-        // Create skip dialog
         this.skipDialog = this.createSkipDialog();
 
-        // skip prologue handler
         this.skipBanner.addEventListener('click', () => {
             this.openSkipDialog();
         });
     }
 
-
     openSkipDialog() {
-        // Prevent multiple dialogs from being opened
         if (this.currentDialogClose) return;
 
-        // Access the DOM elements first
+        const closeDialog = this.skipDialog.open();
+        this.currentDialogClose = closeDialog;
+
         const dialog = document.getElementById('skip-dialog');
         const form = document.getElementById('skip-form');
         const submitBtn = document.getElementById('skip-submit');
         const randomizeBtn = document.getElementById('skip-randomize');
         const devsaveBtn = document.getElementById('skip-devsave');
 
-        // Validation
+        const updateSpecialtyEffect = (value) => {
+            const specialtyEffect = document.getElementById('specialty-effect');
+            const specialtyIndex = parseInt(value);
+            if (specialtyIndex === 0) {
+                specialtyEffect.innerHTML = '+10 <span class="term" data-tips="savvy">Savvy</span>';
+            } else if (specialtyIndex === 1) {
+                specialtyEffect.innerHTML = '+10 <span class="term" data-tips="valor">Valor</span>';
+            } else if (specialtyIndex === 2) {
+                specialtyEffect.innerHTML = '+10 <span class="term" data-tips="wisdom">Wisdom</span>';
+            } else {
+                specialtyEffect.innerHTML = '&nbsp;';
+            }
+        };
+
+        this.dialogSelects.gender = createSelect({
+            options: [
+                { value: 'M', label: 'King' },
+                { value: 'F', label: 'Queen' }
+            ],
+        });
+        document.getElementById('gender-container').appendChild(this.dialogSelects.gender.element);
+
+        this.dialogSelects.specialty = createSelect({
+            options: [
+                { value: '0', label: 'Economic Prosperity' },
+                { value: '1', label: 'Military Campaigns' },
+                { value: '2', label: 'New Discoveries' }
+            ],
+            onChange: (value) => updateSpecialtyEffect(value)
+        });
+        document.getElementById('specialty-container').appendChild(this.dialogSelects.specialty.element);
+
         const validateForm = () => {
             const firstName = document.getElementById('first-name').value.trim();
             const lastName = document.getElementById('last-name').value.trim();
             const cityName = document.getElementById('city-name').value.trim();
+            const gender = this.dialogSelects.gender.value;
+            const specialty = this.dialogSelects.specialty.value;
 
-            const isValid = firstName && lastName && cityName &&
-                           firstName.length <= 15 && lastName.length <= 15 && cityName.length <= 15 &&
-                           InputService.isAlphabetic(firstName) && InputService.isAlphabetic(lastName) && InputService.isAlphabetic(cityName);
+            const isValid = firstName && lastName && cityName && gender && specialty &&
+                firstName.length <= 15 && lastName.length <= 15 && cityName.length <= 15 &&
+                InputService.isAlphabetic(firstName) && InputService.isAlphabetic(lastName) && InputService.isAlphabetic(cityName);
 
             submitBtn.disabled = !isValid;
             return isValid;
         };
 
-        // Store listener functions for cleanup
         const listeners = [];
 
-        // Simple validation using InputService.isAlphabetic like in StoryManager
         ['first-name', 'last-name', 'city-name'].forEach(id => {
             const input = document.getElementById(id);
             input.onanimationend = () => input.classList.remove("invalid");
@@ -87,25 +117,16 @@ export default class StoryPanel {
             });
         });
 
-        // Specialty change handler
-        const specialtyHandler = (e) => {
-            const specialtyEffect = document.getElementById('specialty-effect');
-            const specialtyIndex = parseInt(e.target.value);
+        const genderEl = this.dialogSelects.gender.element;
+        const specialtyEl = this.dialogSelects.specialty.element;
+        const selectClickHandler = () => setTimeout(validateForm, 10);
+        genderEl.addEventListener('click', selectClickHandler);
+        specialtyEl.addEventListener('click', selectClickHandler);
+        listeners.push(() => {
+            genderEl.removeEventListener('click', selectClickHandler);
+            specialtyEl.removeEventListener('click', selectClickHandler);
+        });
 
-            // Update the tooltip and text based on selected specialty
-            if (specialtyIndex === 0) {
-                specialtyEffect.innerHTML = '+10 <span class="term" data-tips="savvy">Savvy</span>';
-            } else if (specialtyIndex === 1) {
-                specialtyEffect.innerHTML = '+10 <span class="term" data-tips="valor">Valor</span>';
-            } else if (specialtyIndex === 2) {
-                specialtyEffect.innerHTML = '+10 <span class="term" data-tips="wisdom">Wisdom</span>';
-            }
-        };
-
-        document.getElementById('specialty').addEventListener('change', specialtyHandler);
-        listeners.push(() => document.getElementById('specialty').removeEventListener('change', specialtyHandler));
-
-        // Randomize button
         const randomizeHandler = () => {
             this.randomizeInputs();
             validateForm();
@@ -114,17 +135,14 @@ export default class StoryPanel {
         randomizeBtn.addEventListener('click', randomizeHandler);
         listeners.push(() => randomizeBtn.removeEventListener('click', randomizeHandler));
 
-        // Dev save button
         const devsaveHandler = async () => {
             closeDialog();
             await waitForEvent(document, 'dialogResolved');
 
             await this.core.storage.storeSave(this.core.storage.devSave);
             await this.core.storage.loadFullGame(this.core);
-            // Exact same flow as prologue button click
             requestAnimationFrame(() => {
-                this.core.story.startGame(); 
-                // skip news setup since save state already has it
+                this.core.story.startGame();
                 window.location.reload();
             });
         };
@@ -132,29 +150,29 @@ export default class StoryPanel {
         devsaveBtn.addEventListener('click', devsaveHandler);
         listeners.push(() => devsaveBtn.removeEventListener('click', devsaveHandler));
 
-        // Form submission
         const submitHandler = async (e) => {
             e.preventDefault();
             if (!validateForm() || this.isSubmitting) return;
 
             this.isSubmitting = true;
 
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData);
+            const firstName = document.getElementById('first-name').value.trim();
+            const lastName = document.getElementById('last-name').value.trim();
+            const cityName = document.getElementById('city-name').value.trim();
+            const gender = this.dialogSelects.gender.value;
+            const specialty = this.dialogSelects.specialty.value;
 
-            // Set game state like prologue completion
-            this.core.city.setRulerName(data.first, data.last);
-            this.core.city.ruler.gender = data.gender;
-            this.core.city.name = data.city;
+            this.core.city.setRulerName(firstName, lastName);
+            this.core.city.ruler.gender = gender;
+            this.core.city.name = cityName;
 
-            // Set specialty
-            const specialtyIndex = parseInt(data.specialty);
+            const specialtyIndex = parseInt(specialty);
             if (specialtyIndex === 0) this.core.city.ruler.savvy = 10;
             else if (specialtyIndex === 1) this.core.city.ruler.valor = 10;
             else if (specialtyIndex === 2) this.core.city.ruler.wisdom = 10;
 
             this.core.story.recordChoice(specialtyIndex);
-            this.core.story.checkpoint(6); // Mark story as completed like prologue
+            this.core.story.checkpoint(6);
 
             closeDialog();
 
@@ -171,14 +189,17 @@ export default class StoryPanel {
 
         const cleanup = () => {
             listeners.forEach(cleanup => cleanup());
+            if (this.dialogSelects.gender) {
+                this.dialogSelects.gender.destroy();
+                this.dialogSelects.gender = null;
+            }
+            if (this.dialogSelects.specialty) {
+                this.dialogSelects.specialty.destroy();
+                this.dialogSelects.specialty = null;
+            }
             this.currentDialogClose = null;
         };
 
-        // Open dialog and set up cleanup on close
-        const closeDialog = this.skipDialog.open();
-        this.currentDialogClose = closeDialog;
-
-        // Set up cleanup when dialog closes
         const originalOnClose = dialog.onclose;
         dialog.onclose = () => {
             cleanup();
@@ -191,7 +212,7 @@ export default class StoryPanel {
     createSkipDialog() {
         const dialogHTML = `
             <dialog id="skip-dialog">
-            <p class='caption'>The creator of the multiverse has permanently retired. Your divinely ordained task: safeguard your world’s future.</p>
+            <p class='caption'>The creator of reality has permanently retired, and you were deemed worthy of a promotion.</p>
                 <form id="skip-form" novalidate>
                     <div class="input-row">
                         <div class="input-group">
@@ -203,12 +224,8 @@ export default class StoryPanel {
                             <input id="last-name" name="last" type="text" maxlength="15" required>
                         </div>
                         <div class="input-group">
-                            <label for="gender">Gender</label>
-                            <select id="gender" name="gender" required>
-                                <option value="Test" selected disabled hidden></option>
-                                <option value="M">King</option>
-                                <option value="F">Queen</option>
-                            </select>
+                            <label>Gender</label>
+                            <div id="gender-container"></div>
                         </div>
                     </div>
                     <div class="input-row">
@@ -217,13 +234,8 @@ export default class StoryPanel {
                             <input id="city-name" name="city" type="text" maxlength="15" required>
                         </div>
                         <div class="input-group">
-                            <label for="specialty">Specialty</label>
-                            <select id="specialty" name="specialty" required>
-                                <option value="" selected disabled hidden></option>
-                                <option value="0">Economic Prosperity</option>
-                                <option value="1">Military Campaigns</option>
-                                <option value="2">New Discoveries</option>
-                            </select>
+                            <label>Specialty</label>
+                            <div id="specialty-container"></div>
                             <small id="specialty-effect" class="specialty-effect">&nbsp;</small>
                         </div>
                     </div>
@@ -241,9 +253,8 @@ export default class StoryPanel {
 
     reset(html) {
         this.root.innerHTML = html;
-        this.root.scrollBy({top: this.root.scrollHeight});
-        // Show skip banner when story is reset (new game)
-        this.skipBanner.style.display = this.core.story.progress == 0 ? 'flex' : "none";
+        this.root.scrollBy({ top: this.root.scrollHeight });
+        this.skipBanner.style.display = this.core.story.progress === 0 ? 'flex' : "none";
     }
 
     setupAutoScroll() {
@@ -253,7 +264,7 @@ export default class StoryPanel {
             const rectC = this.root.getBoundingClientRect();
             const rectL = last.getBoundingClientRect();
             if (rectL.bottom > rectC.bottom - 45) {
-                this.root.scrollTo({top: this.root.scrollHeight - this.root._excessPadding, behavior: "smooth"});
+                this.root.scrollTo({ top: this.root.scrollHeight - this.root._excessPadding, behavior: "smooth" });
                 this.root.style.paddingBottom = "";
                 this.root._excessPadding = 0;
             }
@@ -265,7 +276,7 @@ export default class StoryPanel {
             childList: true, subtree: true
         });
         window.addEventListener("resize", () => {
-           scrollNow();
+            scrollNow();
         });
     }
 
@@ -281,32 +292,21 @@ export default class StoryPanel {
     }
 
     randomizeInputs() {
-        // Randomize gender first
         const gender = Math.random() < 0.5 ? 'M' : 'F';
-        document.getElementById('gender').value = gender;
+        if (this.dialogSelects.gender) this.dialogSelects.gender.setValue(gender);
 
-        // Gender-specific name arrays (populate with your own names)
-        const maleFirstNames = [];
-        const femaleFirstNames = [];
-        const lastNames = [];
+        const maleFirstNames = ["Laric", "Tirias", "Emyl", "Kastar"];
+        const femaleFirstNames = ["Iniria", "Zasha", "Rennye", "Marrion"];
+        const lastNames = ["Strong", "Mith", "Doran", "Amas"];
+        const cityNames = ["Vauria", "Edren", "Forjas", "Ochom"];
 
-        const cityNames = [];
-
-        // Select first name based on gender
         const firstNameArray = gender === 'M' ? maleFirstNames : femaleFirstNames;
-        if (firstNameArray.length > 0) {
-            document.getElementById('first-name').value = firstNameArray[Math.floor(Math.random() * firstNameArray.length)];
-        }
-
-        // Select last name (gender-neutral)
-        if (lastNames.length > 0) {
-            document.getElementById('last-name').value = lastNames[Math.floor(Math.random() * lastNames.length)];
-        }
+        if (firstNameArray.length > 0) document.getElementById('first-name').value = firstNameArray[Math.floor(Math.random() * firstNameArray.length)];
+        if (lastNames.length > 0) document.getElementById('last-name').value = lastNames[Math.floor(Math.random() * lastNames.length)];
 
         const specialtyValue = Math.floor(Math.random() * 3).toString();
-        document.getElementById('specialty').value = specialtyValue;
+        if (this.dialogSelects.specialty) this.dialogSelects.specialty.setValue(specialtyValue);
 
-        // Update specialty effect based on randomized value
         const specialtyEffect = document.getElementById('specialty-effect');
         if (specialtyValue === '0') {
             specialtyEffect.innerHTML = '+10 <span class="term" data-tips="savvy">Savvy</span>';

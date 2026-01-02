@@ -49,10 +49,6 @@ export default class IndustryManager {
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // UPGRADE SYSTEM 
-    // ═══════════════════════════════════════════════════════════════════════════
-
     #upgrades = new Set();
 
     // Optional priority: lower numbers apply later (default: 0)
@@ -77,10 +73,6 @@ export default class IndustryManager {
         if (!entry.predicate) return true;
         return entry.predicate(args);
     }
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // RATE CALCULATION
-    // ═══════════════════════════════════════════════════════════════════════════
 
     recalculate() {
         if (!this.#cache.dirty || this.#recalculating) return;
@@ -126,34 +118,21 @@ export default class IndustryManager {
     
  
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // UNIFIED EFFECT SYSTEM - Every line item is an Effect with semantic tags
-    // ═══════════════════════════════════════════════════════════════════════════
-    
-    // Determine semantic tag for a drain effect
-    // Worker food drains are 'pay' (wages), other drains are 'input' (materials)
     #getDrainTag(resource, effectType) {
         return effectType === 'worker' && resource === 'food' ? 'pay' : 'input';
     }
     
-    // Compute a single effect with modifiers applied
-    // ctx shape: { category, resource, direction, tag, baseValue, units, buildingType, effectType? }
-    // - category: 'rate' | 'cost' | 'reward' | 'cap'
-    // - direction: 'gain' | 'drain'
-    // - tag: semantic identifier like 'prod', 'input', 'pay', 'build', 'cap'
     #computeEffect(ctx) {
         let value = ctx.baseValue;
         let mult = 1;
         const modifiers = [];
         
-        // Apply upgrades that match this effect
         for (const entry of this.#sortedUpgrades()) {
             if (!this.#applies(entry, ctx)) continue;
             
             let mod = entry.fn.call(this, ctx);
             if (!mod) continue;
             
-            // Apply meta upgrades
             for (const metaEntry of this.#sortedUpgrades()) {
                 if (metaEntry === entry) continue;
                 const metaCtx = { ...ctx, upgradeFn: entry.fn, upgradeResult: mod };
@@ -161,7 +140,6 @@ export default class IndustryManager {
                 if (metaResult) mod = metaResult;
             }
             
-            // Apply modifications
             if (mod.set !== undefined) value = mod.set;
             if (mod.add !== undefined) value += mod.add;
             if (mod.mult !== undefined) mult *= mod.mult;
@@ -175,7 +153,6 @@ export default class IndustryManager {
         };
     }
     
-    // Build all effects for an action (returns array of Effect objects)
     #buildActionEffects(action, type, units) {
         const def = IndustryManager.BUILDING_DEFS[type];
         if (!def || units === 0) return [];
@@ -185,12 +162,10 @@ export default class IndustryManager {
         const isRemoval = action === 'sell' || action === 'furlough';
         const buildingCount = this.buildings[type]?.count || 0;
         
-        // Rate effects (per-second gains/drains)
         for (const [resource, eff] of Object.entries(def.effects || {})) {
             const effDef = eff[effectType];
             if (!effDef) continue;
             
-            // Production (gain)
             if (effDef.gain) {
                 const baseValue = effDef.gain?.toNumber?.() ?? effDef.gain;
                 effects.push(this.#computeEffect({
@@ -206,7 +181,6 @@ export default class IndustryManager {
                 }));
             }
             
-            // Drains - determine if pay or input based on context
             if (effDef.drain) {
                 const baseValue = effDef.drain?.toNumber?.() ?? effDef.drain;
                 const tag = effectType === 'worker' ? this.#getDrainTag(resource, effectType) : 'input';
@@ -224,7 +198,6 @@ export default class IndustryManager {
             }
         }
         
-        // One-time costs (for build action)
         if (action === 'build' && def.buildCost) {
             for (const [resource, amt] of Object.entries(def.buildCost)) {
                 effects.push(this.#computeEffect({
@@ -240,7 +213,6 @@ export default class IndustryManager {
             }
         }
         
-        // One-time rewards (for sell action)
         if (action === 'sell' && def.sellReward) {
             for (const [resource, amt] of Object.entries(def.sellReward)) {
                 effects.push(this.#computeEffect({
@@ -256,7 +228,6 @@ export default class IndustryManager {
             }
         }
         
-        // Cap changes (for build/sell)
         if ((action === 'build' || action === 'sell') && def.capIncrease) {
             for (const [resource, amt] of Object.entries(def.capIncrease)) {
                 effects.push(this.#computeEffect({
@@ -272,7 +243,6 @@ export default class IndustryManager {
             }
         }
         
-        // Worker cap (from workersPerBuilding)
         if ((action === 'build' || action === 'sell') && def.workersPerBuilding) {
             effects.push(this.#computeEffect({
                 category: 'cap',
@@ -289,7 +259,6 @@ export default class IndustryManager {
         return effects.filter(e => e.value !== 0);
     }
     
-    // Build aggregate effects for current buildings/workers
     #buildAggregateEffects(type, effectType, units) {
         const def = IndustryManager.BUILDING_DEFS[type];
         if (!def?.effects || units === 0) return [];
@@ -336,13 +305,6 @@ export default class IndustryManager {
         return effects.filter(e => e.value !== 0);
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // EFFECT QUERIES
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    // Get all effects for an action (build/sell/hire/furlough)
-    // Returns array of Effect objects, each with category, tag, and modifiers
-    // options.forceUnits: if provided, bypasses affordability/limits and uses this unit count
     getActionEffects(action, type, options = {}) {
         const def = IndustryManager.BUILDING_DEFS[type];
         if (!def) return null;
@@ -353,8 +315,7 @@ export default class IndustryManager {
 
         const forcedUnits = options.forceUnits ?? null;
 
-        // For demolish/furlough, nothing to remove -> no effects
-        if ((action === 'sell' || action === 'furlough') && (plan.limit ?? 0) <= 0) {
+            if ((action === 'sell' || action === 'furlough') && (plan.limit ?? 0) <= 0) {
             return null;
         }
 
@@ -366,7 +327,6 @@ export default class IndustryManager {
         return { plan, effects, scale, def, units, effectType };
     }
 
-    // Get aggregate effects of current buildings or workers
     getAggregateEffects(type, effectType) {
         const def = IndustryManager.BUILDING_DEFS[type];
         const b = this.buildings[type];
@@ -381,8 +341,6 @@ export default class IndustryManager {
         return effects.length ? { effects, units, scale, def } : null;
     }
 
-    // Get all effects acting on a resource from all buildings
-    // Uses unified effect system by aggregating building/worker effects
     getResourceEffects(res) {
         if (!this.resources[res]) return null;
 
@@ -394,7 +352,6 @@ export default class IndustryManager {
             const def = IndustryManager.BUILDING_DEFS[type];
             if (!def?.effects?.[res]) continue;
 
-            // Aggregate base effects
             if (b.count > 0) {
                 const baseEffects = this.#buildAggregateEffects(type, 'base', b.count);
                 for (const e of baseEffects) {
@@ -406,7 +363,6 @@ export default class IndustryManager {
                 }
             }
 
-            // Aggregate worker effects (with scale)
             if (b.workers > 0) {
                 const workerEffects = this.#buildAggregateEffects(type, 'worker', b.workers);
                 for (const e of workerEffects) {
@@ -426,14 +382,9 @@ export default class IndustryManager {
 
 
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // WORKER SCALING 
-    // ═══════════════════════════════════════════════════════════════════════════
-
     getWorkerScale() {
         if (this.workersOnStrike) return 0;
         
-        // Find all resources that workers drain
         const workerDrains = new Map();
         for (const [type, b] of Object.entries(this.buildings)) {
             if (b.workers <= 0) continue;
@@ -448,13 +399,11 @@ export default class IndustryManager {
         
         if (workerDrains.size === 0) return 1;
         
-        // Check each drained resource
         let minScale = 1;
         for (const [res, workerDrain] of workerDrains) {
             const val = this.resources[res]?.value.toNumber() || 0;
-            if (val > 0) continue; // Resource not depleted
+            if (val > 0) continue;
             
-            // Calculate non-worker production of this resource
             let production = 0;
             for (const [type, b] of Object.entries(this.buildings)) {
                 const def = IndustryManager.BUILDING_DEFS[type];
@@ -468,7 +417,6 @@ export default class IndustryManager {
                 }
             }
             
-            // Scale = production / drain
             if (workerDrain > 0) {
                 const scale = production / workerDrain;
                 if (scale < minScale) minScale = scale;
@@ -498,10 +446,6 @@ export default class IndustryManager {
         return bottlenecks;
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // RESOURCE CAPS
-    // ═══════════════════════════════════════════════════════════════════════════
-
     getCap(res) {
         const resource = this.resources[res];
         if (!resource?.cap) return undefined;
@@ -513,10 +457,6 @@ export default class IndustryManager {
         }
         return new Decimal(cap);
     }
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // ACTIONS
-    // ═══════════════════════════════════════════════════════════════════════════
 
     build(type, amount = null) {
         const def = IndustryManager.BUILDING_DEFS[type];
@@ -591,10 +531,6 @@ export default class IndustryManager {
         return amount;
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // ACTION PLANNING
-    // ═══════════════════════════════════════════════════════════════════════════
-
     getActionPlan(action, type) {
         const limit = this.getActionLimit(action, type);
         const selected = this.configs.actionIncrement;
@@ -644,14 +580,9 @@ export default class IndustryManager {
         return Math.max(0, Math.floor(this.resources.workers.value.toNumber() - assigned));
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // GAME LOOP
-    // ═══════════════════════════════════════════════════════════════════════════
-
     tick(dt) {
         this.recalculate();
         
-        // Check worker strike
         const foodRate = this.#cache.rates.get('food') || 0;
         const foodDrain = foodRate < 0 ? Math.abs(foodRate) : 0;
         const food = this.resources.food;
@@ -680,10 +611,6 @@ export default class IndustryManager {
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // BOOT / SERIALIZATION
-    // ═══════════════════════════════════════════════════════════════════════════
-
     boot() {
         if (this.access.basic) {
             document.querySelector("#industrynav").classList.remove("locked");
@@ -699,19 +626,8 @@ export default class IndustryManager {
         this.#setupWisdomUpgrade();
     }
 
-    #setupTest() {
-        // Test upgrade: +3 to all effects (for testing only)
-        this.upgrade((ctx) => {
-            return {
-                add: 3,
-                modifiers: [{ value: '+3', label: 'test' }]
-            };
-        });
-    }
-
     #setupWisdomUpgrade() {
-        // Wisdom only affects production, not inputs/pay/costs
-        this.upgrade((ctx) => {
+        this.upgrade(() => {
             if (ctx.tag !== 'prod') return null;
             const wisdom = this.core.city?.ruler?.wisdom || 0;
             if (wisdom === 0) return null;
@@ -776,10 +692,6 @@ export default class IndustryManager {
         this.broadcast();
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // THEURGY (Manual actions)
-    // ═══════════════════════════════════════════════════════════════════════════
-
     performTheurgy(type) {
         const changes = [];
         if (type === "plant") {
@@ -798,10 +710,6 @@ export default class IndustryManager {
     canPerformTheurgy(type) {
         return type === "plant" || (type === "harvest" && this.resources.crops.value.gte(1));
     }
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // QUERY HELPERS 
-    // ═══════════════════════════════════════════════════════════════════════════
 
     isUnlocked(type) { return this.buildings[type]?.unlocked === true; }
     unlock(type) {

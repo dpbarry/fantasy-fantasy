@@ -24,11 +24,9 @@ export default class UIManager {
         this.initShortcuts();
         this.initEventListeners();
         
-        // Handled in GlobalBehavior.js
         this.detectVisibleSection = () => {};
     }
 
-    // called in GameCore after initialization so that the necessary managers are formed
     readyPanels() {
         this.panels = {
             story: new StoryPanel(this.core),
@@ -36,6 +34,8 @@ export default class UIManager {
             settings: new SettingsPanel(this.core),
             industry: new IndustryPanel(this.core),
         };
+
+        this.initNavButtonFocusability();
     }
 
     boot() {
@@ -125,7 +125,6 @@ export default class UIManager {
     show(loc, panel) {
         if (!this.activePanels[loc]|| !panel) return;
 
-        // Hide all panels in this location
         for (const panelName in this.panels) {
             if (this.panels[panelName] && typeof this.panels[panelName].updateVisibility === 'function') {
                 this.panels[panelName].updateVisibility(loc, panel);
@@ -161,6 +160,27 @@ export default class UIManager {
             clearInterval(interval);
             this.renderLoops.splice(index, 1);
         }
+    }
+
+    initNavButtonFocusability() {
+        const updateFocusability = (navButton) => {
+            navButton.tabIndex = navButton.classList.contains('locked') ? -1 : 0;
+        };
+
+        document.querySelectorAll('.navbutton').forEach(updateFocusability);
+
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    const target = mutation.target;
+                    if (target.classList.contains('navbutton')) updateFocusability(target);
+                }
+            });
+        });
+
+        document.querySelectorAll('.navbutton').forEach(button => {
+            observer.observe(button, { attributes: true, attributeFilter: ['class'] });
+        });
     }
 
     updateRenderIntervals() {

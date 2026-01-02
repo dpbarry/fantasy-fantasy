@@ -3,14 +3,12 @@ export default class ClockManager {
     #gameTimeListeners;
 
     constructor() {
-        // Constants
         this.SECONDS_PER_MINUTE = 60;
         this.SECONDS_PER_HOUR = 3600;        // 60 * 60
         this.SECONDS_PER_DAY = 86400;        // 24 * 60 * 60
         this.SECONDS_PER_MONTH = 2592000;    // 30 * 24 * 60 * 60
         this.SECONDS_PER_YEAR = 31104000;    // 360 * 24 * 60 * 60
 
-        // State
         this.totalSeconds = (this.SECONDS_PER_MONTH*4) + (this.SECONDS_PER_DAY*8)
                                 + 60 * 60 * 7 + 60 * 22 + 11; // start at 07:22
         this.startYear = 581;

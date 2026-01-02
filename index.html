@@ -13,49 +13,58 @@
     <link as="font" crossorigin href="assets/fonts/SourceSerifItalic.ttf" rel="preload" type="font/ttf">
 
     <script>
-        <!-- Apply theme immediately to prevent flash -->
-        let background = localStorage.getItem('theme') || 'dark';
-        let accent = localStorage.getItem('accent') || 'lightning';
-        const STYLE = document.documentElement.style;
+        // Apply theme immediately to prevent flash
+        window.applyTheme = function (background, accent) {
+            const STYLE = document.documentElement.style;
 
-        document.documentElement.classList.add("notransition");
-        switch (background) {
-            case "dark":
-                STYLE.setProperty("--contrastColor", "#000");
-                STYLE.setProperty("--baseColor", "#eee");
-                STYLE.setProperty("--baseFilter", "invert(0.9)");
-                STYLE.setProperty("--alpha", "1");
-                STYLE.colorScheme = "dark";
-                break;
-            case "light":
-                STYLE.setProperty("--contrastColor", "#fff");
-                STYLE.setProperty("--baseColor", "#111");
-                STYLE.setProperty("--baseFilter", "invert(0.1)");
-                STYLE.setProperty("--alpha", "0.15");
-                STYLE.colorScheme = "light";
-                break;
-        }
-        switch (accent) {
-            case "lightning":
-                STYLE.setProperty("--accent", "hsl(190, 82.5%, 45%)");
-                STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(50%) sepia(94%) saturate(2762%) hue-rotate(156deg) brightness(106%) contrast(84%)");
-                break;
-            case "acid":
-                STYLE.setProperty("--accent", "hsl(125, 82.5%, 45%)");
-                STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(50%) sepia(82%) saturate(1810%) hue-rotate(86deg) brightness(110%) contrast(91%)");
-                break;
-            case "amber":
-                STYLE.setProperty("--accent", "hsl(45, 82.5%, 45%)");
-                STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(76%) sepia(85%) saturate(2552%) hue-rotate(4deg) brightness(92%) contrast(84%)");
-                break;
-            case "arcane":
-                STYLE.setProperty("--accent", "hsl(260, 100%, 64%)");
-                STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(29%) sepia(33%) saturate(5426%) hue-rotate(245deg) brightness(107%) contrast(116%)");
-                break;
-        }
-        window.requestAnimationFrame(() => {
-            document.documentElement.classList.remove("notransition");
-        });
+            localStorage.setItem('theme', background);
+            localStorage.setItem('accent', accent);
+
+            document.documentElement.classList.add("notransition");
+            switch (background) {
+                case "dark":
+                    STYLE.setProperty("--contrastColor", "#000");
+                    STYLE.setProperty("--baseColor", "#eee");
+                    STYLE.setProperty("--baseFilter", "invert(0.9)");
+                    STYLE.setProperty("--alpha", "1");
+                    STYLE.colorScheme = "dark";
+                    break;
+                case "light":
+                    STYLE.setProperty("--contrastColor", "#fff");
+                    STYLE.setProperty("--baseColor", "#111");
+                    STYLE.setProperty("--baseFilter", "invert(0.1)");
+                    STYLE.setProperty("--alpha", "0.15");
+                    STYLE.colorScheme = "light";
+                    break;
+            }
+            switch (accent) {
+                case "lightning":
+                    STYLE.setProperty("--accent", "hsl(190, 82.5%, 45%)");
+                    STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(50%) sepia(94%) saturate(2762%) hue-rotate(156deg) brightness(106%) contrast(84%)");
+                    break;
+                case "acid":
+                    STYLE.setProperty("--accent", "hsl(125, 82.5%, 45%)");
+                    STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(50%) sepia(82%) saturate(1810%) hue-rotate(86deg) brightness(110%) contrast(91%)");
+                    break;
+                case "amber":
+                    STYLE.setProperty("--accent", "hsl(45, 82.5%, 45%)");
+                    STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(76%) sepia(85%) saturate(2552%) hue-rotate(4deg) brightness(92%) contrast(84%)");
+                    break;
+                case "arcane":
+                    STYLE.setProperty("--accent", "hsl(260, 100%, 64%)");
+                    STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(29%) sepia(33%) saturate(5426%) hue-rotate(245deg) brightness(107%) contrast(116%)");
+                    break;
+            }
+            window.requestAnimationFrame(() => {
+                document.documentElement.classList.remove("notransition");
+            });
+        };
+
+        // Apply on initial load
+        window.applyTheme(
+            localStorage.getItem('theme') || 'dark',
+            localStorage.getItem('accent') || 'lightning'
+        );
     </script>
 
     <style>
@@ -91,10 +100,11 @@
             --bgColor: color-mix(in oklab, var(--contrastColor), var(--accent) 2%);
             --baseColor: hsl(0, 0%, 90%);
             --baseFilter: invert(0.9);
-            --darkBaseColor: color-mix(in oklab, var(--contrastColor) 83%, var(--baseColor));
-            --darkerBaseColor: color-mix(in oklab, var(--contrastColor) 93%, var(--baseColor));
-            --darkestBaseColor: color-mix(in oklab, var(--contrastColor) 97%, var(--baseColor));
-            --midBaseColor: color-mix(in oklab, var(--contrastColor) 47.5%, var(--baseColor));
+            --midDarkBaseColor: color-mix(in oklab, var(--contrastColor) 75%, var(--baseColor));
+            --darkBaseColor: color-mix(in oklab, var(--contrastColor) 82.5%, var(--baseColor));
+            --darkerBaseColor: color-mix(in oklab, var(--contrastColor) 90%, var(--baseColor));
+            --darkestBaseColor: color-mix(in oklab, var(--contrastColor) 95%, var(--baseColor));
+            --midBaseColor: color-mix(in oklab, var(--contrastColor) 50%, var(--baseColor));
             --lightBaseColor: color-mix(in oklab, var(--contrastColor) 20%, var(--baseColor));
             --boxColor: var(--baseColor);
             --accent: hsl(190, 82.5%, 45%);
@@ -333,6 +343,10 @@
                 &:disabled {
                     opacity: 0.33;
                     cursor: default;
+                }
+
+                &:focus-visible {
+                    color: var(--accent);
                 }
 
                 @media (pointer: fine) and (hover: hover) {
@@ -963,7 +977,15 @@
             opacity: 0;
         }
 
-        button:not(.navbutton, .section-nav-arrow) {
+        button,
+        input,
+        select,
+        textarea {
+            font-family: inherit;
+            font-size: inherit;
+        }
+
+        .basic-button {
             appearance: none;
             font-family: SourceSerif;
             background: transparent;
@@ -1067,6 +1089,8 @@
         /*noinspection CssInvalidPseudoSelector*/
 
         ::picker(select) {
+            position-try-options: none;
+            position-try-fallbacks: none;
             border: 0.5px solid var(--baseColor);
             border-top: none;
             border-bottom-left-radius: 3px;
@@ -1086,7 +1110,7 @@
 
         @media (hover: hover) and (pointer: fine) {
             option:not(:checked):hover {
-                background: var(--darkerBaseColor);
+                background: light-dark(var(--darkerBaseColor), var(--midDarkBaseColor));
             }
 
         }
@@ -1111,7 +1135,6 @@
             padding-left: 1px;
             caret-color: var(--darkAccent);
 
-            border: none;
             border-bottom: 0.06em solid var(--baseColor);
 
             &:focus-visible {
@@ -1134,6 +1157,192 @@
         select,
         option {
             cursor: pointer;
+        }
+
+        /* Only Chrome supports ::picker. Hence custom component. */
+
+        .select {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            font-family: SourceSerif;
+            cursor: pointer;
+
+            &:focus {
+                outline: none;
+            }
+
+        }
+
+        .select-trigger {
+            appearance: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5em;
+            width: 100%;
+            height: 1.75em;
+            padding: 0 1px;
+            background: transparent;
+            border: none;
+            border-bottom: 0.06em solid var(--baseColor);
+            font-family: inherit;
+            font-size: 0.95em;
+            font-weight: 600;
+            color: var(--baseColor);
+            cursor: pointer;
+            transition: border-color 0.12s cubic-bezier(0.22, 0.61, 0.36, 1);
+        }
+
+        /* Wrapper for slide animation */
+        .select-value-wrapper {
+            position: relative;
+            overflow: hidden;
+            flex: 1;
+            min-width: 0;
+            height: 1.3em;
+        }
+
+        .select-value {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            text-align: left;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+
+            &.placeholder {
+                opacity: 0.5;
+            }
+        }
+
+        .select-arrow {
+            flex-shrink: 0;
+            font-size: 0.7em;
+            opacity: 0.9;
+            transition: transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1);
+
+            &::after {
+                content: "▼";
+            }
+        }
+
+        .select.open .select-arrow {
+            transform: rotate(180deg);
+        }
+
+        label {
+            &:has(+ *:focus-within) {
+                color: var(--baseColor) !important;
+            }
+        }
+
+        /* Value slide-out animation (old value leaves upward) */
+        .select-value-exiting {
+            animation: selectValueSlideOut 0.18s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+        }
+
+        /* Value slide-in animation (new value enters from below) */
+        .select-value-entering {
+            opacity: 0;
+            transform: translateY(100%);
+        }
+
+        .select-value-entered {
+            animation: selectValueSlideIn 0.18s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+        }
+
+        @keyframes selectValueSlideOut {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-100%);
+            }
+        }
+
+        @keyframes selectValueSlideIn {
+            0% {
+                opacity: 0;
+                transform: translateY(100%);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .select-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 100%;
+            width: max-content;
+            z-index: 100;
+            background: var(--bgColor);
+            border: 0.5px solid var(--baseColor);
+            border-top: none;
+            border-bottom-left-radius: 3px;
+            border-bottom-right-radius: 3px;
+            filter: drop-shadow(0 0 0.1em light-dark(#ddd, #000));
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 0.05s cubic-bezier(0.22, 0.61, 0.36, 1);
+            pointer-events: none;
+        }
+
+        .select.open .select-dropdown {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .select-option {
+            display: flex;
+            align-items: center;
+            gap: 0.4em;
+            padding: 3px 5px;
+            font-size: 0.85em;
+            color: var(--baseColor);
+            cursor: pointer;
+            transition: background 0.06s cubic-bezier(0.22, 0.61, 0.36, 1);
+
+            &.focused {
+                background: light-dark(var(--darkestBaseColor), var(--darkBaseColor));
+            }
+
+            @media (hover: hover) and (pointer: fine) {
+                &:hover {
+                    background: light-dark(var(--darkestBaseColor), var(--darkBaseColor));
+                }
+            }
+
+            &.selected {
+                background: light-dark(var(--darkBaseColor), var(--midDarkBaseColor));
+            }
+
+            &.selected .select-checkmark {
+                opacity: 1;
+            }
+        }
+
+        .select-checkmark {
+            flex-shrink: 0;
+            width: 1.2em;
+            opacity: 0;
+            transition: opacity 0.06s cubic-bezier(0.22, 0.61, 0.36, 1);
+        }
+
+        .select-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
 
@@ -1192,7 +1401,8 @@
                 gap: 0.5em;
             }
 
-            select {
+            select,
+            .select {
                 flex: 1;
                 min-width: 120px;
 
@@ -1468,9 +1678,11 @@
             overflow: hidden;
             text-overflow: ellipsis;
 
-            &:hover:not(.disabled) {
-                background: color-mix(in oklab, var(--accent) 15%, transparent);
-                color: var(--accent);
+            @media (hover: hover) and (pointer: fine) {
+                &:hover:not(.disabled) {
+                    background: color-mix(in oklab, var(--accent) 15%, transparent);
+                    color: var(--accent);
+                }
             }
 
             &.disabled {
@@ -1660,9 +1872,6 @@
             height: 100%;
             min-width: 0;
             min-height: 0;
-        }
-
-        #industry {
 
             &:has(#industry-resources.animatingWidth) {
                 transition: grid-template-columns 0.32s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1890,6 +2099,7 @@
                     color: var(--baseColor);
                     background: color-mix(in oklab, var(--bgColor) 85%, var(--accent));
                     border: none;
+                    font-weight: 600;
                     border-top: 0.5px solid var(--accent);
                     border-right: 0.5px solid var(--accent);
                     border-left: 0.5px solid transparent;
@@ -2972,8 +3182,8 @@
                 <div class="panel" id="industry">
                     <div class="subbox" id="industry-theurgy">
                         <strong>Theurgy</strong>
-                        <button class="ripples" id="theurgy-plant">Plant Seed</button>
-                        <button class="ripples" id="theurgy-harvest">Harvest Crop</button>
+                        <button class="basic-button ripples" id="theurgy-plant">Plant Seed</button>
+                        <button class="basic-button ripples" id="theurgy-harvest">Harvest Crop</button>
                     </div>
                     <div class="subbox" id="industry-resources">
                         <strong>Resources</strong>

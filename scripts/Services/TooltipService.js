@@ -147,7 +147,6 @@ export default function createTooltipService(core) {
         const cy = r.top + r.height / 2;
         const space = { above: r.top, below: vh - r.bottom, left: r.left, right: vw - r.right };
 
-        // Pick best side
         let pos;
         if (space.above >= tb.height + PADDING) pos = 'above';
         else if (space.below >= tb.height + PADDING) pos = 'below';
@@ -155,18 +154,15 @@ export default function createTooltipService(core) {
         else if (space.left >= tb.width + PADDING) pos = 'left';
         else pos = space.above >= space.below ? 'above' : 'below';
 
-        // Initial position centered on element
         let top, left;
         if (pos === 'above') { top = r.top - tb.height - MARGIN; left = cx - tb.width / 2; }
         else if (pos === 'below') { top = r.bottom + MARGIN; left = cx - tb.width / 2; }
         else if (pos === 'left') { top = cy - tb.height / 2; left = r.left - tb.width - MARGIN; }
         else { top = cy - tb.height / 2; left = r.right + MARGIN; }
 
-        // Clamp to viewport
         left = clamp(left, PADDING, vw - tb.width - PADDING);
         top = clamp(top, PADDING, vh - tb.height - PADDING);
 
-        // Arrow offset relative to tooltip
         const arrowX = (pos === 'above' || pos === 'below') ? clamp(cx - left, ARROW_MIN, tb.width - ARROW_MIN) : undefined;
         const arrowY = (pos === 'left' || pos === 'right') ? clamp(cy - top, ARROW_MIN, tb.height - ARROW_MIN) : undefined;
 
@@ -285,7 +281,6 @@ export default function createTooltipService(core) {
             tipBox.innerHTML = tip.content;
             tipBox._lastContent = tip.content;
 
-            // Append to open dialog if one exists, otherwise to body
             const openDialog = document.querySelector('dialog[open]');
             (openDialog || document.body).appendChild(tipBox);
 
@@ -526,11 +521,8 @@ export default function createTooltipService(core) {
         document.querySelectorAll('.hastip').forEach(attach);
     }
 
-    // Initialize tooltips
     (function initialize() {
-        // Clean up tooltips when dialogs close (to handle tooltips attached to dialogs)
         document.addEventListener('dialogclose', () => {
-            // Check if any tooltips are still active and clean up references
             activeTips.forEach((map, tipBox) => {
                 if (!document.contains(tipBox)) {
                     map.forEach(anchor => {
@@ -706,7 +698,6 @@ export default function createTooltipService(core) {
             const panel = core.ui.panels.industry;
             const data = panel.formatAggregateTooltip(type, 'worker');
             if (!data || data.length === 0) return '';
-            // Worker effects returns array of sections, combine them
             return data.map(s => createBreakdownBox(s)).join('');
         });
 
@@ -826,13 +817,10 @@ export default function createTooltipService(core) {
             const data = core.industry.getAggregateEffects(type, 'worker');
             if (!data || !data.effects || data.effects.length === 0) return '';
 
-            // Calculate potential (unthrottled) effects - effects array contains base values
-            // Potential = what the effect would be if scale = 1 (no throttling)
             const potentialByRes = {};
             for (const eff of data.effects) {
                 const { resource, direction, value } = eff;
                 const isGain = direction === 'gain';
-                // Effect value is already the full value; potential is just value (as if scale = 1)
                 potentialByRes[resource] = (potentialByRes[resource] || 0) + (isGain ? value : -value);
             }
 

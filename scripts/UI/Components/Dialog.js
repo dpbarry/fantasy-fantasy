@@ -1,10 +1,9 @@
-export default function createModalDialog(dialogElementOrHtml, options = {}) {
+export default function createModalDialog(dialogElementOrHtml) {
     let dialog;
     let closeDialogFunction = null;
     let previouslyFocusedElement = null;
     let clickOutsideHandler = null;
 
-    // Create dialog element if HTML string provided
     if (typeof dialogElementOrHtml === 'string') {
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = dialogElementOrHtml.trim();
@@ -16,6 +15,8 @@ export default function createModalDialog(dialogElementOrHtml, options = {}) {
     }
 
     function handleClickOutside(e) {
+        if (e.target.closest('select') || e.target.closest('.select')) return;
+
         const rect = dialog.getBoundingClientRect();
         const clickedInDialog = (
             rect.top <= e.clientY &&
@@ -30,16 +31,14 @@ export default function createModalDialog(dialogElementOrHtml, options = {}) {
     }
 
     async function handleDialogClose() {
-        // Clean up click listener
-        if (clickOutsideHandler) {
+            if (clickOutsideHandler) {
             document.removeEventListener('click', clickOutsideHandler);
             clickOutsideHandler = null;
         }
 
-        // Reset the close function reference since dialog is now closed
+        dialog.style.display = "none";
         closeDialogFunction = null;
 
-        // Use focus/blur/refocus cycle to reset input state
         const restoreFocus = async () => {
             if (previouslyFocusedElement &&
                 previouslyFocusedElement.focus &&
@@ -47,18 +46,15 @@ export default function createModalDialog(dialogElementOrHtml, options = {}) {
                 !document.activeElement?.closest('dialog')) {
 
 
-                // In mobile mode, only restore focus to elements in the active section
                 const isMobile = window.matchMedia('(width <= 950px)').matches;
                 if (isMobile) {
                     const activeSection = document.querySelector('.main-section.active');
                     if (activeSection && !activeSection.contains(previouslyFocusedElement)) {
-                        // Don't restore focus to elements outside the active section in mobile
                         return false;
                     }
                 }
 
 
-                // Reset input state with focus/blur/refocus cycle
                 previouslyFocusedElement.focus({ preventScroll: true });
                 previouslyFocusedElement.blur();
                 await new Promise(resolve => {
@@ -79,20 +75,14 @@ export default function createModalDialog(dialogElementOrHtml, options = {}) {
     }
 
     function open() {
-        if (closeDialogFunction) return closeDialogFunction; // Already open
+        if (closeDialogFunction) return closeDialogFunction;
 
-        // Save the currently focused element
         previouslyFocusedElement = document.activeElement;
-
-        // Open the dialog
         dialog.showModal();
         dialog.style.display = "";
 
-        // Handle clicking outside the dialog to close it
         let ignoreClick = true;
-        setTimeout(() => {
-            ignoreClick = false;
-        }, 250); // Ignore clicks for the first 100ms to prevent immediate closure
+        setTimeout(() => { ignoreClick = false; }, 250);
 
         clickOutsideHandler = (e) => {
             if (ignoreClick) return;
@@ -101,11 +91,9 @@ export default function createModalDialog(dialogElementOrHtml, options = {}) {
 
         document.addEventListener('click', clickOutsideHandler);
 
-        // Create a close function that closes the dialog
         closeDialogFunction = async () => {
-            if (!closeDialogFunction) return; // Already closed
+            if (!closeDialogFunction) return;
 
-            // Clean up click listener
             if (clickOutsideHandler) {
                 document.removeEventListener('click', clickOutsideHandler);
                 clickOutsideHandler = null;

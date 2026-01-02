@@ -1,29 +1,24 @@
 export default function createBreakdownBox(data) {
     if (!data) return '';
 
-    // Handle simple text-only case (e.g., disabled reasons)
     if (data.header && !data.items) {
         return `<div class="bd"><p>${data.header}</p></div>`;
     }
 
     const parts = [];
 
-    // Header text
     if (data.header) {
         parts.push(`<p>${data.header}</p>`);
     }
 
-    // Items in order (IndustryManager handles ordering)
     if (data.items?.length) {
         parts.push(data.items.map(item => renderItem(item)).join(''));
     }
 
-    // Result line (can be single item or array)
     if (data.result) {
         parts.push(renderResult(data.result));
     }
 
-    // Footer text
     if (data.footer) {
         parts.push(`<p>${data.footer}</p>`);
     }
@@ -38,10 +33,8 @@ function renderItem(item) {
     const note = item.note ? ` <span class="bd-n">(${item.note})</span>` : '';
     const itemHtml = `<div class="bd-r"><span class="${cls}">${item.value}</span> ${item.label}${note}</div>`;
 
-    // Modifiers attached directly to item
     if (item.modifiers?.length) {
         const modHtml = item.modifiers.map(mod => {
-            // Format: if value is just "×" and label starts with number, combine them as "×{number}"
             let displayValue = mod.value;
             let displayLabel = mod.label;
 

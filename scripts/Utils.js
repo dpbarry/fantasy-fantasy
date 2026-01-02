@@ -42,7 +42,6 @@ export function verticalScroll(el, moe, respectPadding = false) {
     }
     el.style.overflowY = "auto";
 
-    // One pixel is added to the height to account for non-integer heights.
     const isScrolledToBottom = el.scrollHeight < clientHeight + el.scrollTop + moe;
     const isScrolledToTop = isScrolledToBottom ? false : el.scrollTop < moe;
 
@@ -60,27 +59,22 @@ export function verticalScroll(el, moe, respectPadding = false) {
     el.style.maskImage = `linear-gradient(to bottom, transparent 0, black ${top}px, black calc(100% - ${bottom}px), transparent 100%)`;
 }
 
-// Number formatting abbreviations
 const STANDARD_ABBREVIATIONS = ['', 'k', 'm', 'b', 't', 'q'];
 
-// Generate alphabetical abbreviations
 function generateAlphabeticalAbbreviations() {
     const alphabet = 'abcdefghijklmnopqrstuvwxyz';
     const abbreviations = [];
 
-    // Single letters: a-z (0-25, representing 10^3 to 10^78)
     for (let i = 0; i < alphabet.length; i++) {
         abbreviations.push(alphabet[i]);
     }
 
-    // Double letters: aa-az, ba-bz, ..., za-zz (26-701, representing 10^81 to 10^2103)
     for (let first = 0; first < alphabet.length; first++) {
         for (let second = 0; second < alphabet.length; second++) {
             abbreviations.push(alphabet[first] + alphabet[second]);
         }
     }
 
-    // Triple letters: aaa-aaz, aba-abz, ..., zzz (702+, representing 10^2106+)
     for (let first = 0; first < alphabet.length; first++) {
         for (let second = 0; second < alphabet.length; second++) {
             for (let third = 0; third < alphabet.length; third++) {
@@ -93,8 +87,6 @@ function generateAlphabeticalAbbreviations() {
 }
 
 const ALPHABETICAL_ABBREVIATIONS = generateAlphabeticalAbbreviations();
-
-// Helper functions for consistent formatting operations
 
 function formatMantissa(mantissa, decimalPlaces, keepTrailingZeros) {
     let formatted = keepTrailingZeros
@@ -113,18 +105,11 @@ function applyRounding(value, decimalPlaces, roundUp) {
 function calculateEffectiveDecimalPlaces(absNum, formatType, baseDecimalPlaces) {
     const exponent = Math.floor(Math.log10(absNum));
 
-    // Scientific format: reduce precision for very large exponents
-    if (formatType === 'scientific' && exponent >= 100) {
-        return 1;
-    }
-
-    // Alphabetical format: reduce precision for very large indices
+    if (formatType === 'scientific' && exponent >= 100) return 1;
     if (formatType === 'alphabetical' && absNum >= 1000) {
         const index = Math.floor((Math.log10(absNum) - 3) / 3);
         if (index >= 100) return 1;
     }
-
-    // Standard format: reduce precision for very large indices
     if (formatType === 'standard' && absNum >= 1000) {
         const index = Math.floor(Math.log10(absNum) / 3);
         if (index >= 10) return 1;
@@ -193,29 +178,23 @@ export function formatNumber(value, formatType = 'standard', opt = {}) {
 
     const effectiveDp = calculateEffectiveDecimalPlaces(absNum, formatType, options.decimalPlaces);
 
-
-    // Handle small numbers (< 1000) - use decimal formatting
     if (absNum < 1000) {
         if (formatType === 'scientific') {
             const exponent = Math.floor(Math.log10(absNum));
             if (exponent >= 3) {
-                // Use scientific notation even for numbers < 1000 if exponent >= 3
                 const mantissa = absNum / Math.pow(10, exponent);
                 const formattedMantissa = formatMantissa(mantissa, effectiveDp, options.keepTrailingZeros);
                 return `${isNegative ? '-' : ''}${formattedMantissa}e${exponent}`;
             }
         }
-        // All formats use decimal for small numbers (unless scientific with high exponent)
         return formatSmallNumber(absNum, options, effectiveDp, isNegative);
     }
 
-    // Handle large numbers (>= 1000) - use appropriate format
     const result = formatLargeNumber(absNum, formatType, options, effectiveDp, isNegative);
     if (result !== null) {
         return result;
     }
 
-    // fallback to scientific notation for very large numbers
     return formatNumber(num, 'scientific', opt);
 }
 

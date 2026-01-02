@@ -143,15 +143,14 @@ export default class GameStorage {
 
     get devSave() {
         try {
-            // Minimal save - just skip prologue and unlock industry
-            const baseSave = {
+            return {
                 version: this.core.currentVersion,
                 timestamp: Date.now(),
-                isDev: true, // Flag to trigger dev overrides
+                isDev: true,
                 data: {
                     story: {
                         progress: 6,
-                        choices: { 2: 2 },
+                        choices: {2: 2},
                         currentEpisode: null,
                         dismissedInfoBoxes: []
                     },
@@ -161,7 +160,7 @@ export default class GameStorage {
                         ]
                     },
                     industry: {
-                        access: { basic: true }
+                        access: {basic: true}
                     },
                     ui: {
                         activePanels: {
@@ -173,8 +172,6 @@ export default class GameStorage {
                     }
                 }
             };
-
-            return baseSave;
         } catch (error) {
             console.error('Failed to generate dev save from current state:', error);
             return false;

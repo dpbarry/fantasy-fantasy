@@ -13,7 +13,6 @@ export default class NewsPanel {
     render(data) {
         this.#logs = data;
 
-        // Render each log entry with timestamp and message
         let lastMsg;
         for (const {timestamp, message} of this.#logs) {
             const timeEl = document.createElement('div');

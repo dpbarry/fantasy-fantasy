@@ -3,7 +3,7 @@ export default function createContextMenuService(core, tooltipService) {
     let activeMenu = null;
     let activeElement = null;
     let pendingMenu = null;
-    const menuShownFromHold = new WeakMap(); // Track if menu was shown from hold (to prevent action)
+    const menuShownFromHold = new WeakMap();
     let dismissHandlers = null;
 
     const PANEL_SHORTCUTS = [
@@ -32,7 +32,6 @@ export default function createContextMenuService(core, tooltipService) {
         
         const actions = [];
         
-        // Check registered menus
         for (const [selector, getActions] of menus.entries()) {
             const match = el.matches && el.matches(selector) ? el : (el.closest && el.closest(selector));
             if (match) {
@@ -43,7 +42,6 @@ export default function createContextMenuService(core, tooltipService) {
             }
         }
         
-        // Check data attribute
         if (el.dataset?.contextMenu) {
             const menuId = el.dataset.contextMenu;
             const getActions = menus.get(`[data-context-menu="${menuId}"]`);
@@ -71,10 +69,8 @@ export default function createContextMenuService(core, tooltipService) {
         const actions = getMenuActions(el);
         const hasTip = hasTooltip(el);
         
-        // Build menu items
         const items = [];
         
-        // Add "See tooltip" only if from hold and tooltip exists
         if (fromHold && hasTip) {
             items.push({
                 label: 'See tooltip',
@@ -85,10 +81,8 @@ export default function createContextMenuService(core, tooltipService) {
             });
         }
         
-        // Add other actions
         items.push(...actions);
 
-        // If no items after all, don't show menu
         if (items.length === 0) {
             return false;
         }
@@ -98,7 +92,6 @@ export default function createContextMenuService(core, tooltipService) {
             menuShownFromHold.set(el, true);
         }
         
-        // Create menu element
         const menu = document.createElement('div');
         menu.className = 'context-menu';
         menu.style.position = 'fixed';
@@ -106,8 +99,7 @@ export default function createContextMenuService(core, tooltipService) {
         menu.style.opacity = '0';
         menu.style.pointerEvents = 'none';
 
-        // Create menu items
-        items.forEach((item, idx) => {
+        items.forEach((item,) => {
             const itemEl = document.createElement('div');
             itemEl.className = 'context-menu-item';
             if (item.disabled) {
@@ -126,7 +118,6 @@ export default function createContextMenuService(core, tooltipService) {
 
         document.body.appendChild(menu);
 
-        // Position menu
         const rect = menu.getBoundingClientRect();
         const vw = window.innerWidth;
         const vh = window.innerHeight;
@@ -135,7 +126,6 @@ export default function createContextMenuService(core, tooltipService) {
         let finalX = x;
         let finalY = y;
 
-        // Adjust if menu would go off screen
         if (finalX + rect.width > vw - PADDING) {
             finalX = vw - rect.width - PADDING;
         }
@@ -156,7 +146,6 @@ export default function createContextMenuService(core, tooltipService) {
 
         activeMenu = menu;
 
-        // Dismiss on click outside or scroll
         const dismiss = (e) => {
             if (e.target && e.target.nodeType === Node.ELEMENT_NODE && !menu.contains(e.target)) {
                 destroyMenu();
@@ -192,7 +181,6 @@ export default function createContextMenuService(core, tooltipService) {
 
         if (items.length === 0) return false;
 
-        // Create menu element
         const menu = document.createElement('div');
         menu.className = 'context-menu';
         menu.style.position = 'fixed';
@@ -216,7 +204,6 @@ export default function createContextMenuService(core, tooltipService) {
 
         document.body.appendChild(menu);
 
-        // Position menu
         const rect = menu.getBoundingClientRect();
         const vw = window.innerWidth;
         const vh = window.innerHeight;
@@ -284,7 +271,7 @@ export default function createContextMenuService(core, tooltipService) {
     }
 
     function handleRightClick(e) {
-        if (e.button !== 2) return; // Only right mouse button
+        if (e.button !== 2) return;
         
         e.preventDefault();
         e.stopPropagation();
@@ -295,7 +282,6 @@ export default function createContextMenuService(core, tooltipService) {
             const rect = el.getBoundingClientRect();
             showMenu(el, rect.left + rect.width / 2, rect.top + rect.height / 2, false);
         } else {
-            // Background context menu
             showBackgroundMenu(e.clientX, e.clientY);
         }
     }
@@ -316,7 +302,6 @@ export default function createContextMenuService(core, tooltipService) {
         menuShownFromHold.delete(el);
     }
 
-    // Handle background holds on mobile
     let backgroundHoldTimeout = null;
     let backgroundHoldTarget = null;
     
@@ -324,25 +309,16 @@ export default function createContextMenuService(core, tooltipService) {
         if (e.pointerType === 'mouse') return;
         
         const target = e.target;
-        // Check if target or any parent has tooltip or context menu
         const hasTooltipOrMenu = target.closest('.hastip, [data-context-menu], button, a, [role="button"]');
-        
-        // If it's on an element with tooltip/menu, let TooltipService handle it
         if (hasTooltipOrMenu) return;
         
-        // Check if we're on a non-interactive background area
         const isBackground = !target.closest('button, a, input, select, textarea, [role="button"], .hastip, [data-context-menu]');
-        
         if (!isBackground) return;
         
         backgroundHoldTarget = { x: e.clientX, y: e.clientY };
         
-        // Clear any existing timeout
-        if (backgroundHoldTimeout) {
-            clearTimeout(backgroundHoldTimeout);
-        }
+        if (backgroundHoldTimeout) clearTimeout(backgroundHoldTimeout);
         
-        // Set up timeout for background hold (use same delay as interactive elements)
         backgroundHoldTimeout = setTimeout(() => {
             if (backgroundHoldTarget) {
                 showBackgroundMenu(backgroundHoldTarget.x, backgroundHoldTarget.y);
@@ -350,7 +326,6 @@ export default function createContextMenuService(core, tooltipService) {
             }
         }, 350);
         
-        // Cancel on pointer up
         const cancel = () => {
             if (backgroundHoldTimeout) {
                 clearTimeout(backgroundHoldTimeout);
@@ -365,7 +340,6 @@ export default function createContextMenuService(core, tooltipService) {
         document.addEventListener('pointercancel', cancel, { once: true });
     }
 
-    // Initialize
     document.addEventListener('contextmenu', handleRightClick);
     document.addEventListener('pointerdown', handleBackgroundHold, true);
 

@@ -30,7 +30,6 @@ export default class GameCore {
         this.#lastFrameTime = 0;
         this.#isRunning = false;
 
-        // Save throttling
         this.#lastSaveTime = 0;
         this.#saveThrottleMS = 1000;
         this.#pendingSave = false;
@@ -39,7 +38,6 @@ export default class GameCore {
 
         this.storage = new GameStorage(this);
 
-        // These managers are required in some constructors of the others
         this.clock = new ClockManager(this);
         this.ui = new UIManager(this);
 

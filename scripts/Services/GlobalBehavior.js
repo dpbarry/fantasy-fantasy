@@ -11,12 +11,10 @@ export default function setupGlobalBehavior(core) {
     let settingsClicks = 0;
     let isMobile = matchesMobile();
 
-    // Mutation observer to ensure all inputs get proper attributes and forms get novalidate
     const inputObserver = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
             mutation.addedNodes.forEach((node) => {
                 if (node.nodeType === Node.ELEMENT_NODE) {
-                    // Check the node itself
                     if (node.tagName === 'INPUT') {
                         node.autocomplete = "off";
                         node.inputMode = "none";
@@ -25,7 +23,6 @@ export default function setupGlobalBehavior(core) {
                     if (node.tagName === 'FORM') {
                         node.setAttribute('novalidate', '');
                     }
-                    // Check descendants
                     const inputs = node.querySelectorAll ? node.querySelectorAll('input') : [];
                     inputs.forEach(input => {
                         input.autocomplete = "off";
@@ -41,7 +38,6 @@ export default function setupGlobalBehavior(core) {
         });
     });
 
-    // Initial scan for existing elements
     document.querySelectorAll('input').forEach(input => {
         input.autocomplete = "off";
         input.inputMode = "none";
@@ -193,15 +189,15 @@ export default function setupGlobalBehavior(core) {
         const visibleSection = document.querySelector(`.main-section[id="${core.ui.visibleSection}-section"]`);
         if (!visibleSection) return;
 
-        // Find the first focusable element in the visible section
         const focusableElements = visibleSection.querySelectorAll(
             'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
         );
         const visibleFocusable = Array.from(focusableElements).filter(el =>
-            el.offsetParent !== null && // Element is visible
+            el.offsetParent !== null &&
             !el.hasAttribute('disabled') &&
-            !el.classList.contains('locked') && // Don't include locked nav buttons
-            !el.classList.contains('tab-goalpost') // Don't focus goalposts directly
+            !el.classList.contains('locked') &&
+            !el.classList.contains('tab-goalpost') &&
+            el.tabIndex !== -1
         );
 
         if (visibleFocusable.length > 0) {
@@ -226,8 +222,6 @@ export default function setupGlobalBehavior(core) {
             scrollToVisibleSection(true);
             core.ui.updateMobileNavArrows();
             updateTabTrapping();
-
-            // Focus the new section to enter its tab trap
             focusNewSection();
         };
 
@@ -277,7 +271,6 @@ export default function setupGlobalBehavior(core) {
                 createGoalposts();
                 updateTabTrapping();
                 scrollToVisibleSection(false);
-                // Focus the center section when entering mobile mode
                 focusNewSection();
             } else {
                 if (!isResizing) {
@@ -344,14 +337,13 @@ export default function setupGlobalBehavior(core) {
 
         try {
             document.querySelector(`.main-section[id="${core.ui.visibleSection}-section"]`).classList.remove("active");
-        } catch {}
+        } catch { }
 
         if (closestSection) {
             core.ui.visibleSection = closestSection;
             document.querySelector(`.main-section[id="${core.ui.visibleSection}-section"]`).classList.add("active");
             core.ui.updateMobileNavArrows();
             core.ui.tooltipService?.checkSectionAndDismiss();
-            // Focus the new section when scrolling to it
             focusNewSection();
             if (scrollTimeout) clearTimeout(scrollTimeout);
             scrollTimeout = setTimeout(() => {
@@ -433,249 +425,98 @@ export default function setupGlobalBehavior(core) {
 
         sectionsWrapper.addEventListener("scroll", mobileScrollHandler, { passive: true });
 
-        // Initialize with current scroll position
         lockedScrollLeft = sectionsWrapper.scrollLeft;
         _scrollLeft = sectionsWrapper.scrollLeft;
     };
 
     updateScrollBehavior();
 
-    // Tab trapping within visible section for mobile view
     let tabKeyHandler = null;
 
-    // Create goalpost spans for tab trapping
+    // Goalposts: invisible focusable elements for mobile tab trapping
     function createGoalposts() {
         const sections = document.querySelectorAll('.main-section');
         sections.forEach(section => {
-            // Remove existing goalposts if any
             const existingTop = section.querySelector('.tab-goalpost-top');
             const existingBottom = section.querySelector('.tab-goalpost-bottom');
             if (existingTop) existingTop.remove();
             if (existingBottom) existingBottom.remove();
 
-            // Create top goalpost (invisible, focusable span)
             const topGoalpost = document.createElement('span');
             topGoalpost.className = 'tab-goalpost tab-goalpost-top';
             topGoalpost.tabIndex = matchesMobile() ? 0 : -1;
             topGoalpost.setAttribute('aria-hidden', 'true');
-            topGoalpost.style.cssText = `
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 1px;
-                height: 1px;
-                padding: 0;
-                margin: 0;
-                border: none;
-                overflow: hidden;
-                clip: rect(0, 0, 0, 0);
-                white-space: nowrap;
-            `;
+            topGoalpost.style.cssText = `position: absolute; top: -10px; left: -10px; width: 1px; height: 1px; padding: 0; margin: 0; border: none; opacity: 0; pointer-events: none;`;
 
-            // Create bottom goalpost (invisible, focusable span)
             const bottomGoalpost = document.createElement('span');
             bottomGoalpost.className = 'tab-goalpost tab-goalpost-bottom';
             bottomGoalpost.tabIndex = matchesMobile() ? 0 : -1;
             bottomGoalpost.setAttribute('aria-hidden', 'true');
-            bottomGoalpost.style.cssText = `
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                width: 1px;
-                height: 1px;
-                padding: 0;
-                margin: 0;
-                border: none;
-                overflow: hidden;
-                clip: rect(0, 0, 0, 0);
-                white-space: nowrap;
-            `;
+            bottomGoalpost.style.cssText = `position: absolute; bottom: -10px; left: -10px; width: 1px; height: 1px; padding: 0; margin: 0; border: none; opacity: 0; pointer-events: none;`;
 
-            // Add focus handlers to goalposts
             topGoalpost.addEventListener('focus', () => {
                 if (!matchesMobile()) return;
-
-                // When top goalpost is focused, move to last focusable element in section
                 const section = topGoalpost.closest('.main-section');
-                const focusableElements = section.querySelectorAll(
-                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-                );
+                const focusableElements = section.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
                 const visibleFocusable = Array.from(focusableElements).filter(el =>
-                    el.offsetParent !== null &&
-                    !el.hasAttribute('disabled') &&
-                    !el.classList.contains('locked') &&
-                    !el.classList.contains('tab-goalpost')
+                    el.offsetParent !== null && !el.hasAttribute('disabled') && !el.classList.contains('locked') && !el.classList.contains('tab-goalpost') && el.tabIndex !== -1
                 );
-
-                if (visibleFocusable.length > 0) {
-                    visibleFocusable[visibleFocusable.length - 1].focus();
-                }
+                if (visibleFocusable.length > 0) visibleFocusable[visibleFocusable.length - 1].focus();
             });
 
             bottomGoalpost.addEventListener('focus', () => {
                 if (!matchesMobile()) return;
-
-                // When bottom goalpost is focused, move to first focusable element in section
                 const section = bottomGoalpost.closest('.main-section');
-                const focusableElements = section.querySelectorAll(
-                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-                );
+                const focusableElements = section.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
                 const visibleFocusable = Array.from(focusableElements).filter(el =>
-                    el.offsetParent !== null &&
-                    !el.hasAttribute('disabled') &&
-                    !el.classList.contains('locked') &&
-                    !el.classList.contains('tab-goalpost')
+                    el.offsetParent !== null && !el.hasAttribute('disabled') && !el.classList.contains('locked') && !el.classList.contains('tab-goalpost') && el.tabIndex !== -1
                 );
-
-                if (visibleFocusable.length > 0) {
-                    visibleFocusable[0].focus();
-                }
+                if (visibleFocusable.length > 0) visibleFocusable[0].focus();
             });
 
-            // Insert goalposts at the very beginning and end of the section
             section.insertBefore(topGoalpost, section.firstChild);
             section.appendChild(bottomGoalpost);
         });
     }
 
     function updateTabTrapping() {
-        if (tabKeyHandler) {
-            document.removeEventListener('keydown', tabKeyHandler);
-        }
+        if (tabKeyHandler) document.removeEventListener('keydown', tabKeyHandler);
 
-        // Update goalpost tabindex based on mobile state
         const goalposts = document.querySelectorAll('.tab-goalpost');
-        goalposts.forEach(goalpost => {
-            goalpost.tabIndex = matchesMobile() ? 0 : -1;
-        });
-
-        // Simple tab handler - dialogs handle their own tab trapping natively
-        tabKeyHandler = (e) => {
-            if (e.key !== 'Tab') return;
-
-            // Don't interfere with dialog tab trapping - let browser handle it
-            if (document.activeElement?.closest('dialog')) {
-                return;
-            }
-
-            // Only enable goalposts in mobile mode
-            if (!matchesMobile()) return;
-
-        };
+        goalposts.forEach(goalpost => { goalpost.tabIndex = matchesMobile() ? 0 : -1; });
 
         document.addEventListener('keydown', tabKeyHandler);
     }
 
-    // Create goalpost spans for tab trapping
     createGoalposts();
-
-    // Initialize tab trapping
     updateTabTrapping();
 
-    // Global keyboard accessibility: space/enter on interactive elements triggers click
+    // Space/Enter triggers click on interactive elements
     document.addEventListener('keydown', (e) => {
-        // Only handle space and enter keys
         if (e.key !== ' ' && e.key !== 'Enter') return;
-
-        // Check if focused element is interactive
         const target = document.activeElement;
         if (!target) return;
 
-        // Define interactive elements that should respond to space/enter
-        const interactiveElements = [
-            'button',
-            'input[type="button"]',
-            'input[type="submit"]',
-            'input[type="reset"]',
-            'input[type="image"]',
-            '[role="button"]',
-            '[role="menuitem"]',
-            '[role="option"]',
-            '[role="tab"]',
-            '.navbutton',
-            '.ripples'
-        ];
+        const interactiveElements = ['button', 'input[type="button"]', 'input[type="submit"]', 'input[type="reset"]', 'input[type="image"]', '[role="button"]', '[role="menuitem"]', '[role="option"]', '[role="tab"]', '.navbutton', '.ripples'];
+        const isInteractive = interactiveElements.some(selector => target.matches(selector)) || target.onclick !== null || target.onpointerdown !== null || target.getAttribute('onclick') !== null;
 
-        // Check if element matches interactive selectors or has click handler
-        const isInteractive = interactiveElements.some(selector => target.matches(selector)) ||
-                             target.onclick !== null || target.onpointerdown !== null ||
-                             target.getAttribute('onclick') !== null;
-
-        // Don't interfere with input fields (except buttons)
-        if (target.tagName === 'INPUT' && !['button', 'submit', 'reset', 'image'].includes(target.type)) {
-            return;
-        }
-
-        // Don't interfere with textarea or contenteditable
-        if (target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
-            return;
-        }
+        if (target.tagName === 'INPUT' && !['button', 'submit', 'reset', 'image'].includes(target.type)) return;
+        if (target.tagName === 'TEXTAREA' || target.contentEditable === 'true') return;
 
         if (isInteractive) {
             e.preventDefault();
             target.click();
-            target.dispatchEvent(new Event('pointerdown', {simulated: true}));
+            target.dispatchEvent(new Event('pointerdown', { simulated: true }));
             target.dispatchEvent(new Event('pointerup'));
-
         }
     });
 
-    // On mobile, ensure we scroll to the correct section after scroll locking is set up
-    if (matchesMobile() && sectionsWrapper) {
-        scrollToVisibleSection(false);
-    }
+    if (matchesMobile() && sectionsWrapper) scrollToVisibleSection(false);
 }
 
 
 export function applyTheme(core) {
-    let background = core.settings.configs.background;
-    let accent = core.settings.configs.accent;
-
-    // Save to top level localStorage for early page load access
-    localStorage.setItem('theme', background);
-    localStorage.setItem('accent', accent);
-
-    const STYLE = document.documentElement.style;
-
-    document.documentElement.classList.add("notransition");
-    switch (background) {
-        case "dark":
-            STYLE.setProperty("--contrastColor", "#000");
-            STYLE.setProperty("--baseColor", "#eee");
-            STYLE.setProperty("--baseFilter", "invert(0.9)");
-            STYLE.setProperty("--alpha", "1");
-            STYLE.colorScheme = "dark";
-            break;
-        case "light":
-            STYLE.setProperty("--contrastColor", "#fff");
-            STYLE.setProperty("--baseColor", "#111");
-            STYLE.setProperty("--baseFilter", "invert(0.1)");
-            STYLE.setProperty("--alpha", "0.15");
-            STYLE.colorScheme = "light";
-            break;
-    }
-
-    switch (accent) {
-        case "lightning":
-            STYLE.setProperty("--accent", "hsl(190, 82.5%, 45%)");
-            STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(50%) sepia(94%) saturate(2762%) hue-rotate(156deg) brightness(106%) contrast(84%)");
-            break;
-        case "acid":
-            STYLE.setProperty("--accent", "hsl(125, 82.5%, 45%)");
-            STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(50%) sepia(82%) saturate(1810%) hue-rotate(86deg) brightness(110%) contrast(91%)");
-            break;
-        case "amber":
-            STYLE.setProperty("--accent", "hsl(45, 82.5%, 45%)");
-            STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(76%) sepia(85%) saturate(2552%) hue-rotate(4deg) brightness(92%) contrast(84%)");
-            break;
-        case "arcane":
-            STYLE.setProperty("--accent", "hsl(260, 100%, 64%)");
-            STYLE.setProperty("--accentFilter", "brightness(0) saturate(100%) invert(29%) sepia(33%) saturate(5426%) hue-rotate(245deg) brightness(107%) contrast(116%)");
-            break;
-    }
-    window.requestAnimationFrame(() => {
-        document.documentElement.classList.remove("notransition");
-    });
+    window.applyTheme(core.settings.configs.background, core.settings.configs.accent);
 }
 
 export function spawnRipple(mouseEvent, element) {
@@ -685,7 +526,6 @@ export function spawnRipple(mouseEvent, element) {
     const rippleEl = document.createElement('div');
     rippleEl.classList.add('ripple');
 
-    // Position the ripple
     let x = element.offsetWidth / (Math.floor(Math.random() * 5) + 1);
     let y = element.offsetHeight / (Math.floor(Math.random() * 5) + 1);
 
@@ -698,16 +538,9 @@ export function spawnRipple(mouseEvent, element) {
     rippleEl.style.top = `${y}px`;
     element.appendChild(rippleEl);
 
-    requestAnimationFrame(() => {
-        rippleEl.classList.add('run');
-    });
+    requestAnimationFrame(() => rippleEl.classList.add('run'));
 
     const cleanup = setTimeout(() => rippleEl.remove(), 750);
-    // Remove ripple element when the transition is done
-    rippleEl.addEventListener('transitionend', () => {
-        clearTimeout(cleanup);
-        rippleEl.remove();
-    });
-
+    rippleEl.addEventListener('transitionend', () => { clearTimeout(cleanup); rippleEl.remove(); });
     return rippleEl;
 }

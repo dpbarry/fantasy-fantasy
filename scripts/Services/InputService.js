@@ -1,6 +1,4 @@
 export default class InputService {
-    static #center = document.getElementById("center");
-
     static #resizeHandlers = [];
 
     static {
@@ -13,12 +11,6 @@ export default class InputService {
         return [...text].every(c => "abcdefghijklmnopqrstuvwxyz".includes(c.toLowerCase()))
     }
 
-    /**
-     * @param {function} cb
-     * @param {string} type
-     * @param {string} className
-     * @returns {HTMLInputElement}
-     */
     static getInput(cb, type = "alpha", className = "") {
         const input = document.createElement("input");
         input.name = "inp";
@@ -26,23 +18,16 @@ export default class InputService {
         input.inputMode = type === "alpha" ? "none" : "numeric";
         input.oninput = cb;
 
-        input._resizeHandle = () => cb({data: "", target: input});
+        input._resizeHandle = () => cb({ data: "", target: input });
         this.#resizeHandlers.push(input._resizeHandle);
 
-        input.onfocus = () => cb({data: "", target: input});
+        input.onfocus = () => cb({ data: "", target: input });
 
 
         input.onanimationend = () => input.classList.remove("invalid");
         return input;
     }
 
-    /**
-     * @param {string} key
-     * @param {function} cb
-     * @param {boolean} immediatelyVisible
-     * @param {string} text
-     * @returns {HTMLSpanElement}
-     */
     static getCue(key, cb, immediatelyVisible = false, text = "") {
         const cue = document.createElement("span");
         cue.innerText = text;
@@ -85,15 +70,10 @@ export default class InputService {
         return cue;
     };
 
-    /**
-     * @param {HTMLElement} p
-     * @param {string} query
-     */
     static async clearInput(p, query = ".inputwrap input") {
         p.querySelectorAll(query).forEach(i => {
             i.onblur = null;
             i.onfocus = null;
-            // Remove focus recapture handlers if they exist
             if (i.blurHandler) {
                 const blurHandler = i.blurHandler;
                 i.removeEventListener("blur", blurHandler);
@@ -130,10 +110,6 @@ export default class InputService {
         });
     }
 
-    /**
-     * @param {InputEvent} e
-     * @param {function} cueCheck
-     */
     static nameValidate(e, cueCheck = null) {
         if (!e.target.closest("#story").querySelector(".cue")) return;
 
@@ -148,8 +124,8 @@ export default class InputService {
 
 
         if (!e.data && !e.target.value) {
-                resetField(e.target);
-                return;
+            resetField(e.target);
+            return;
         } else if (!InputService.isAlphabetic(e.data)) {
             let store = e.target.selectionStart - [...e.data].filter(c => !InputService.isAlphabetic(c)).length;
             const inputValue = e.target.value;
@@ -193,11 +169,6 @@ export default class InputService {
     }
 
 
-    /**
-     * @param {HTMLDivElement} pStory
-     * @param {string} text
-     * @returns {number}
-     */
     static getTrueWidthName(pStory, text) {
         let p = document.createElement("p");
         p.className = "fakeinput getname";
@@ -213,36 +184,25 @@ export default class InputService {
         p.remove();
         return store;
     }
-    
-    
 
-    /**
-     * Sets up focus recapture for input elements, returning a cleanup function
-     * @param {HTMLInputElement[]} inputs
-     * @returns {function} cleanup function
-     */
+
+
+    // Keeps focus within story inputs (desktop only)
     static setupFocusRecapture(inputs) {
         let blurEnabled = true;
 
         const blurHandler = (e) => {
             if (!blurEnabled) return;
-            // Don't refocus if we're moving to a dialog or staying within story inputs
-            if (e.srcElement?.closest("dialog") || e.relatedTarget?.closest("#story input") || (e.relatedTarget?.closest(".main-section") && !e.relatedTarget.closest(".main-section").classList.contains("active"))) {
-               return;
-            }
-            // Refocus if focus is lost to something outside the story area
-            if (!e.relatedTarget || !e.relatedTarget.closest("#story")) {
-                e.currentTarget.focus({preventScroll: true});
-            }
+            if (window.matchMedia("(width <= 950px)").matches) return;
+            if (e.srcElement?.closest("dialog") || e.relatedTarget?.closest("#story input") || (e.relatedTarget?.closest(".main-section") && !e.relatedTarget.closest(".main-section").classList.contains("active"))) return;
+            if (!e.relatedTarget || !e.relatedTarget.closest("#story")) e.currentTarget.focus({ preventScroll: true });
         };
 
         inputs.forEach(input => {
             input.addEventListener("blur", blurHandler);
-            // Store cleanup info on the input for clearInput to use
             input.blurHandler = blurHandler;
         });
 
-        // Return cleanup function
         return () => {
             inputs.forEach(input => {
                 input.removeEventListener("blur", blurHandler);
@@ -251,7 +211,7 @@ export default class InputService {
         };
     }
 
-    static getButton(text, id, cb, className="ripples nudge") {
+    static getButton(text, id, cb, className = "basic-button ripples nudge") {
         const b = document.createElement("button");
         b.textContent = text;
         b.id = id;

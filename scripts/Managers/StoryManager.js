@@ -71,14 +71,11 @@ export default class StoryManager {
         const [p, inputs] = res;
         const [inputFirst, inputSecond] = inputs;
 
-        // Set up focus recapture with cleanup
         const cleanupFocusRecapture = InputService.setupFocusRecapture(inputs);
 
         const finishGetName = async () => {
-            // Clean up focus recapture listeners
             cleanupFocusRecapture();
             this.core.city.setRulerName(inputFirst.value, inputSecond.value);
-            // Hide skip prologue banner since user has started the prologue
             this.core.ui.panels.story.skipBanner.classList.add("hide");
             this.core.ui.panels.story.skipBanner.onanimationend = () => this.core.ui.panels.story.skipBanner.style.display = "none";
             this.core.clock.resume();
@@ -194,10 +191,9 @@ export default class StoryManager {
             const [p, inputs] = res;
             name = inputs[0];
 
-            // Set up focus recapture with cleanup
             const cleanupFocusRecapture = InputService.setupFocusRecapture(inputs);
             this.core.ui.story.append(InputService.getCue("Enter", () => {
-                cleanupFocusRecapture(); // Clean up before finishing
+                cleanupFocusRecapture();
                 this.finishGetCityName(p);
             }));
             setTimeout(() => name.focus({preventScroll: true}), 0);
@@ -271,8 +267,7 @@ export default class StoryManager {
         if (this.dismissedInfoBoxes.has(id)) return;
         if (!element) return;
         if (document.querySelector(`[data-infobox-id="${id}"]`)) return;
-
-        const box = createInfoBox(element, `<p>${message}</p>`, {
+        createInfoBox(element, `<p>${message}</p>`, {
             id: id,
             preferredPosition: options.preferredPosition,
             updateFn: options.updateFn,

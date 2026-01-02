@@ -1,5 +1,8 @@
+import createSelect from "../Components/Select.js";
+
 export default class SettingsPanel {
     #settings;
+    #selects = {};
 
     constructor(core) {
         this.core = core;
@@ -31,23 +34,12 @@ export default class SettingsPanel {
                 <strong>Game</strong>
                 <div class="setting-row">
                     <div class="setting">
-                        <label for="numformat">Number Format</label>
-                        <div class="inputs">
-                            <select id="numformat" name="numformat">
-                                <option selected value="standard">Standard</option>
-                                <option value="scientific">Scientific</option>
-                                <option value="alphabetical">Alphabetical</option>
-                            </select>
-                        </div>
+                        <label>Number Format</label>
+                        <div class="inputs" id="numformat-container"></div>
                     </div>
                     <div class="setting">
-                        <label for="offlineprogress">Offline Progress</label>
-                        <div class="inputs">
-                            <select id="offlineprogress" name="offlineprogress">
-                                <option selected value="on">On</option>
-                                <option value="off">Off</option>
-                            </select>
-                        </div>
+                        <label>Offline Progress</label>
+                        <div class="inputs" id="offlineprogress-container"></div>
                     </div>
                 </div>
             </div>
@@ -55,19 +47,8 @@ export default class SettingsPanel {
                 <strong>System</strong>
                 <div class="setting-row">
                     <div class="setting">
-                        <label for="refreshUI">UI Refresh Rate</label>
-                        <div class="inputs">
-                            <select id="refreshUI" name="refreshUI">
-                                <option value="100">100</option>
-                                <option value="75">75</option>
-                                <option value="50">50</option>
-                                <option selected value="30">30</option>
-                                <option value="20">20</option>
-                                <option value="10">10</option>
-                                <option value="5">5</option>
-                                <option value="1">1</option>
-                            </select>
-                        </div>
+                        <label>UI Refresh Rate</label>
+                        <div class="inputs" id="refreshUI-container"></div>
                     </div>
                 </div>
             </div>
@@ -82,35 +63,66 @@ export default class SettingsPanel {
             </div>
         `;
 
-        this.root.querySelectorAll("input, select").forEach((i) => {
+        this.#selects.numformat = createSelect({
+            options: [
+                { value: 'standard', label: 'Standard' },
+                { value: 'scientific', label: 'Scientific' },
+                { value: 'alphabetical', label: 'Alphabetical' }
+            ],
+            value: 'standard',
+            onChange: (value) => this.core.settings.updateSetting('numformat', value)
+        });
+        this.root.querySelector('#numformat-container').appendChild(this.#selects.numformat.element);
+
+        this.#selects.offlineprogress = createSelect({
+            options: [
+                { value: 'on', label: 'On' },
+                { value: 'off', label: 'Off' }
+            ],
+            value: 'on',
+            onChange: (value) => this.core.settings.updateSetting('offlineprogress', value)
+        });
+        this.root.querySelector('#offlineprogress-container').appendChild(this.#selects.offlineprogress.element);
+
+        this.#selects.refreshUI = createSelect({
+            options: [
+                { value: '100', label: '100' },
+                { value: '75', label: '75' },
+                { value: '50', label: '50' },
+                { value: '30', label: '30' },
+                { value: '20', label: '20' },
+                { value: '10', label: '10' },
+                { value: '5', label: '5' },
+                { value: '1', label: '1' }
+            ],
+            value: '30',
+            onChange: (value) => this.core.settings.updateSetting('refreshUI', value)
+        });
+        this.root.querySelector('#refreshUI-container').appendChild(this.#selects.refreshUI.element);
+
+        this.root.querySelectorAll("input").forEach((i) => {
             i.onchange = () => {
                 if (i.type === "checkbox" || i.type === "radio") {
                     this.core.settings.updateSetting(i.name, i.id);
-                } else if (i.nodeName === "SELECT") {
-                    this.core.settings.updateSetting(i.id, i.value);
                 }
             };
-        })
+        });
     }
-
-
 
     render(data) {
         this.#settings = data;
-        Object.entries(this.#settings).forEach(([k,v]) => {
-            let i = this.root.querySelector(`input[name="${k}"][id="${v}"]`) ?? this.root.querySelector(`select[name="${k}"] option[value="${v}"]`);
-            if (i.type === "checkbox" || i.type === "radio") {
+        Object.entries(this.#settings).forEach(([k, v]) => {
+            if (this.#selects[k]) {
+                this.#selects[k].setValue(v);
+                return;
+            }
+
+            let i = this.root.querySelector(`input[name="${k}"][id="${v}"]`);
+            if (i && (i.type === "checkbox" || i.type === "radio")) {
                 i.checked = true;
                 [...i.parentNode.children].forEach(x => {
                     if (x !== i) {
                         x.removeAttribute("checked");
-                    }
-                });
-            } else if (i.nodeName === "OPTION") {
-                i.selected = true;
-                [...i.parentNode.children].forEach(x => {
-                    if (x !== i) {
-                        x.removeAttribute("selected");
                     }
                 });
             }

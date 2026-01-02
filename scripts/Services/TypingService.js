@@ -111,16 +111,13 @@ export default class TypingService {
     }
 
     static async typePWithChoices(text, body, choices) {
-        // Insert text paragraph and collapse as before
         const p = await this.typeP(text, body);
         this.collapseP(p);
 
-        // Create container for choices
         const choiceContainer = document.createElement("div");
         choiceContainer.className = "choice-container";
         p.after(choiceContainer);
 
-        // Create choice elements
         const choiceElements = choices.map((choice, index) => {
             const el = document.createElement("div");
             el.className = "choice adding";

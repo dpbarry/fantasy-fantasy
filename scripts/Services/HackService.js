@@ -27,7 +27,6 @@ export default class HackService {
 
         this.#consoleElement.appendChild(feedback);
 
-        // Create modal dialog component
         this.#modalDialog = createModalDialog(this.#consoleElement);
 
 
@@ -83,13 +82,10 @@ export default class HackService {
         const input = this.#consoleElement.querySelector('.console-input');
         input.textContent = '';
 
-        // Use modal dialog component
         this.#modalDialog.open();
 
         const feedback = this.#consoleElement.querySelector('.console-feedback');
         feedback.textContent = "";
-
-        // Focus the input
         input.focus();
     }
 
@@ -101,7 +97,6 @@ export default class HackService {
 
         this.#consoleElement.classList.remove('visible');
 
-        // Close the modal dialog if it's open
         if (this.#modalDialog.isOpen) {
             this.#modalDialog.close();
         }
