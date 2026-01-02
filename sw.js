@@ -1,4 +1,4 @@
-const CACHE_NAME = 'game-v0.1.9';
+const CACHE_NAME = 'game-v0.2.0';
 const ALLOWED_CACHES = [CACHE_NAME];
 
 self.addEventListener('activate', evt => {
