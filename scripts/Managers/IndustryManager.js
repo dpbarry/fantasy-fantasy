@@ -627,7 +627,7 @@ export default class IndustryManager {
     }
 
     #setupWisdomUpgrade() {
-        this.upgrade(() => {
+        this.upgrade((ctx) => {
             if (ctx.tag !== 'prod') return null;
             const wisdom = this.core.city?.ruler?.wisdom || 0;
             if (wisdom === 0) return null;
