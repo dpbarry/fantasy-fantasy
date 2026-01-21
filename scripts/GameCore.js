@@ -96,6 +96,8 @@ export default class GameCore {
         })
         await LoadingService.hide();
 
+        document.body.focus();
+
         this.#isRunning = true;
         this.#lastFrameTime = performance.now();
         this.gameLoop(this.#lastFrameTime);

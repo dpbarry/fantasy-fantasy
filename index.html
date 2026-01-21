@@ -139,7 +139,13 @@
                 background: color-mix(in oklab, transparent 30%, var(--darkerAccent));
             }
 
-            &:focus {
+            &:focus-visible {
+                outline: 2px solid var(--baseColor);
+                outline-style: auto;
+                outline-offset: 4px;
+            }
+
+            &:focus:not(:focus-visible) {
                 outline: none;
             }
         }
@@ -250,6 +256,10 @@
             padding-bottom: calc(var(--boxGap) + env(safe-area-inset-bottom));
             background: var(--bgColor);
             min-width: 0;
+
+            &:focus {
+                outline: none;
+            }
             min-height: 0;
         }
 
@@ -291,7 +301,9 @@
 
         /* DESKTOP VIEW */
 
-        @media (width > 950px) { /* 950px USED IN JS */
+        @media (width > 950px) {
+
+            /* 950px USED IN JS */
             #sections-wrapper {
                 overflow-x: visible;
             }
@@ -332,9 +344,6 @@
                     cursor: default;
                 }
 
-                &:focus-visible {
-                    color: var(--accent);
-                }
 
                 @media (pointer: fine) and (hover: hover) {
                     &:not(:disabled):hover {
@@ -553,7 +562,8 @@
                 text-align: center;
                 transition: width 0.25s linear, border-color 0.15s, background 0.15s;
 
-                &:focus {
+                &:focus, &:focus-visible {
+                    outline: none !important;
                     border-color: var(--accent);
                 }
 
@@ -878,11 +888,7 @@
             transition: transform 0.1s, background 0.1s, scale 0.1s;
             box-shadow: 0 0 6px transparent;
 
-            &:focus-visible {
-                outline: 2px solid var(--accent);
-                outline-offset: 5px;
-                z-index: 2;
-            }
+
 
             @media (hover: hover) and (pointer: fine) {
                 &:hover:not(:disabled) {
@@ -1005,10 +1011,6 @@
 
             border-bottom: 0.06em solid var(--baseColor);
 
-            &:focus-visible {
-                border-color: var(--accent);
-            }
-
         }
 
         option {
@@ -1036,10 +1038,6 @@
             width: 100%;
             font-family: SourceSerif;
             cursor: pointer;
-
-            &:focus {
-                outline: none;
-            }
 
             .select-trigger {
                 appearance: none;
@@ -1951,7 +1949,6 @@
                     border-radius: 0;
                     z-index: 1;
                     isolation: isolate;
-                    outline: none;
                     min-width: 0;
                     min-height: 2.5em;
                     top: 0;
@@ -2829,13 +2826,13 @@
                     color: var(--baseColor);
                     transition: border-color 0.15s;
 
-                    &:focus-visible {
-                        border-color: var(--accent);
-                    }
-
-
                     &.invalid {
                         animation: invalid 0.18s forwards;
+                    }
+
+                    &:focus, &:focus-visible {
+                        border-color: var(--accent);
+                        outline: none !important;
                     }
                 }
 
@@ -2885,12 +2882,6 @@
                     &:disabled {
                         opacity: 0.5;
                         cursor: default;
-                    }
-
-                    &:focus-visible {
-                        border-color: var(--accent);
-                        color: var(--accent);
-                        outline: none;
                     }
                 }
             }
@@ -3125,7 +3116,7 @@
     <!--  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
 </head>
 
-<body>
+<body tabindex="-1">
     <div id="sections-wrapper">
         <section class="main-section" id="left-section">
             <div class="navbar box" id="herobar">

@@ -219,7 +219,7 @@ export default class StoryManager {
         this.checkpoint(5);
         await this.typeP(`Out of nowhere, the floor heaves, knocking you off your feat. Outside, the sky explodes into a kaleidoscope of surreal colors and the land beyond ${this.core.city.name} transforms. The events of your dream—or rather, your vision—rush back to you:`);
         await this.typeP("The long prophecied Cataclysm has arrived.", { italic: true });
-        await this.typeP("The creator of the universe has perished, and his limitless power has been scattered across the cosmos, rewriting the laws of reality along the way.", { italic: true });
+        await this.typeP("The creator of the universe has retired, and his limitless power has been scattered across the cosmos, rewriting the laws of reality along the way.", { italic: true });
         await this.typeP("Some of that power has found its home in you.", { italic: true });
 
         await this.cueBegin();
