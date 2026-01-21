@@ -1,6 +1,6 @@
 import InputService from "../Services/InputService.js";
 import TypingService from "../Services/TypingService.js";
-import {delay} from "../Utils.js";
+import { delay } from "../Utils.js";
 import createHintBox from "../UI/Components/HintBox.js";
 import createInfoBox from "../UI/Components/InfoBox.js";
 
@@ -102,11 +102,11 @@ export default class StoryManager {
         inputFirst.addEventListener("keydown", (e) => {
             if (e.key === " ") {
                 e.preventDefault();
-                inputSecond.focus({preventScroll: true});
+                inputSecond.focus({ preventScroll: true });
             }
         });
 
-        setTimeout(() => inputFirst.focus({preventScroll: true}), 0);
+        setTimeout(() => inputFirst.focus({ preventScroll: true }), 0);
     }
 
     async getGender() {
@@ -175,7 +175,7 @@ export default class StoryManager {
             }
         })());
 
-        const box = createHintBox(this.core.ui.story, "Many things in the game can be hovered over or tapped to show a tooltip. Try it now on @! For more in-depth information, see the @.", [chosenSpecialty, "Codex"], ["term", "codexWord term"], [chosenSpecialty.toLowerCase()]);
+        const box = createHintBox(this.core.ui.story, "Many things in the game can be hovered over or pressed to show a tooltip. Try it now on @! For more in-depth information, see the @.", [chosenSpecialty, "Codex"], ["term", "codexWord term"], [chosenSpecialty.toLowerCase()]);
 
         await delay(1000);
 
@@ -196,7 +196,7 @@ export default class StoryManager {
                 cleanupFocusRecapture();
                 this.finishGetCityName(p);
             }));
-            setTimeout(() => name.focus({preventScroll: true}), 0);
+            setTimeout(() => name.focus({ preventScroll: true }), 0);
         });
     }
 
@@ -218,9 +218,9 @@ export default class StoryManager {
     async beginUpheaval() {
         this.checkpoint(5);
         await this.typeP(`Out of nowhere, the floor heaves, knocking you off your feat. Outside, the sky explodes into a kaleidoscope of surreal colors and the land beyond ${this.core.city.name} transforms. The events of your dream—or rather, your vision—rush back to you:`);
-        await this.typeP("The long prophecied Cataclysm has arrived.", {italic: true});
-        await this.typeP("The creator of the universe has perished, and his limitless power has been scattered across the cosmos, rewriting the laws of reality along the way.", {italic: true});
-        await this.typeP("Some of that power has found its home in you.", {italic: true});
+        await this.typeP("The long prophecied Cataclysm has arrived.", { italic: true });
+        await this.typeP("The creator of the universe has perished, and his limitless power has been scattered across the cosmos, rewriting the laws of reality along the way.", { italic: true });
+        await this.typeP("Some of that power has found its home in you.", { italic: true });
 
         await this.cueBegin();
     }
@@ -248,7 +248,7 @@ export default class StoryManager {
             const mainBtn = document.querySelector('[data-building-type="farmPlot"].building-main-btn');
             if (mainBtn) {
                 const message = this.getFarmPlotMessage();
-                this.showInfoBox('farm-plot', mainBtn, message, { 
+                this.showInfoBox('farm-plot', mainBtn, message, {
                     preferredPosition: 'below',
                     updateFn: () => `<p>${this.getFarmPlotMessage()}</p>`
                 });
@@ -301,7 +301,7 @@ export default class StoryManager {
     checkFarmPlotWorkerInfo() {
         if (this.dismissedInfoBoxes.has('farm-plot-worker')) return;
         if (document.querySelector(`[data-infobox-id="farm-plot-worker"]`)) return;
-        
+
         const farmPlot = this.core.industry.buildings.farmPlot;
         if (farmPlot && farmPlot.count > 0) {
             const tryShowWorker = () => {
@@ -368,7 +368,7 @@ export default class StoryManager {
     }
 
     serialize() {
-        const {core, ...rest} = this;
+        const { core, ...rest } = this;
         return {
             ...rest,
             dismissedInfoBoxes: Array.from(this.dismissedInfoBoxes)
