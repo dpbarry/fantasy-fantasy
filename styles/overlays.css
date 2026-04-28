@@ -1,0 +1,474 @@
+#dialog-overlay {
+            position: fixed;
+            display: block;
+            width: 100%;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 100%;
+            z-index: var(--z-overlay);
+            pointer-events: none;
+            background-color: rgba(0, 0, 0, var(--alpha));
+            opacity: 0;
+            transition: opacity .15s cubic-bezier(0.39, 0.58, 0.57, 1);
+
+            html:has(dialog[open]) & {
+                opacity: 0.75;
+                pointer-events: all;
+            }
+
+            html:has(dialog.hide) & {
+                transition: opacity .1s cubic-bezier(0.39, 0.58, 0.57, 1);
+                opacity: 0 !important;
+            }
+        }
+
+        #skip-dialog {
+            box-sizing: border-box;
+            width: 32em;
+            display: flex;
+            height: fit-content;
+            flex-direction: column;
+
+            .caption {
+                font-size: 1.05em;
+                text-align: center;
+                font-style: italic;
+                color: var(--lightBaseColor);
+                margin: 0;
+                padding-bottom: 2.5em;
+            }
+
+            form {
+                display: flex;
+                flex-direction: column;
+                height: fit-content;
+            }
+
+            .input-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 1em;
+                margin-bottom: 1em;
+
+                &:first-of-type {
+                    grid-template-columns: 1fr 1fr 1fr;
+                }
+
+                .input-group.full {
+                    grid-column: 1 / -1;
+                }
+            }
+
+            .input-group {
+                height: 3em;
+
+                label {
+                    display: block;
+                    font-size: 0.85em;
+                    font-weight: 450;
+                    color: var(--midBaseColor);
+                }
+
+                input,
+                select {
+                    width: 100%;
+                    padding: 2px;
+                    padding-left: 1px;
+                    height: 1.75em;
+                    border-bottom: 0.06em solid var(--baseColor);
+                    background: transparent;
+                    color: var(--baseColor);
+                    transition: border-color 0.15s;
+
+                    &.invalid {
+                        animation: invalid 0.18s forwards;
+                    }
+
+                    &:focus,
+                    &:focus-visible {
+                        border-color: var(--accent);
+                        outline: none !important;
+                    }
+                }
+
+
+                select option[disabled][hidden] {
+                    display: none;
+                }
+
+                select#specialty {
+                    min-width: 12em;
+                }
+
+                .specialty-effect {
+                    display: block;
+                    margin-top: var(--s-1);
+                    width: fit-content;
+                    font-size: 0.85em;
+                    font-weight: 300;
+                    color: var(--baseColor);
+                }
+            }
+
+            .button-row {
+                display: flex;
+                gap: 1em;
+                padding-top: 2.5em;
+                justify-content: flex-start;
+            }
+        }
+
+        .filling-icon {
+            --prog: 0%;
+            --fillSpeed: 0.39s;
+            --baseColor: transparent;
+            --fillColor: var(--accent);
+            --strokeColor: var(--darkerAccent);
+
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            .icon-base {
+                color: var(--baseColor);
+
+                path {
+                    stroke: var(--strokeColor);
+                    stroke-width: 1.5px;
+                    vector-effect: non-scaling-stroke;
+                }
+            }
+
+            .icon-fill {
+                position: absolute;
+                color: var(--fillColor);
+                clip-path: inset(calc(100% - var(--prog)) 0 0 0);
+                transition: clip-path var(--fillSpeed) ease-in-out;
+            }
+
+            &.is-filled {
+                .icon-fill {
+                    clip-path: inset(0 0 0 0);
+                }
+            }
+
+            &.hidden {
+                visibility: hidden;
+            }
+        }
+
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bgColor);
+            z-index: var(--z-overlay);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 1;
+            transition: opacity 0.35s ease-out;
+
+            &.hidden {
+                opacity: 0;
+                pointer-events: none;
+            }
+
+            .filling-icon {
+                width: 4rem;
+                height: 4rem;
+
+                p {
+                    transition: opacity 0.3s;
+                    opacity: 0.8;
+
+                    @starting-style {
+                        opacity: 0;
+                    }
+                }
+            }
+        }
+
+        .hackbar {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--pureColor);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            z-index: var(--z-overlay);
+            box-shadow: 0 0 2px rgba(0, 0, 0, 0.4), 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 5px;
+            margin: 0;
+            min-width: fit-content;
+
+            .console-input {
+                width: clamp(50px, 50vw, 300px);
+                padding: 4px 2px 2px;
+                color: var(--accent);
+                font-family: SourceSerif;
+                font-size: 1.33rem;
+                outline: none;
+                background: transparent;
+                border: none;
+                caret-color: var(--accent);
+            }
+
+            &.visible {
+                display: block;
+                animation: fadeInConsole 0.15s;
+            }
+
+            .console-feedback {
+                color: var(--baseColor);
+                font-size: 0.85rem;
+                font-weight: 250;
+                padding: 0 2px 2px;
+                height: fit-content;
+                opacity: 0;
+                transition: opacity 0.05s;
+
+
+                &.visible {
+                    opacity: 0.75;
+                }
+            }
+        }
+
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+            }
+        }
+
+        @keyframes counterHide {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+                font-size: 0;
+            }
+        }
+
+        @keyframes fadeincue {
+            0% {
+                opacity: 0;
+            }
+
+            100% {
+                opacity: 0.8;
+            }
+        }
+
+        @keyframes choiceIn {
+            from {
+                opacity: 0;
+                top: 1rem;
+            }
+
+            to {
+                opacity: 1;
+                top: 0;
+            }
+        }
+
+        @keyframes cueing {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0.65;
+            }
+        }
+
+        @keyframes invalid {
+            0% {
+                border-color: var(--accent);
+            }
+
+            50% {
+                border-color: hsl(3, 75%, 70%);
+            }
+
+            100% {
+                border-color: var(--accent);
+            }
+        }
+
+        @keyframes selectValueSlideOut {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-100%);
+            }
+        }
+
+        @keyframes selectValueSlideIn {
+            0% {
+                opacity: 0;
+                transform: translateY(100%);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInConsole {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        /* ── EffectsService v2 ─────────────────────────────────────
+           Keyframes and helper classes for DOM-driven effects. The
+           service adds a class, listens for animationend, removes it.
+           Canvas-driven effects (bloom/embers/ribbon) live in JS. */
+
+        @keyframes effect-pulse {
+            0%   { box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent; }
+            45%  { box-shadow: 0 0 8px 2px var(--accent-glow), 0 0 16px 4px var(--accent-glow-soft); }
+            100% { box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent; }
+        }
+
+        .effect-pulse        { animation: effect-pulse 420ms var(--ease-emphasis); }
+        .effect-pulse-subtle { animation: effect-pulse 320ms var(--ease-standard); }
+        .effect-pulse-loud   { animation: effect-pulse 620ms var(--ease-emphasis); }
+
+        @keyframes effect-shimmer-sweep {
+            0%   { transform: translateX(-110%); opacity: 0; }
+            20%  { opacity: 1; }
+            80%  { opacity: 1; }
+            100% { transform: translateX(110%); opacity: 0; }
+        }
+
+        .effect-shimmer-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            border-radius: inherit;
+        }
+
+        .effect-shimmer-overlay::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 60%;
+            left: 0;
+            background: linear-gradient(105deg,
+                transparent 0%,
+                color-mix(in oklab, transparent 60%, var(--accent)) 50%,
+                transparent 100%);
+            mix-blend-mode: screen;
+            animation: effect-shimmer-sweep 700ms ease-out forwards;
+        }
+
+        @keyframes effect-float-rise {
+            0%   { opacity: 0; transform: translate(-50%, 0)    scale(0.85); }
+            18%  { opacity: 1; transform: translate(-50%, -10px) scale(1.06); }
+            100% { opacity: 0; transform: translate(-50%, -42px) scale(1); }
+        }
+
+        .effect-float-text {
+            position: fixed;
+            pointer-events: none;
+            font-family: SourceSerif, serif;
+            font-weight: 600;
+            font-size: 0.95em;
+            white-space: nowrap;
+            z-index: var(--z-tooltip);
+            text-shadow: 0 0 6px currentColor;
+            animation: effect-float-rise 950ms ease-out forwards;
+        }
+        .effect-float-text.gain    { color: var(--gainColor); }
+        .effect-float-text.drain   { color: var(--drainColor); }
+        .effect-float-text.crit    { color: var(--accent); font-size: 1.4em; }
+        .effect-float-text.neutral { color: var(--baseColor); }
+
+        @keyframes effect-crackle {
+            0%, 100% { transform: translateX(0);    box-shadow: 0 0 0 0 transparent; }
+            18%      { transform: translateX(-3px); box-shadow: 0 0 12px 1px var(--drainColor); }
+            36%      { transform: translateX(3px); }
+            54%      { transform: translateX(-2px); box-shadow: 0 0 6px 0 var(--drainColor); }
+            72%      { transform: translateX(2px); }
+        }
+
+        .effect-crackle        { animation: effect-crackle 320ms ease-out; }
+        .effect-crackle-subtle { animation: effect-crackle 220ms ease-out; }
+
+        .effect-wave {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: calc(var(--z-scanlines) - 1);
+            background: radial-gradient(
+                circle at var(--wave-origin, 50% 50%),
+                color-mix(in oklab, transparent 60%, var(--accent)) 0%,
+                color-mix(in oklab, transparent 80%, var(--accent)) 18%,
+                transparent 45%
+            );
+            mix-blend-mode: screen;
+            transform-origin: var(--wave-origin, 50% 50%);
+            animation: effect-wave-expand var(--wave-duration, 900ms) cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        @keyframes effect-wave-expand {
+            0%   { transform: scale(0);    opacity: 1; }
+            45%  { opacity: 0.85; }
+            100% { transform: scale(2.6);  opacity: 0; }
+        }
+
+        .effect-crossfade-out {
+            transition: opacity var(--dur-normal) var(--ease-standard),
+                        transform var(--dur-normal) var(--ease-standard);
+            opacity: 0 !important;
+            transform: scale(0.985);
+        }
+
+        .effect-crossfade-in {
+            animation: effect-crossfade-in var(--dur-normal) var(--ease-standard);
+        }
+
+        @keyframes effect-crossfade-in {
+            from { opacity: 0; transform: scale(1.015); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .effect-pulse, .effect-pulse-subtle, .effect-pulse-loud,
+            .effect-crackle, .effect-crackle-subtle,
+            .effect-shimmer-overlay::before,
+            .effect-wave,
+            .effect-crossfade-in {
+                animation-duration: 1ms !important;
+            }
+            .effect-float-text { animation-duration: 200ms !important; }
+        }

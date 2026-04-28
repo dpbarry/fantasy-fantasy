@@ -47,7 +47,7 @@ export default class LoadingService {
                 this.#warningNote.innerText = "Loading longer than expected, check network or refresh...";
                 Object.assign(this.#warningNote.style, {
                     position: 'absolute',
-                    bottom: '-20px',
+                    bottom: 'calc(var(--s-5) * -1)',
                     whiteSpace: 'nowrap',
                     color: 'var(--lightBaseColor)',
                     fontSize: '0.9rem',

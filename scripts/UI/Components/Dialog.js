@@ -46,10 +46,10 @@ export default function createModalDialog(dialogElementOrHtml) {
                 !document.activeElement?.closest('dialog')) {
 
 
-                const isMobile = window.matchMedia('(width <= 950px)').matches;
+                const isMobile = window.matchMedia('(width <= 850px)').matches;
                 if (isMobile) {
-                    const activeSection = document.querySelector('.main-section.active');
-                    if (activeSection && !activeSection.contains(previouslyFocusedElement)) {
+                    const activeMainPanel = document.getElementById('main-panel');
+                    if (activeMainPanel && !activeMainPanel.contains(previouslyFocusedElement)) {
                         return false;
                     }
                 }
@@ -98,6 +98,11 @@ export default function createModalDialog(dialogElementOrHtml) {
                 document.removeEventListener('click', clickOutsideHandler);
                 clickOutsideHandler = null;
             }
+
+            dialog.classList.add('closing');
+            await new Promise(resolve => setTimeout(resolve, 180));
+            dialog.classList.remove('closing');
+
             await dialog.close();
             dialog.style.display = "none";
             closeDialogFunction = null;

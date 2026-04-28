@@ -9,29 +9,29 @@ export default class SettingsPanel {
         this.root = core.ui.settings;
 
         this.root.innerHTML = `
-            <div class="subbox">
-                <strong>Appearance</strong>
+            <div class="settings-group">
+                <h3>Appearance</h3>
                 <div class="setting-row">
                     <div class="setting theme">
                         <label for="dark">Background</label>
                         <div class="inputs">
-                            <input checked id="dark" name="background" type="radio" />
-                            <input id="light" name="background" type="radio" />
+                            <input checked id="dark" name="background" type="radio" aria-label="Dark Mode" />
+                            <input id="light" name="background" type="radio" aria-label="Light Mode" />
                         </div>
                     </div>
                     <div class="setting theme">
                         <label for="lightning">Theme</label>
                         <div class="inputs">
-                            <input checked id="lightning" name="accent" type="radio" />
-                            <input id="acid" name="accent" type="radio" />
-                            <input id="amber" name="accent" type="radio" />
-                            <input id="arcane" name="accent" type="radio" />
+                            <input checked id="lightning" name="accent" type="radio" aria-label="Lightning Theme" />
+                            <input id="acid" name="accent" type="radio" aria-label="Acid Theme" />
+                            <input id="amber" name="accent" type="radio" aria-label="Amber Theme" />
+                            <input id="arcane" name="accent" type="radio" aria-label="Arcane Theme" />
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="subbox">
-                <strong>Game</strong>
+            <div class="settings-group">
+                <h3>Game</h3>
                 <div class="setting-row">
                     <div class="setting">
                         <label>Number Format</label>
@@ -43,8 +43,8 @@ export default class SettingsPanel {
                     </div>
                 </div>
             </div>
-            <div class="subbox">
-                <strong>System</strong>
+            <div class="settings-group">
+                <h3>System</h3>
                 <div class="setting-row">
                     <div class="setting">
                         <label>UI Refresh Rate</label>
@@ -52,8 +52,8 @@ export default class SettingsPanel {
                     </div>
                 </div>
             </div>
-            <div class="subbox">
-                <strong>About</strong>
+            <div class="settings-group">
+                <h3>About</h3>
                 <div id="about">
                     This site does not collect any data and is a WIP. Most icons are sourced from <a
                         href="https://game-icons.net/about.html#:~:text=Authors%20%26%20Contributors">game-icons.net</a>.
@@ -130,11 +130,11 @@ export default class SettingsPanel {
     }
 
     updateVisibility(loc, panel) {
-        if (loc === "right") {
-            if (panel === "settings")
-                this.root.classList.add("shown");
-            else
-                this.root.classList.remove("shown");
-        }
+        if (loc !== "main") return;
+        this.root.classList.toggle("shown", panel === "settings");
+    }
+
+    onVisibilityChange({ activePanels }) {
+        this.updateVisibility("main", activePanels.main);
     }
 }

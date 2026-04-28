@@ -1,6 +1,7 @@
 import createTooltipService from "../Services/TooltipService.js";
 import createContextMenuService from "../Services/ContextMenuService.js";
 import setupGlobalBehavior, {spawnRipple} from "../Services/GlobalBehavior.js";
+import EffectsService from "../Services/EffectsService.js";
 import {verticalScroll, formatNumber as baseFormatNumber} from "../Utils.js";
 import StoryPanel from "../UI/Panels/StoryPanel.js";
 import NewsPanel from "../UI/Panels/NewsPanel.js";
@@ -10,21 +11,21 @@ import IndustryPanel from "../UI/Panels/IndustryPanel.js";
 export default class UIManager {
     constructor(core) {
         this.core = core;
+        this.mobileLayoutQuery = window.matchMedia("(width <= 850px)");
+        this.ledgerVisibleQuery = window.matchMedia("(width > 1150px)");
         this.activePanels = {
-            "left": "",
-            "center": "story",
-            "right": "settings"
+            "main": "industry",
+            "ledger": "log"
         };
-        this.visibleSection = "center";
-        this.renderLoops = [];
+        this.renderLoops = new Map();
+        this.renderLoopSeed = 0;
+        this.renderDriverId = null;
         this.initialize();
     }
 
     initialize() {
         this.initShortcuts();
         this.initEventListeners();
-        
-        this.detectVisibleSection = () => {};
     }
 
     readyPanels() {
@@ -40,22 +41,29 @@ export default class UIManager {
 
     boot() {
         setupGlobalBehavior(this.core);
+        EffectsService.init(this.canvas);
+        this.effects = EffectsService;
         this.tooltipService = createTooltipService(this.core);
         this.contextMenuService = createContextMenuService(this.core, this.tooltipService);
         this.tooltipService.setContextMenuService(this.contextMenuService);
+        this.setupMobileTopNavPager();
         this.showPanels();
+        this.syncLedgerVisibilityState();
+        this.panels.story.syncPreludeLayer();
         this.updateMobileNavArrows();
     }
-
 
     initShortcuts() {
         this.story = document.getElementById("story");
         this.news = document.getElementById("news");
-        this.left = document.getElementById("left");
-        this.center = document.getElementById("center");
-        this.right = document.getElementById("right");
+        this.mainPanel = document.getElementById("main-panel");
+        this.ledger = document.getElementById("ledger");
         this.industry = document.getElementById("industry");
         this.settings = document.getElementById("settings");
+        this.topnav = document.getElementById("topnav");
+        this.mobileNavViewport = document.getElementById("mobile-nav-viewport");
+        this.mobileNavPrev = document.getElementById("mobile-nav-prev");
+        this.mobileNavNext = document.getElementById("mobile-nav-next");
         this.canvas = this.newCanvas();
     }
 
@@ -100,12 +108,12 @@ export default class UIManager {
                         addNudgeListener(node);
                     }
                     if (node.classList.contains("ripples")) {
-                        node.addEventListener("click", (e) => spawnRipple(e, node));
+                        node.addEventListener("pointerdown", (e) => spawnRipple(e, node));
                     }
 
                     node.querySelectorAll?.(".nudge").forEach(addNudgeListener);
                     node.querySelectorAll?.(".ripples").forEach(el => {
-                        el.addEventListener("click", (e) => spawnRipple(e, el));
+                        el.addEventListener("pointerdown", (e) => spawnRipple(e, el));
                     });
                 });
             });
@@ -115,51 +123,289 @@ export default class UIManager {
             childList: true, subtree: true
         });
 
-        const updateStoryScroll = () => verticalScroll(this.story, 5, true);
+        const updateStoryScroll = () => {
+            if (!this.story || !this.core.story?.prologueUnfinished) return;
+            verticalScroll(this.story, 5, true);
+        };
 
-        this.story.addEventListener("scroll", updateStoryScroll);
+        this.story?.addEventListener("scroll", updateStoryScroll);
         window.addEventListener("resize", updateStoryScroll);
+        window.addEventListener("resize", () => this.syncLedgerVisibilityState());
+
+        document.addEventListener("keydown", (e) => this.handleGlobalHotkeys(e));
+
     }
 
+    handleGlobalHotkeys(e) {
+        const key = e.key;
+        if (!key) return;
 
-    show(loc, panel) {
-        if (!this.activePanels[loc]|| !panel) return;
+        if (key === "Escape") {
+            return;
+        }
 
-        for (const panelName in this.panels) {
-            if (this.panels[panelName] && typeof this.panels[panelName].updateVisibility === 'function') {
-                this.panels[panelName].updateVisibility(loc, panel);
+        if (this.isTypingContext()) return;
+
+        if (key.toLowerCase() === "n") {
+            if (!this.isLedgerVisible()) return;
+            e.preventDefault();
+            this.show("ledger", "log");
+            return;
+        }
+
+        const isPrevKey = key === "[" || key === "{";
+        const isNextKey = key === "]" || key === "}";
+        if (isPrevKey || isNextKey) {
+            e.preventDefault();
+            if (e.shiftKey) {
+                this.cycleWithinCurrentGroup(isNextKey ? 1 : -1);
+            } else {
+                this.cycleNavGroups(isNextKey ? 1 : -1);
             }
         }
+    }
+
+    isTypingContext() {
+        const active = document.activeElement;
+        if (!active) return false;
+        if (active.closest("dialog")) return true;
+        if (active.isContentEditable) return true;
+        const tag = active.tagName;
+        return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+    }
+
+    getNavGroups() {
+        return Array.from(document.querySelectorAll("#topnav .nav-group"));
+    }
+
+    getUnlockedButtons(group) {
+        if (!group) return [];
+        return Array.from(group.querySelectorAll("[data-loc='main'][data-panel]"))
+            .filter((button) => !button.classList.contains("locked"));
+    }
+
+    cycleNavGroups(direction) {
+        const groups = this.getNavGroups();
+        if (!groups.length) return;
+
+        const currentButton = document.querySelector("#topnav .nav-group [data-loc='main'].chosen");
+        const currentGroup = currentButton?.closest(".nav-group");
+        let idx = Math.max(0, groups.indexOf(currentGroup));
+
+        for (let i = 0; i < groups.length; i++) {
+            idx = (idx + direction + groups.length) % groups.length;
+            const unlocked = this.getUnlockedButtons(groups[idx]);
+            if (unlocked.length) {
+                const next = unlocked[0];
+                this.show("main", next.dataset.panel);
+                next.focus({preventScroll: true});
+                return;
+            }
+        }
+    }
+
+    cycleWithinCurrentGroup(direction) {
+        const chosen = document.querySelector("#topnav .nav-group [data-loc='main'].chosen");
+        const group = chosen?.closest(".nav-group");
+        const unlocked = this.getUnlockedButtons(group);
+        if (!unlocked.length) return;
+
+        const currentIndex = Math.max(0, unlocked.indexOf(chosen));
+        const nextIndex = (currentIndex + direction + unlocked.length) % unlocked.length;
+        const next = unlocked[nextIndex];
+        this.show("main", next.dataset.panel);
+        next.focus({preventScroll: true});
+    }
+
+    setupMobileTopNavPager() {
+        const groups = this.mobileNavViewport
+            ? Array.from(this.mobileNavViewport.querySelectorAll(".nav-group"))
+            : [];
+        if (!this.topnav || !groups.length || !this.mobileNavPrev || !this.mobileNavNext) return;
+
+        this.mobileNavGroupIndex = Math.min(1, groups.length - 1);
+
+        const applyPagerState = () => {
+            const isMobile = this.isMobileLayout();
+            const maxIndex = groups.length - 1;
+            const fallbackIndex = Math.min(1, maxIndex);
+            const nextIndex = isMobile
+                ? Math.max(0, Math.min(maxIndex, this.mobileNavGroupIndex ?? fallbackIndex))
+                : fallbackIndex;
+
+            this.mobileNavGroupIndex = nextIndex;
+            groups.forEach((group, index) => {
+                group.classList.toggle("mobile-nav-active", index === nextIndex);
+            });
+            this.mobileNavPrev.disabled = !isMobile || nextIndex <= 0;
+            this.mobileNavNext.disabled = !isMobile || nextIndex >= maxIndex;
+        };
+
+        this.syncMobileTopNavPager = applyPagerState;
+
+        this.mobileNavPrev.addEventListener("pointerdown", (e) => {
+            if (!this.isMobileLayout()) return;
+            e.preventDefault();
+            this.mobileNavGroupIndex = Math.max(0, (this.mobileNavGroupIndex ?? 1) - 1);
+            applyPagerState();
+        });
+
+        this.mobileNavNext.addEventListener("pointerdown", (e) => {
+            if (!this.isMobileLayout()) return;
+            e.preventDefault();
+            this.mobileNavGroupIndex = Math.min(groups.length - 1, (this.mobileNavGroupIndex ?? 1) + 1);
+            applyPagerState();
+        });
+
+        const syncAll = () => {
+            applyPagerState();
+        };
+
+        window.addEventListener("resize", syncAll);
+        syncAll();
+    }
+
+    focusMobileNavGroupFor(button) {
+        if (!button || !this.mobileNavViewport || !this.isMobileLayout()) return;
+        const group = button.closest(".nav-group");
+        if (!group) return;
+        const groups = Array.from(this.mobileNavViewport.querySelectorAll(".nav-group"));
+        const nextIndex = groups.indexOf(group);
+        if (nextIndex < 0) return;
+        this.mobileNavGroupIndex = nextIndex;
+        this.syncMobileTopNavPager?.();
+    }
+
+    syncInfoBoxesForActivePanel(loc, panel) {
+        const panelVisible = this.isPanelVisible(loc, panel);
+        document.querySelectorAll(".infobox").forEach((box) => {
+            if (box.dataset.infoboxLoc !== loc) return;
+            const isTargetPanel = box.dataset.infoboxPanel === panel;
+            box._setSuspended?.(!(isTargetPanel && panelVisible));
+        });
+    }
+
+    syncInfoBoxesForActivePanels(activePanels = this.activePanels) {
+        Object.entries(activePanels).forEach(([loc, panel]) => {
+            this.syncInfoBoxesForActivePanel(loc, panel);
+        });
+    }
+
+    notifyPanelVisibilityChange(change) {
+        for (const panel of Object.values(this.panels || {})) {
+            if (!panel) continue;
+            if (typeof panel.onVisibilityChange === "function") {
+                panel.onVisibilityChange({
+                    activePanels: this.activePanels,
+                    change
+                });
+                continue;
+            }
+            if (typeof panel.updateVisibility === "function") {
+                panel.updateVisibility(change.loc, change.panel);
+            }
+        }
+    }
+
+    show(loc, panel, options = {}) {
+        const { force = false } = options;
+        if (!(loc in this.activePanels) || !panel) return;
+        if (loc === "ledger" && !this.isLedgerVisible()) return;
+        if (!force && this.activePanels[loc] === panel) return;
+
+        this.contextMenuService?.destroyMenu?.();
+        this.tooltipService?.cleanupAllTooltips?.();
 
         this.activePanels[loc] = panel;
+        this.notifyPanelVisibilityChange({ loc, panel, reason: "show" });
+        this.syncInfoBoxesForActivePanels();
 
-        document.querySelectorAll(`.navbutton.chosen[data-loc='${loc}']`).forEach(el => el.classList.remove("chosen"));
-        const button = document.querySelector(`.navbutton[data-panel='${panel}']`);
-        if (button) {
+        document.querySelectorAll(`[data-loc='${loc}'].chosen`).forEach(el => el.classList.remove("chosen"));
+        const buttons = document.querySelectorAll(`[data-loc='${loc}'][data-panel='${panel}']`);
+        buttons.forEach((button) => {
             button.classList.add("chosen");
-        }
+            if (loc === "main") {
+                this.focusMobileNavGroupFor(button);
+            }
+        });
 
-        this.detectVisibleSection();
+        this.updateMobileNavArrows();
+    }
+
+    isMobileLayout() {
+        return this.mobileLayoutQuery.matches;
+    }
+
+    isLedgerVisible() {
+        return this.ledgerVisibleQuery.matches;
+    }
+
+    isPanelVisible(loc, panel) {
+        if (!(loc in this.activePanels) || !panel) return false;
+        if (loc === "ledger" && !this.isLedgerVisible()) return false;
+        return this.activePanels[loc] === panel;
+    }
+
+    syncLedgerVisibilityState() {
+        const ledgerVisible = this.isLedgerVisible();
+        if (!ledgerVisible) {
+            document.querySelectorAll("[data-loc='ledger'].chosen").forEach((el) => el.classList.remove("chosen"));
+            this.ledger?.querySelectorAll(".panel.shown").forEach((panelEl) => panelEl.classList.remove("shown"));
+        } else {
+            const activeLedgerPanel = this.activePanels.ledger;
+            document.querySelectorAll(`[data-loc='ledger'][data-panel='${activeLedgerPanel}']`)
+                .forEach((el) => el.classList.add("chosen"));
+            this.ledger?.querySelectorAll(".panel").forEach((panelEl) => {
+                panelEl.classList.toggle("shown", panelEl.id === activeLedgerPanel);
+            });
+        }
+        this.notifyPanelVisibilityChange({
+            loc: "ledger",
+            panel: this.activePanels.ledger,
+            reason: "ledger-visibility"
+        });
+        this.syncInfoBoxesForActivePanels();
     }
 
     showPanels() {
         Object.entries(this.activePanels).forEach(([loc, panel]) => {
-            this.show(loc, panel);
+            this.show(loc, panel, { force: true });
         });
     }
 
     createRenderInterval(fn) {
-        const interval = setInterval(fn, this.core.settings.refreshUI);
-        this.renderLoops.push({interval, fn});
-        return interval;
+        const id = ++this.renderLoopSeed;
+        this.renderLoops.set(id, {
+            id,
+            fn,
+            lastRun: 0,
+            intervalMs: this.core.settings.refreshUI
+        });
+        this.ensureRenderDriver();
+        return id;
     }
 
     destroyRenderInterval(interval) {
-        const index = this.renderLoops.findIndex(loop => loop.interval === interval);
-        if (index !== -1) {
-            clearInterval(interval);
-            this.renderLoops.splice(index, 1);
+        this.renderLoops.delete(interval);
+        if (this.renderLoops.size === 0 && this.renderDriverId !== null) {
+            cancelAnimationFrame(this.renderDriverId);
+            this.renderDriverId = null;
         }
+    }
+
+    ensureRenderDriver() {
+        if (this.renderDriverId !== null) return;
+        const tick = (now) => {
+            this.renderLoops.forEach((loop) => {
+                if (now - loop.lastRun < loop.intervalMs) return;
+                loop.lastRun = now;
+                loop.fn();
+            });
+            this.renderDriverId = this.renderLoops.size
+                ? requestAnimationFrame(tick)
+                : null;
+        };
+        this.renderDriverId = requestAnimationFrame(tick);
     }
 
     initNavButtonFocusability() {
@@ -184,9 +430,8 @@ export default class UIManager {
     }
 
     updateRenderIntervals() {
-        this.renderLoops.forEach(loop => {
-            clearInterval(loop.interval);
-            loop.interval = setInterval(loop.fn, this.core.settings.refreshUI);
+        this.renderLoops.forEach((loop) => {
+            loop.intervalMs = this.core.settings.refreshUI;
         });
     }
 
@@ -195,36 +440,25 @@ export default class UIManager {
     }
 
     serialize() {
-        return {activePanels: this.activePanels, visibleSection: this.visibleSection};
+        return {activePanels: this.activePanels};
     }
 
     deserialize(data) {
-        this.activePanels = data.activePanels;
-        this.visibleSection = data.visibleSection;
+        const incoming = data.activePanels || {};
+        const validMain = ["industry", "hero", "team", "equipment", "augment", "upgrade",
+                           "city", "research", "dungeon", "trade", "army", "tournament", "news",
+                           "chart", "achievements", "codex", "settings"];
+        const validLedger = ["log", "crew", "kingdom"];
+
+        this.activePanels = {
+            main: validMain.includes(incoming.main) ? incoming.main : "industry",
+            ledger: validLedger.includes(incoming.ledger) ? incoming.ledger : "log"
+        };
+
     }
 
     updateMobileNavArrows() {
-        const sectionOrder = ["left", "center", "right"];
-        const currentIndex = sectionOrder.indexOf(this.visibleSection);
-        if (currentIndex === -1) return;
-
-        const arrows = {
-            left: [
-                { id: "nav-arrow-left", disabled: currentIndex === 0 },
-                { id: "nav-arrow-center-from-right", disabled: currentIndex !== 1 },
-                { id: "nav-arrow-right-from-left", disabled: currentIndex !== 2 }
-            ],
-            right: [
-                { id: "nav-arrow-center-from-left", disabled: currentIndex !== 0 },
-                { id: "nav-arrow-right-from-center", disabled: currentIndex !== 1 },
-                { id: "nav-arrow-right", disabled: currentIndex === 2 }
-            ]
-        };
-
-        [...arrows.left, ...arrows.right].forEach(({ id, disabled }) => {
-            const arrow = document.getElementById(id);
-            if (arrow) arrow.disabled = disabled;
-        });
+        this.syncMobileTopNavPager?.();
     }
 
     hookTip(el, tipKey) {

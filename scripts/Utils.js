@@ -198,13 +198,11 @@ export function formatNumber(value, formatType = 'standard', opt = {}) {
     return formatNumber(num, 'scientific', opt);
 }
 
-export function getElementSection(el) {
+export function getElementLoc(el) {
     if (!el) return null;
-    const left = document.getElementById('left');
-    const center = document.getElementById('center');
-    const right = document.getElementById('right');
-    if (left?.contains(el)) return 'left';
-    if (center?.contains(el)) return 'center';
-    if (right?.contains(el)) return 'right';
+    const main = document.getElementById('main-panel');
+    const ledger = document.getElementById('ledger-wrap');
+    if (main?.contains(el)) return 'main';
+    if (ledger?.contains(el)) return 'ledger';
     return null;
 }

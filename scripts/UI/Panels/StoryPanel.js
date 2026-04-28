@@ -7,7 +7,8 @@ export default class StoryPanel {
     constructor(core) {
         this.core = core;
         this.root = document.getElementById("story");
-        this.skipBanner = document.getElementById("skip-banner");
+        this.preludeRoot = document.getElementById("story-prelude-root");
+        this.skipControl = document.getElementById("story-skip");
         this.isSubmitting = false;
         this.dialogSelects = {};
 
@@ -16,13 +17,47 @@ export default class StoryPanel {
 
         this.skipDialog = this.createSkipDialog();
 
-        this.skipBanner.addEventListener('click', () => {
-            this.openSkipDialog();
-        });
+        this.skipControl?.addEventListener("click", () => this.openSkipDialog());
+    }
+
+    syncPreludeLayer() {
+        if (!this.preludeRoot) return;
+        if (!this.core.story.prologueUnfinished) {
+            this.endPrelude();
+            return;
+        }
+        this.preludeRoot.classList.add("active");
+        this.preludeRoot.removeAttribute("aria-hidden");
+        this.preludeRoot.inert = false;
+        if (this.skipControl) this.skipControl.disabled = false;
+    }
+
+    endPrelude() {
+        if (this.root._scrollObserver) {
+            this.root._scrollObserver.disconnect();
+            this.root._scrollObserver = null;
+        }
+        if (this._storyResizeScroll) {
+            window.removeEventListener("resize", this._storyResizeScroll);
+            this._storyResizeScroll = null;
+        }
+        this.root.innerHTML = "";
+        this.root.style.paddingBottom = "";
+        this.root._excessPadding = 0;
+        if (this.skipControl) {
+            this.skipControl.classList.remove("hide");
+            this.skipControl.onanimationend = null;
+            this.skipControl.style.display = "none";
+            this.skipControl.disabled = true;
+        }
+        if (!this.preludeRoot) return;
+        this.preludeRoot.classList.remove("active");
+        this.preludeRoot.setAttribute("aria-hidden", "true");
+        this.preludeRoot.inert = true;
     }
 
     openSkipDialog() {
-        if (this.currentDialogClose) return;
+        if (!this.core.story.prologueUnfinished || this.currentDialogClose) return;
 
         const closeDialog = this.skipDialog.open();
         this.currentDialogClose = closeDialog;
@@ -37,33 +72,39 @@ export default class StoryPanel {
             const specialtyEffect = document.getElementById('specialty-effect');
             const specialtyIndex = parseInt(value);
             if (specialtyIndex === 0) {
-                specialtyEffect.innerHTML = '+10 <span class="term" data-tips="savvy">Savvy</span>';
+                specialtyEffect.innerHTML = '+10 <span class="term hastip tooltip-prefer-below" data-tips="savvy">Savvy</span>';
             } else if (specialtyIndex === 1) {
-                specialtyEffect.innerHTML = '+10 <span class="term" data-tips="valor">Valor</span>';
+                specialtyEffect.innerHTML = '+10 <span class="term hastip tooltip-prefer-below" data-tips="valor">Valor</span>';
             } else if (specialtyIndex === 2) {
-                specialtyEffect.innerHTML = '+10 <span class="term" data-tips="wisdom">Wisdom</span>';
+                specialtyEffect.innerHTML = '+10 <span class="term hastip tooltip-prefer-below" data-tips="wisdom">Wisdom</span>';
             } else {
                 specialtyEffect.innerHTML = '&nbsp;';
             }
         };
 
-        this.dialogSelects.gender = createSelect({
-            options: [
-                { value: 'M', label: 'King' },
-                { value: 'F', label: 'Queen' }
-            ],
-        });
-        document.getElementById('gender-container').appendChild(this.dialogSelects.gender.element);
+        if (!this.dialogSelects.gender) {
+            this.dialogSelects.gender = createSelect({
+                options: [
+                    { value: 'M', label: 'King' },
+                    { value: 'F', label: 'Queen' }
+                ]
+            });
+            document.getElementById('gender-container').appendChild(this.dialogSelects.gender.element);
+        }
 
-        this.dialogSelects.specialty = createSelect({
-            options: [
-                { value: '0', label: 'Economic Prosperity' },
-                { value: '1', label: 'Military Campaigns' },
-                { value: '2', label: 'New Discoveries' }
-            ],
-            onChange: (value) => updateSpecialtyEffect(value)
-        });
-        document.getElementById('specialty-container').appendChild(this.dialogSelects.specialty.element);
+        if (!this.dialogSelects.specialty) {
+            this.dialogSelects.specialty = createSelect({
+                options: [
+                    { value: '0', label: 'Economic Prosperity' },
+                    { value: '1', label: 'Military Campaigns' },
+                    { value: '2', label: 'New Discoveries' }
+                ],
+                onChange: (value) => updateSpecialtyEffect(value)
+            });
+            document.getElementById('specialty-container').appendChild(this.dialogSelects.specialty.element);
+        }
+
+        updateSpecialtyEffect(this.dialogSelects.specialty.value);
 
         const validateForm = () => {
             const firstName = document.getElementById('first-name').value.trim();
@@ -189,14 +230,6 @@ export default class StoryPanel {
 
         const cleanup = () => {
             listeners.forEach(cleanup => cleanup());
-            if (this.dialogSelects.gender) {
-                this.dialogSelects.gender.destroy();
-                this.dialogSelects.gender = null;
-            }
-            if (this.dialogSelects.specialty) {
-                this.dialogSelects.specialty.destroy();
-                this.dialogSelects.specialty = null;
-            }
             this.currentDialogClose = null;
         };
 
@@ -212,39 +245,41 @@ export default class StoryPanel {
     createSkipDialog() {
         const dialogHTML = `
             <dialog id="skip-dialog">
-            <p class='caption'>The creator of reality has permanently retired, and you were deemed worthy of a promotion.</p>
-                <form id="skip-form" novalidate>
-                    <div class="input-row">
-                        <div class="input-group">
-                            <label for="first-name">First Name</label>
-                            <input id="first-name" name="first" type="text" maxlength="15" required>
+                <div class="dialog-body">
+                    <p class='caption'>The creator of reality has permanently retired, and you have been deemed worthy of a promotion.</p>
+                    <form id="skip-form" novalidate>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="first-name">First Name</label>
+                                <input id="first-name" name="first" type="text" maxlength="15" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="last-name">Last Name</label>
+                                <input id="last-name" name="last" type="text" maxlength="15" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Gender</label>
+                                <div id="gender-container"></div>
+                            </div>
                         </div>
-                        <div class="input-group">
-                            <label for="last-name">Last Name</label>
-                            <input id="last-name" name="last" type="text" maxlength="15" required>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="city-name">City Name</label>
+                                <input id="city-name" name="city" type="text" maxlength="15" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Specialty</label>
+                                <div id="specialty-container"></div>
+                                <small id="specialty-effect" class="specialty-effect">&nbsp;</small>
+                            </div>
                         </div>
-                        <div class="input-group">
-                            <label>Gender</label>
-                            <div id="gender-container"></div>
+                        <div class="button-row">
+                            <button type="submit" id="skip-submit" class="basic-button">Begin Game</button>
+                            <button type="button" id="skip-randomize" class="basic-button">Randomize</button>
+                            <button type="button" id="skip-devsave" class="basic-button">Dev Save</button>
                         </div>
-                    </div>
-                    <div class="input-row">
-                        <div class="input-group">
-                            <label for="city-name">City Name</label>
-                            <input id="city-name" name="city" type="text" maxlength="15" required>
-                        </div>
-                        <div class="input-group">
-                            <label>Specialty</label>
-                            <div id="specialty-container"></div>
-                            <small id="specialty-effect" class="specialty-effect">&nbsp;</small>
-                        </div>
-                    </div>
-                    <div class="button-row">
-                        <button type="submit" id="skip-submit">Begin Game</button>
-                        <button type="button" id="skip-randomize">Randomize</button>
-                        <button type="button" id="skip-devsave">Dev Save</button>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </dialog>
         `;
 
@@ -254,7 +289,12 @@ export default class StoryPanel {
     reset(html) {
         this.root.innerHTML = html;
         this.root.scrollBy({ top: this.root.scrollHeight });
-        this.skipBanner.style.display = this.core.story.progress === 0 ? 'flex' : "none";
+        if (this.skipControl) {
+            this.skipControl.classList.remove("hide");
+            this.skipControl.style.display = this.core.story.progress === 0 ? "" : "none";
+            this.skipControl.onanimationend = null;
+            this.skipControl.disabled = false;
+        }
     }
 
     setupAutoScroll() {
@@ -270,25 +310,22 @@ export default class StoryPanel {
             }
         };
 
-        let scrollObserver = new MutationObserver(scrollNow);
+        this._storyResizeScroll = () => scrollNow();
+        const scrollObserver = new MutationObserver(scrollNow);
         this.root._scrollObserver = scrollObserver;
         scrollObserver.observe(this.root, {
             childList: true, subtree: true
         });
-        window.addEventListener("resize", () => {
-            scrollNow();
-        });
+        window.addEventListener("resize", this._storyResizeScroll);
     }
 
-    updateVisibility(loc, panel) {
+    updateVisibility(_loc, _panel) {
+        if (!this.core.story.prologueUnfinished) return;
         this.core.story.updateRunning();
-        if (loc === "center") {
-            if (panel === "story")
-                this.root.closest(".box").classList.add("shown");
-            else
-                this.root.closest(".box").classList.remove("shown");
-        }
+    }
 
+    onVisibilityChange() {
+        this.updateVisibility("main", this.core.ui.activePanels.main);
     }
 
     randomizeInputs() {
@@ -306,15 +343,6 @@ export default class StoryPanel {
 
         const specialtyValue = Math.floor(Math.random() * 3).toString();
         if (this.dialogSelects.specialty) this.dialogSelects.specialty.setValue(specialtyValue);
-
-        const specialtyEffect = document.getElementById('specialty-effect');
-        if (specialtyValue === '0') {
-            specialtyEffect.innerHTML = '+10 <span class="term" data-tips="savvy">Savvy</span>';
-        } else if (specialtyValue === '1') {
-            specialtyEffect.innerHTML = '+10 <span class="term" data-tips="valor">Valor</span>';
-        } else if (specialtyValue === '2') {
-            specialtyEffect.innerHTML = '+10 <span class="term" data-tips="wisdom">Wisdom</span>';
-        }
 
         document.getElementById('city-name').value = cityNames[Math.floor(Math.random() * cityNames.length)];
     }

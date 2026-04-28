@@ -12,13 +12,21 @@ import IndustryManager from "./Managers/IndustryManager.js";
 
 export default class GameCore {
     static #instance = null;
+    static RuntimeModes = Object.freeze({
+        BOOTING: "booting",
+        RUNNING: "running",
+        PAUSED: "paused",
+        PROLOGUE: "prologue",
+    });
+
     #lastFrameTime;
     #isRunning;
     #lastSaveTime;
     #saveThrottleMS;
     #pendingSave;
     #saveableComponents;
-    #currentVersion = "0.2.0";
+    #currentVersion = "0.2.1";
+    #runtimeMode;
 
 
     constructor() {
@@ -29,6 +37,7 @@ export default class GameCore {
 
         this.#lastFrameTime = 0;
         this.#isRunning = false;
+        this.#runtimeMode = GameCore.RuntimeModes.BOOTING;
 
         this.#lastSaveTime = 0;
         this.#saveThrottleMS = 1000;
@@ -78,6 +87,10 @@ export default class GameCore {
         return this.#isRunning;
     }
 
+    get runtimeMode() {
+        return this.#runtimeMode;
+    }
+
     static getInstance() {
         if (!GameCore.#instance) {
             GameCore.#instance = new GameCore();
@@ -89,6 +102,7 @@ export default class GameCore {
         HackService.initialize(this);
         this.ui.readyPanels();
         await this.storage.loadFullGame(this);
+        this.story.syncPrologueStateFromProgress();
         this.managers.settings.earlyInit();
         await LoadingService.initialize();
         Object.values(this.managers).forEach(m => {
@@ -98,6 +112,7 @@ export default class GameCore {
 
         document.body.focus();
 
+        this.setRuntimeMode(GameCore.RuntimeModes.RUNNING);
         this.#isRunning = true;
         this.#lastFrameTime = performance.now();
         this.gameLoop(this.#lastFrameTime);
@@ -113,27 +128,45 @@ export default class GameCore {
         const frameTime = (currentTime - this.#lastFrameTime) / 1000;
         this.#lastFrameTime = currentTime;
 
-        this.clock.advance(frameTime);
-        this["industry"].tick(frameTime);
+        if (this.#runtimeMode === GameCore.RuntimeModes.RUNNING) {
+            this.clock.advance(frameTime);
+            this.industry.tick(frameTime);
 
-        const now = Date.now();
-        if (!this.#pendingSave && now - this.#lastSaveTime >= this.#saveThrottleMS) {
-            this.#pendingSave = true;
-            this.storage.saveFullGame(this).finally(() => {
-                this.#lastSaveTime = Date.now();
-                this.#pendingSave = false;
-            });
+            const now = Date.now();
+            if (!this.#pendingSave && now - this.#lastSaveTime >= this.#saveThrottleMS) {
+                this.#pendingSave = true;
+                this.storage.saveFullGame(this).finally(() => {
+                    this.#lastSaveTime = Date.now();
+                    this.#pendingSave = false;
+                });
+            }
         }
 
         requestAnimationFrame((time) => this.gameLoop(time));
     }
 
+    setRuntimeMode(mode) {
+        const valid = Object.values(GameCore.RuntimeModes);
+        if (!valid.includes(mode)) return false;
+        this.#runtimeMode = mode;
+        if (mode === GameCore.RuntimeModes.RUNNING) {
+            this.clock.resume();
+        } else {
+            this.clock.pause();
+        }
+        return true;
+    }
+
     pause() {
+        this.setRuntimeMode(GameCore.RuntimeModes.PAUSED);
         this.#isRunning = false;
     }
 
     resume() {
         if (!this.#isRunning) {
+            if (this.#runtimeMode === GameCore.RuntimeModes.PAUSED) {
+                this.setRuntimeMode(GameCore.RuntimeModes.RUNNING);
+            }
             this.#isRunning = true;
             this.#lastFrameTime = performance.now();
             this.gameLoop(this.#lastFrameTime);

@@ -5,13 +5,15 @@ export default class NewsPanel {
 
     constructor(core) {
         this.core = core;
-        this.root = core.ui.news;
-
-        this.logs = this.root.querySelector("#update-logs");
+        this.mainRoot = document.getElementById("news");
+        this.ledgerRoot = document.getElementById("log");
+        this.mainLogs = this.mainRoot?.querySelector("#update-news");
+        this.ledgerLogs = this.ledgerRoot?.querySelector("#update-logs");
     }
 
-    render(data) {
-        this.#logs = data;
+    #renderInto(container) {
+        if (!container) return;
+        container.innerHTML = "";
 
         let lastMsg;
         for (const {timestamp, message} of this.#logs) {
@@ -23,26 +25,49 @@ export default class NewsPanel {
             msgEl.className = 'message';
             msgEl.textContent = message;
 
-            this.logs.appendChild(timeEl);
-            this.logs.appendChild(msgEl);
+            container.appendChild(timeEl);
+            container.appendChild(msgEl);
 
             lastMsg = timeEl;
         }
         if (lastMsg) {
-            this.logs.scrollTop = this.logs.scrollHeight;
+            container.scrollTop = container.scrollHeight;
             lastMsg.ontransitionend = () => {
-                verticalScroll(this.logs, 2);
-            }
+                verticalScroll(container, 2);
+            };
+        }
+    }
+
+    render(data) {
+        this.#logs = data;
+        if (this.core.ui.isPanelVisible("main", "news")) {
+            this.#renderInto(this.mainLogs);
+        }
+        if (this.core.ui.isPanelVisible("ledger", "log")) {
+            this.#renderInto(this.ledgerLogs);
         }
     }
 
     updateVisibility(loc, panel) {
-        if (loc === "right") {
-            if (panel === "news") {
-                this.root.classList.add("shown");
-            } else {
-                this.root.classList.remove("shown");
+        if (loc === "main") {
+            const isMainNews = panel === "news";
+            this.mainRoot?.classList.toggle("shown", isMainNews);
+            if (isMainNews) {
+                this.#renderInto(this.mainLogs);
+            }
+            return;
+        }
+        if (loc === "ledger") {
+            const isLedgerLog = panel === "log" && this.core.ui.isLedgerVisible();
+            this.ledgerRoot?.classList.toggle("shown", isLedgerLog);
+            if (isLedgerLog) {
+                this.#renderInto(this.ledgerLogs);
             }
         }
+    }
+
+    onVisibilityChange({ activePanels }) {
+        this.updateVisibility("main", activePanels.main);
+        this.updateVisibility("ledger", activePanels.ledger);
     }
 }

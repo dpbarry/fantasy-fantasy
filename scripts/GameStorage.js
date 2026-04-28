@@ -3,7 +3,19 @@ export default class GameStorage {
         this.core = core;
         this.storageKey = "gameState";
         this.saveListKey = "saveList";
-        this.list = JSON.parse(localStorage.getItem(this.saveListKey)) || [];
+        this.list = this.#safeParseSaveList(localStorage.getItem(this.saveListKey));
+    }
+
+    #safeParseSaveList(rawValue) {
+        if (!rawValue) return [];
+        try {
+            const parsed = JSON.parse(rawValue);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+            console.warn('Invalid save list found in storage. Resetting save list.', error);
+            localStorage.removeItem(this.saveListKey);
+            return [];
+        }
     }
 
     async storeSave(data) {
@@ -60,7 +72,11 @@ export default class GameStorage {
     }
 
     async loadSave(i) {
-        const key = this.list[i].id;
+        const entry = this.list[i];
+        if (!entry?.id) {
+            throw new Error(`No save found`);
+        }
+        const key = entry.id;
         const save = localStorage.getItem(key);
         if (!save) {
             throw new Error(`No save found`);
@@ -114,9 +130,11 @@ export default class GameStorage {
             if (!snapshot) return false;
             if (snapshot.version !== core.currentVersion) {
                 console.warn(`Save version ${snapshot.version} not supported (want ${core.currentVersion}). Resetting...`);
+                localStorage.removeItem(this.storageKey);
                 return false;
             }
-            for (const [key, component] of core.saveableComponents) {
+            const components = Array.from(core.saveableComponents.entries());
+            for (const [key, component] of components) {
                 if (snapshot.data[key]) {
                     if (typeof component.deserialize === 'function') {
                         component.deserialize(snapshot.data[key], snapshot.timestamp);
@@ -131,7 +149,7 @@ export default class GameStorage {
                 core.city.ruler.firstName = "Al";
                 core.city.ruler.lastName = "Green";
                 core.city.ruler.gender = "M";
-                core.city.ruler.wisdom = 10;
+                core.city.ruler.savvy = 10;
             }
             
             return true;
@@ -164,11 +182,9 @@ export default class GameStorage {
                     },
                     ui: {
                         activePanels: {
-                            left: "",
-                            center: "industry",
-                            right: "settings"
-                        },
-                        visibleSection: "center"
+                            main: "industry",
+                            ledger: "log"
+                        }
                     }
                 }
             };

@@ -113,13 +113,13 @@ export default class HackService {
                     feedback.textContent = 'Commands: help, pause, resume, hardstop, restart, devstart, settime, save, load, delsave';
                     break;
                 case 'pause':
-                    feedback.textContent = core.clock.isPaused ? "Already paused" : "Game paused";
-                    core.clock.pause();
+                    feedback.textContent = core.runtimeMode !== core.constructor.RuntimeModes.RUNNING ? "Already paused" : "Game paused";
+                    core.setRuntimeMode(core.constructor.RuntimeModes.PAUSED);
                     break;
                 case 'resume':
-                    feedback.textContent = !core.clock.isPaused && core.isRunning ? "Nothing was paused" : "Game resumed";
+                    feedback.textContent = core.runtimeMode === core.constructor.RuntimeModes.RUNNING ? "Nothing was paused" : "Game resumed";
                     core.resume();
-                    core.clock.resume();
+                    core.setRuntimeMode(core.constructor.RuntimeModes.RUNNING);
                     break;
                 case 'forcestop':
                     feedback.textContent = ! core.isRunning ? "Game is already stopped" : "Force stopped game";

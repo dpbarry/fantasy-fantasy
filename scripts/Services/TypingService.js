@@ -139,7 +139,7 @@ export default class TypingService {
         return new Promise(resolve => {
             choiceElements.forEach((el, i) => {
                 el.onclick = async () => {
-                    if (body._scrollObserver) body._scrollObserver.disconnect();
+                    body._scrollObserver?.disconnect();
                     choiceElements.forEach(c => c.onclick = null);
                     el.classList.add("selected");
 
@@ -153,8 +153,8 @@ export default class TypingService {
 
                     if (i === 0) {
                         await Utils.delay(250);
-                        const currentPad = parseFloat(getComputedStyle(document.querySelector('#story')).paddingBottom) || 0;
-                        document.querySelector('#story').style.paddingBottom = `${currentPad + addedHeight}px`;
+                        const currentPad = parseFloat(getComputedStyle(body).paddingBottom) || 0;
+                        body.style.paddingBottom = `${currentPad + addedHeight}px`;
                         unselected.forEach(c => c.remove());
                     } else {
                         const clones = unselected.map(orig => {
@@ -168,13 +168,13 @@ export default class TypingService {
                         await Utils.delay(550);
 
                         unselected.forEach(c => c.remove());
-                        const currentPad = parseFloat(getComputedStyle(document.querySelector('#story')).paddingBottom) || 0;
-                        document.querySelector('#story').style.paddingBottom = `${currentPad + addedHeight}px`;
-                        document.querySelector("#story")._excessPadding += addedHeight;
+                        const currentPad = parseFloat(getComputedStyle(body).paddingBottom) || 0;
+                        body.style.paddingBottom = `${currentPad + addedHeight}px`;
+                        body._excessPadding = (body._excessPadding || 0) + addedHeight;
                         clones.forEach(c => c.remove());
                     }
 
-                    if (body._scrollObserver) {
+                    if (body._scrollObserver?.observe) {
                         body._scrollObserver.observe(body, {
                             childList: true, subtree: true, characterData: true
                         });

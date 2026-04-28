@@ -7,11 +7,10 @@ export default function createContextMenuService(core, tooltipService) {
     let dismissHandlers = null;
 
     const PANEL_SHORTCUTS = [
-        { loc: 'center', panel: 'story', label: 'Story' },
-        { loc: 'center', panel: 'industry', label: 'Industry' },
-        { loc: 'center', panel: 'research', label: 'Research' },
-        { loc: 'right', panel: 'news', label: 'News' },
-        { loc: 'right', panel: 'settings', label: 'Settings' },
+        { loc: 'main', panel: 'industry', label: 'Industry' },
+        { loc: 'main', panel: 'research', label: 'Research' },
+        { loc: 'ledger', panel: 'log', label: 'Log' },
+        { loc: 'main', panel: 'codex', label: 'Codex' },
     ];
 
     function registerMenu(selector, getActions) {
@@ -169,7 +168,9 @@ export default function createContextMenuService(core, tooltipService) {
             destroyMenu();
         }
 
-        const items = PANEL_SHORTCUTS.map(({ loc, panel, label }) => ({
+        const items = PANEL_SHORTCUTS
+            .filter(({ loc }) => loc !== 'ledger' || core.ui?.isLedgerVisible())
+            .map(({ loc, panel, label }) => ({
             label,
             action: () => {
                 if (core.ui && core.ui.show) {

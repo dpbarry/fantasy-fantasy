@@ -6,6 +6,7 @@ import createInfoBox from "../UI/Components/InfoBox.js";
 
 export default class StoryManager {
     #running = false;
+    #prologueUnfinished = true;
 
     constructor(core) {
         this.core = core;
@@ -13,6 +14,14 @@ export default class StoryManager {
         this.snapshots = "";
         this.choices = {};
         this.dismissedInfoBoxes = new Set();
+    }
+
+    syncPrologueStateFromProgress() {
+        this.#prologueUnfinished = (this.progress ?? 0) < 6;
+    }
+
+    syncPrologueUnfinishedFromIndustry() {
+        this.syncPrologueStateFromProgress();
     }
 
     checkpoint(phase) {
@@ -28,6 +37,9 @@ export default class StoryManager {
         return this.choices[this.progress - 1];
     }
 
+    get prologueUnfinished() {
+        return this.#prologueUnfinished;
+    }
 
     async typeP(text, opts = {}) {
         return await TypingService.typeP(text, this.core.ui.story, opts);
@@ -63,7 +75,7 @@ export default class StoryManager {
 
     async beginPrologue() {
         this.checkpoint(0);
-        this.core.clock.pause();
+        this.core.setRuntimeMode(this.core.constructor.RuntimeModes.PROLOGUE);
         this.typeWithInputs("You jolt awake, your head spinning. What a wild dream that must have been. You can hardly even remember your own name... But of course, it is @ @!", "5.5em", "getname", InputService.firstlastNameValidate).then(this.getName.bind(this));
     }
 
@@ -76,10 +88,12 @@ export default class StoryManager {
         const finishGetName = async () => {
             cleanupFocusRecapture();
             this.core.city.setRulerName(inputFirst.value, inputSecond.value);
-            this.core.ui.panels.story.skipBanner.classList.add("hide");
-            this.core.ui.panels.story.skipBanner.onanimationend = () => this.core.ui.panels.story.skipBanner.style.display = "none";
-            this.core.clock.resume();
-            this.core.ui.show("right", "news");
+            const skip = this.core.ui.panels.story.skipControl;
+            if (skip) {
+                skip.classList.add("hide");
+                skip.disabled = true;
+            }
+            this.core.ui.show("ledger", "log");
             this.core.news.update("You woke up from a strange dream.");
             let n = 0;
 
@@ -169,6 +183,10 @@ export default class StoryManager {
                     this.core.city.ruler.valor = 10;
                     return ["+10 @", ["Valor"], ["term"], ["valor"]];
                 case 2:
+                    chosenSpecialty = "Wisdom";
+                    this.core.city.ruler.wisdom = 10;
+                    return ["+10 @", ["Wisdom"], ["term"], ["wisdom"]];
+                default:
                     chosenSpecialty = "Wisdom";
                     this.core.city.ruler.wisdom = 10;
                     return ["+10 @", ["Wisdom"], ["term"], ["wisdom"]];
@@ -346,7 +364,7 @@ export default class StoryManager {
     }
 
     boot() {
-        if (this.core.industry.access.basic && this.core.ui.activePanels["center"] === "industry") {
+        if (this.core.ui.activePanels.main === "industry") {
             requestAnimationFrame(() => {
                 this.showProductionInfoBoxes();
                 this.checkFarmPlotWorkerInfo();
@@ -355,7 +373,7 @@ export default class StoryManager {
     }
 
     updateRunning() {
-        if (this.core.ui.activePanels["center"] !== "story") {
+        if (!this.#prologueUnfinished) {
             this.#running = false;
             return;
         }
@@ -387,17 +405,18 @@ export default class StoryManager {
 
 
     async startGame(fromSkip = false) {
-        this.core.clock.resume();
+        this.#running = false;
+        this.#prologueUnfinished = false;
+        this.core.ui.panels.story.endPrelude();
+        this.core.setRuntimeMode(this.core.constructor.RuntimeModes.RUNNING);
 
         if (fromSkip) {
-            this.core.ui.show("right", "news");
+            this.core.ui.show("ledger", "log");
             this.core.news.update("You woke up from a strange dream.");
         }
 
         await delay(200);
-        this.core.industry.access.basic = true;
-        document.querySelector("#industrynav").classList.remove("locked");
-        this.core.ui.show("center", "industry");
+        this.core.ui.show("main", "industry");
         this.showProductionInfoBoxes();
     }
 } 

@@ -193,8 +193,8 @@ export default class InputService {
 
         const blurHandler = (e) => {
             if (!blurEnabled) return;
-            if (window.matchMedia("(width <= 950px)").matches) return;
-            if (e.srcElement?.closest("dialog") || e.relatedTarget?.closest("#story input") || (e.relatedTarget?.closest(".main-section") && !e.relatedTarget.closest(".main-section").classList.contains("active"))) return;
+            if (window.matchMedia("(width <= 850px)").matches) return;
+            if (e.srcElement?.closest("dialog") || e.relatedTarget?.closest("#story input") || e.relatedTarget?.closest("#story-skip") || e.relatedTarget?.closest("dialog")) return;
             if (!e.relatedTarget || !e.relatedTarget.closest("#story")) e.currentTarget.focus({ preventScroll: true });
         };
 
@@ -211,7 +211,7 @@ export default class InputService {
         };
     }
 
-    static getButton(text, id, cb, className = "basic-button ripples nudge") {
+    static getButton(text, id, cb, className = "raised-button ripples nudge") {
         const b = document.createElement("button");
         b.textContent = text;
         b.id = id;

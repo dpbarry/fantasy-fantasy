@@ -11,6 +11,8 @@ export default class IndustryPanel {
         this.previousLimits = {};
         this.previousBuildingState = {};
         this.incrementBtn = null;
+        this.lastTheurgyClick = {};
+        this.theurgyThrottleMs = 125;
         this.setupChevron();
         this.setupTheurgyButtons();
         this.createResourceRows();
@@ -67,7 +69,8 @@ export default class IndustryPanel {
             if (this.resourcebox._rows[k]) {
                 const { valueSpan, rateSpan, row } = this.resourcebox._rows[k];
                 const parts = formatValueParts(v.value);
-                if (this.isExpanded || window.matchMedia('(width <= 950px)').matches) {
+                const currentVal = v.value.toNumber();
+                if (this.isExpanded || window.matchMedia('(width <= 850px)').matches) {
                     if (parts.hasAbbrev || !parts.dec) {
                         valueSpan.textContent = parts.int + parts.dec + parts.exp;
                     } else {
@@ -78,12 +81,13 @@ export default class IndustryPanel {
                 }
 
                 const cap = v.effectiveCap;
+                let isCapped = false;
                 if (cap !== undefined) {
-                    const currentVal = v.value.toNumber();
                     const capVal = cap.toNumber();
                     const percent = Math.min(100, (currentVal / capVal) * 100);
                     row.style.setProperty('--cap-percent', percent / 100);
                     row.classList.add('has-cap');
+                    isCapped = currentVal >= capVal;
                 } else {
                     row.classList.remove('has-cap');
                 }
@@ -91,24 +95,26 @@ export default class IndustryPanel {
                 const resData = this.core.industry.getResourceEffects(k);
                 const rateNum = resData ? resData.net : 0;
 
-                const showRate = this.isExpanded || window.matchMedia('(width <= 950px)').matches;
+                const showRate = this.isExpanded || window.matchMedia('(width <= 850px)').matches;
                 const prevRate = this.previousRates[k];
 
                 if (showRate) {
-                    if (rateNum !== 0 && prevRate !== undefined && Math.abs(rateNum - prevRate) > 0.1 && buildingStateChanged) {
+                    if (!isCapped && rateNum !== 0 && prevRate !== undefined && Math.abs(rateNum - prevRate) > 0.1 && buildingStateChanged) {
                         const isIncrease = rateNum > prevRate;
                         this.createRateIndicator(rateSpan, isIncrease);
                     }
 
-                    rateSpan.textContent = (rateNum >= 0 ? '+' : '') + formatRate(rateNum);
+                    rateSpan.textContent = isCapped ? '+0.00' : (rateNum >= 0 ? '+' : '') + formatRate(rateNum);
                     rateSpan.classList.toggle('positive', rateNum > 0);
                     rateSpan.classList.toggle('negative', rateNum < 0);
-                    if (rateNum === 0) rateSpan.classList.remove('positive', 'negative');
+                    if (isCapped || rateNum === 0) rateSpan.classList.remove('positive', 'negative');
 
                     this.previousRates[k] = rateNum;
 
                     const { nameSpan } = this.resourcebox._rows[k];
-                    if (rateNum > 0) {
+                    if (isCapped) {
+                        nameSpan.classList.remove('gaining', 'draining');
+                    } else if (rateNum > 0) {
                         nameSpan.classList.remove('draining');
                         nameSpan.classList.add('gaining');
                     } else if (rateNum < 0) {
@@ -139,6 +145,10 @@ export default class IndustryPanel {
             if (isUnlocked && !this.buildingCards[type]) {
                 const card = this.createBuildingCard(type, b, def);
                 buildingsContainer.appendChild(card);
+                requestAnimationFrame(() => {
+                    const cardEl = this.buildingCards[type]?.container;
+                //    if (cardEl) this.core.ui.effects?.bloomAt(cardEl, { maxRadius: 90, embers: 12 });
+                });
             }
 
             if (!isUnlocked && this.buildingCards[type]) {
@@ -351,6 +361,13 @@ export default class IndustryPanel {
     // ============================================================================
 
     handleTheurgyClick(theurgyType, event) {
+        const now = Date.now();
+        const lastClick = this.lastTheurgyClick[theurgyType] || 0;
+        
+        if (now - lastClick < this.theurgyThrottleMs) return;
+        
+        this.lastTheurgyClick[theurgyType] = now;
+
         const changes = this.core.industry.performTheurgy(theurgyType);
         const button = this.theurgyButtons[theurgyType];
         if (!button) return;
@@ -367,7 +384,7 @@ export default class IndustryPanel {
 
         this.updateTheurgyButtonStates();
 
-        if (theurgyType === 'plant' && this.core.story) {
+        if (theurgyType === 'plant') {
             this.core.story.dismissInfoBox('theurgy-plant');
         }
     }
@@ -386,7 +403,7 @@ export default class IndustryPanel {
         } else {
             this.core.industry.unassignWorkerFromBuilding(type);
         }
-        if (type === 'farmPlot' && this.core.story && action === 'assign') {
+        if (type === 'farmPlot' && action === 'assign') {
             this.core.story.dismissInfoBox('farm-plot-worker');
         }
     }
@@ -399,7 +416,7 @@ export default class IndustryPanel {
                 .filter(({ total }) => total > 0)
                 .forEach(({ res, total }) => this.addResourceFloater(res, { type: changeType, amt: total, res }));
         }
-        if (result > 0 && this.core.story && storyKey) {
+        if (result > 0 && storyKey) {
             this.core.story.dismissInfoBox(storyKey);
             if (type === 'farmPlot') this.core.story.checkFarmPlotWorkerInfo();
         }
@@ -747,7 +764,7 @@ export default class IndustryPanel {
         if (progress <= 0 || progress >= 1) {
             progressFill.style.borderRight = 'none';
         } else {
-            progressFill.style.borderRight = '1px solid color-mix(in oklab, var(--bgColor) 35%, var(--accent))';
+            progressFill.style.borderRight = '1px solid color-mix(in oklab, var(--surface) 35%, var(--accent))';
         }
 
         progressFill.dataset.prevWidth = newWidth.toString();
@@ -929,13 +946,13 @@ export default class IndustryPanel {
                 <div class="dropdown-section-body">
                     <div class="action-buttons">
                         <div class="button-with-info">
-                            <button class="basic-button dropdown-add-building-btn" data-building-type="${type}" ${!canBuild ? 'disabled' : ''} style="position: relative;">
+                            <button class="raised-button dropdown-add-building-btn" data-building-type="${type}" ${!canBuild ? 'disabled' : ''} style="position: relative;">
                                 <div class="build-progress-fill"></div>
                                 Build
                             </button>
                         </div>
                         <div class="button-with-info">
-                            <button class="basic-button dropdown-sell-btn" ${!canSell ? 'disabled' : ''} data-building-type="${type}">Demolish</button>
+                            <button class="raised-button dropdown-sell-btn" ${!canSell ? 'disabled' : ''} data-building-type="${type}">Demolish</button>
                         </div>
                     </div>
                 </div>
@@ -963,13 +980,13 @@ export default class IndustryPanel {
                 <div class="dropdown-section-body">
                     <div class="action-buttons">
                         <div class="button-with-info">
-                            <button class="basic-button dropdown-add-worker-btn ${!canAdd ? 'hastip' : ''}" data-building-type="${type}" ${!canAdd ? `disabled data-tips="hire"` : ''} style="position: relative;">
+                            <button class="raised-button dropdown-add-worker-btn ${!canAdd ? 'hastip' : ''}" data-building-type="${type}" ${!canAdd ? `disabled data-tips="hire"` : ''} style="position: relative;">
                                 <div class="hire-progress-fill"></div>
                                 <span class="hire-btn-label" style="position: relative; z-index: 1;">Hire</span>
                             </button>
                         </div>
                         <div class="button-with-info">
-                            <button class="basic-button dropdown-remove-worker-btn" ${!canRemove ? 'disabled' : ''} data-building-type="${type}">Furlough</button>
+                            <button class="raised-button dropdown-remove-worker-btn" ${!canRemove ? 'disabled' : ''} data-building-type="${type}">Furlough</button>
                         </div>
                     </div>
                     ${onStrike ? `
@@ -1000,155 +1017,231 @@ export default class IndustryPanel {
         });
     }
 
-    #addContextualModifiers(modifiers, category, units, scale, effectType) {
-        const mods = modifiers ? [...modifiers] : [];
+    #effectChildren(effect, category, units, scale, effectType) {
+        const traceSteps = effect?.trace?.steps || effect?.trace?.factors || [];
+        const children = traceSteps.map((step) => ({
+            value: step.displayValue || step.value,
+            label: '',
+            note: step.label || step.source || '',
+            tone: 'neutral',
+            children: []
+        }));
         if (category === 'rate' && units > 1) {
             const unitLabel = effectType === 'base' ? 'buildings' : 'workers';
-            mods.push({ value: '×', label: `${units} ${unitLabel}` });
+            children.push({
+                value: `×${units}`,
+                label: '',
+                note: unitLabel,
+                tone: 'neutral',
+                children: []
+            });
         }
         if (category === 'rate' && scale < 1) {
-            mods.push({ value: `×${(scale * 100).toFixed(0)}%`, label: 'throttled' });
+            children.push({
+                value: `×${(scale * 100).toFixed(0)}%`,
+                label: '',
+                note: 'throttled',
+                tone: 'neutral',
+                children: []
+            });
         }
-        return mods;
+        return children;
     }
 
-    formatActionTooltip(action, type) {
+    #toneFromDirection(direction) {
+        return direction === 'gain' ? 'gain' : direction === 'drain' ? 'drain' : 'neutral';
+    }
+
+    #buildActionBreakdown(action, type, opts = {}) {
+        const { includeResult = true, includePlanHeader = true } = opts;
         const plan = this.core.industry.getActionPlan(action, type);
 
-        if (plan.actual <= 0) {
-            return { header: this.getDisabledReason(action, type) };
+        if (includePlanHeader && plan.actual <= 0) {
+            return { header: this.getDisabledReason(action, type), chain: [], resultRows: [] };
         }
 
-        if (action === 'sell' || action === 'furlough') {
+        if (includePlanHeader && (action === 'sell' || action === 'furlough')) {
             if (plan.actual < plan.target) {
                 const actionName = action === 'sell' ? 'demolish' : 'furlough';
-                return { header: `Can only ${actionName} ${plan.actual} (all)` };
+                return { header: `Can only ${actionName} ${plan.actual} (all)`, chain: [], resultRows: [] };
             }
             return null;
         }
 
-        const data = this.core.industry.getActionEffects(action, type);
+        const data = this.core.industry.getCalculationSegment('action', { action, type });
         if (!data) return null;
 
         const { effects, scale, units, effectType } = data;
-        const isPartial = plan.actual < plan.target;
-        const items = [];
+        const chain = [];
         const netRates = {};
-
         const sorted = this.#sortEffects(effects);
 
         for (const eff of sorted) {
-            const { category, resource, direction, tag, baseValue, value, modifiers } = eff;
-            const isGain = direction === 'gain';
-            const mods = this.#addContextualModifiers(modifiers, category, units, scale, effectType);
+            const { category, resource, direction, tag, baseValue, value } = eff;
+            const tone = this.#toneFromDirection(direction);
+            const children = this.#effectChildren(eff, category, units, scale, effectType);
 
-            switch (category) {
-                case 'cost':
-                    items.push({ value: `-${this.fmt(value)}`, label: resource, type: 'drain', note: 'cost', modifiers: mods });
-                    break;
-                case 'reward':
-                    items.push({ value: `+${this.fmt(value)}`, label: resource, type: 'gain', modifiers: mods });
-                    break;
-                case 'cap':
-                    items.push({ value: `${isGain ? '+' : '-'}${this.fmt(value)}`, label: `${resource} cap`, type: isGain ? 'gain' : 'drain', modifiers: mods });
-                    break;
-                case 'rate':
-                    items.push({ value: `${isGain ? '+' : '-'}${this.fmt(baseValue)}`, label: `${resource}/s`, type: isGain ? 'gain' : 'drain', note: tag, modifiers: mods });
-                    netRates[resource] = (netRates[resource] || 0) + (isGain ? value * scale : -value * scale);
-                    break;
+            if (category === 'cost') {
+                chain.push({ value: `-${this.fmt(value)}`, label: resource, note: 'cost', tone: 'drain', children });
+                continue;
+            }
+            if (category === 'reward') {
+                chain.push({ value: `+${this.fmt(value)}`, label: resource, tone: 'gain', children });
+                continue;
+            }
+            if (category === 'cap') {
+                chain.push({
+                    value: `${direction === 'gain' ? '+' : '-'}${this.fmt(value)}`,
+                    label: `${resource} cap`,
+                    tone,
+                    children
+                });
+                continue;
+            }
+            if (category === 'rate') {
+                chain.push({
+                    value: `${direction === 'gain' ? '+' : '-'}${this.fmt(baseValue)}`,
+                    label: `${resource}/s`,
+                    note: tag,
+                    tone,
+                    children
+                });
+                netRates[resource] = (netRates[resource] || 0) + (direction === 'gain' ? value * scale : -value * scale);
             }
         }
 
-        const header = isPartial ? `Can ${action} ${units}` : null;
-        const resultEntries = Object.entries(netRates).filter(([, v]) => Math.abs(v) >= 0.0001);
-        const result = resultEntries.length > 0 ? {
-            items: resultEntries.map(([res, v]) => ({
-                value: `${v > 0 ? '+' : ''}${this.fmt(v)}`,
-                label: `${res}/s`,
-                type: v > 0 ? 'gain' : 'drain'
-            }))
-        } : null;
+        const resultRows = includeResult
+            ? Object.entries(netRates)
+                .filter(([, v]) => Math.abs(v) >= 0.0001)
+                .map(([res, v]) => ({
+                    value: `${v >= 0 ? '+' : ''}${this.fmt(v)}`,
+                    label: `${res}/s`,
+                    tone: v >= 0 ? 'gain' : 'drain'
+                }))
+            : [];
 
-        return { header, items, result };
+        const isPartial = plan.actual < plan.target;
+        return {
+            header: includePlanHeader && isPartial ? `Can ${action} ${units}` : '',
+            chain,
+            resultRows
+        };
+    }
+
+    formatActionTooltip(action, type) {
+        return this.#buildActionBreakdown(action, type, { includeResult: true, includePlanHeader: true });
     }
 
     formatAggregateTooltip(type, effectType) {
-        const data = this.core.industry.getAggregateEffects(type, effectType);
+        const data = this.core.industry.getCalculationSegment('aggregate', { type, effectType });
         if (!data) return null;
 
         const { effects, units, scale } = data;
 
         const sorted = this.#sortEffects(effects);
-        const items = [];
+        const chain = [];
         const netByResource = {};
 
         for (const eff of sorted) {
-            const { resource, direction, tag, baseValue, value, modifiers } = eff;
-            const isGain = direction === 'gain';
-            const mods = this.#addContextualModifiers(modifiers, 'rate', units, scale, effectType);
+            const { resource, direction, tag, baseValue, value } = eff;
+            const children = this.#effectChildren(eff, 'rate', units, scale, effectType);
+            const tone = this.#toneFromDirection(direction);
 
-            items.push({
-                value: `${isGain ? '+' : '-'}${this.fmt(baseValue)}`,
+            chain.push({
+                value: `${direction === 'gain' ? '+' : '-'}${this.fmt(baseValue)}`,
                 label: `${resource}/s`,
-                type: isGain ? 'gain' : 'drain',
+                tone,
                 note: tag,
-                modifiers: mods
+                children
             });
 
-            netByResource[resource] = (netByResource[resource] || 0) + (isGain ? value : -value) * scale;
+            netByResource[resource] = (netByResource[resource] || 0) + (direction === 'gain' ? value : -value) * scale;
         }
 
-        const resultItems = Object.entries(netByResource)
+        const resultRows = Object.entries(netByResource)
             .filter(([, net]) => Math.abs(net) >= 0.0001)
             .map(([res, net]) => ({
                 value: `${net >= 0 ? '+' : ''}${this.fmt(net)}`,
                 label: `${res}/s`,
-                type: net >= 0 ? 'gain' : 'drain'
+                tone: net >= 0 ? 'gain' : 'drain'
             }));
 
-        if (items.length === 0) return null;
+        if (chain.length === 0) return null;
 
         return [{
-            items,
-            result: resultItems.length > 0 ? { items: resultItems } : null
+            chain,
+            resultRows
         }];
     }
 
     formatResourceTooltip(res) {
-        const data = this.core.industry.getResourceEffects(res);
+        const data = this.core.industry.getCalculationSegment('resource', { resource: res });
         if (!data) return null;
 
-        const { effects, net } = data;
-        const items = [];
+        const { effects, net, rawNet = net, netFactors = [], isCapped = false } = data;
+        const chain = [];
+        const formatRateNote = (sourceName, effectType, tag) => {
+            if (!tag) return sourceName;
+            if (tag === 'prod') return effectType === 'worker' ? 'workers' : sourceName;
+            if (tag === 'pay' || tag === 'input') {
+                return `${effectType === 'worker' ? 'worker' : sourceName} ${tag}`;
+            }
+            return `${sourceName} ${tag}`;
+        };
 
         const sorted = this.#sortEffects(effects);
 
         for (const eff of sorted) {
-            const { buildingType, effectType, direction, tag, value, modifiers, scale = 1 } = eff;
+            const { buildingType, effectType, direction, tag, value, scale = 1, baseTotal, trace } = eff;
             const def = this.defs[buildingType];
             const name = effectType === 'base' ? (def?.name?.toLowerCase() || buildingType) : 'workers';
-            const isGain = direction === 'gain';
-            const scaledValue = Math.abs(value) * scale;
+            const rowValue = Math.abs(baseTotal ?? value);
+            const tone = this.#toneFromDirection(direction);
 
-            const mods = modifiers ? [...modifiers] : [];
-            if (scale < 1 && effectType === 'worker') {
-                mods.push({ value: `×${(scale * 100).toFixed(0)}%`, label: 'throttled' });
-            }
-
-            items.push({
-                value: `${isGain ? '+' : '-'}${this.fmt(scaledValue)}`,
+            chain.push({
+                value: `${direction === 'gain' ? '+' : '-'}${this.fmt(rowValue)}`,
                 label: '/s',
-                type: isGain ? 'gain' : 'drain',
-                note: `${name} (${tag})`,
-                modifiers: mods.length > 0 ? mods : undefined
+                tone,
+                note: formatRateNote(name, effectType, tag),
+                children: this.#effectChildren(eff, 'rate', trace?.units ?? 1, scale, effectType)
             });
         }
 
-        if (!items.length) return null;
+        if (!chain.length) return null;
+
+        const hasCapMultiplierStage = isCapped && rawNet > 0 && netFactors.length > 0;
+        if (hasCapMultiplierStage) {
+            chain.push({
+                kind: 'result',
+                value: `${rawNet >= 0 ? '+' : ''}${this.fmt(rawNet)}`,
+                label: '/s',
+                tone: rawNet >= 0 ? 'gain' : 'drain'
+            });
+            for (const factor of netFactors) {
+                chain.push({
+                    value: factor.value,
+                    label: '',
+                    note: factor.label,
+                    tone: 'neutral',
+                    children: []
+                });
+            }
+            chain.push({
+                kind: 'result',
+                value: `${net >= 0 ? '+' : ''}${this.fmt(net)}`,
+                label: '/s',
+                tone: net >= 0 ? 'gain' : 'drain'
+            });
+            return { chain, resultRows: [] };
+        }
 
         return {
-            items,
-            result: { items: [{ value: `${net >= 0 ? '+' : ''}${this.fmt(net)}`, label: '/s', type: net >= 0 ? 'gain' : 'drain' }] }
+            chain,
+            resultRows: [{
+                value: `${net >= 0 ? '+' : ''}${this.fmt(net)}`,
+                label: '/s',
+                tone: net >= 0 ? 'gain' : 'drain'
+            }]
         };
     }
 
@@ -1163,36 +1256,9 @@ export default class IndustryPanel {
     }
 
     formatInfoBoxTooltip(action, type) {
-        const data = this.core.industry.getActionEffects(action, type);
-        if (!data) return null;
-
-        const { effects, scale, units, effectType } = data;
-        const items = [];
-
-        const sorted = this.#sortEffects(effects);
-
-        for (const eff of sorted) {
-            const { category, resource, direction, tag, baseValue, value, modifiers } = eff;
-            const isGain = direction === 'gain';
-            const mods = this.#addContextualModifiers(modifiers, category, units, scale, effectType);
-
-            switch (category) {
-                case 'cost':
-                    items.push({ value: `-${this.fmt(value)}`, label: resource, type: 'drain', note: 'cost', modifiers: mods });
-                    break;
-                case 'reward':
-                    items.push({ value: `+${this.fmt(value)}`, label: resource, type: 'gain', modifiers: mods });
-                    break;
-                case 'cap':
-                    items.push({ value: `${isGain ? '+' : '-'}${this.fmt(value)}`, label: `${resource} cap`, type: isGain ? 'gain' : 'drain', modifiers: mods });
-                    break;
-                case 'rate':
-                    items.push({ value: `${isGain ? '+' : '-'}${this.fmt(baseValue)}`, label: `${resource}/s`, type: isGain ? 'gain' : 'drain', note: tag, modifiers: mods });
-                    break;
-            }
-        }
-
-        return items.length ? { items } : null;
+        const breakdown = this.#buildActionBreakdown(action, type, { includeResult: false, includePlanHeader: false });
+        if (!breakdown || !breakdown.chain.length) return null;
+        return breakdown;
     }
 
     formatAggregateEffectsInline(type, effectType) {
@@ -1435,6 +1501,17 @@ export default class IndustryPanel {
         return value?.toNumber?.() ?? (Number(value) || 0);
     }
 
+    formatResourceCapSummary(resourceKey) {
+        const resource = this.core.industry.resources[resourceKey];
+        if (!resource) return '';
+        const cap = resource.effectiveCap;
+        if (cap === undefined) return '';
+        const capVal = cap.toNumber();
+        const currentVal = resource.value.toNumber();
+        const percent = ((currentVal / capVal) * 100).toFixed(1);
+        return `<p style="opacity: 0.8; margin-top: 0.3em">Cap: ${this.fmt(capVal)} (${percent}%)</p>`;
+    }
+
     getTotalAmount(value, count) {
         if (!count) return 0;
         const total = this.getValueNumber(value) * count;
@@ -1459,70 +1536,7 @@ export default class IndustryPanel {
     // ============================================================================
 
     createParticleExplosion(event) {
-        const GRAVITY = 0.05;
-        const DRAG = 0.97;
-        const LIFESPAN = 70;
-
-        const particles = [];
-
-        const startX = event.clientX;
-        const startY = event.clientY;
-        const count = 5 + Math.floor(Math.random() * 3);
-
-        const canvas = this.core.ui.canvas;
-        const ctx = canvas.getContext('2d');
-
-        for (let i = 0; i < count; i++) {
-            const size = 0.8 + Math.random();
-            const angle = Math.random() * 2 * Math.PI;
-            const speed = 1 + Math.random() * 1.5;
-            const vx = Math.cos(angle) * speed;
-            const vy = Math.sin(angle) * speed * 0.6 - (0.8 + Math.random());
-
-            particles.push({
-                x: startX,
-                y: startY,
-                vx,
-                vy,
-                age: 0,
-                size,
-                lifespan: LIFESPAN
-            });
-        }
-
-        const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
-
-        function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const p = particles[i];
-
-                p.vx *= DRAG;
-                p.vy = p.vy * DRAG + GRAVITY;
-                p.x += p.vx;
-                p.y += p.vy;
-                p.age++;
-
-                const t = p.age / p.lifespan;
-                const alpha = 1 - t;
-
-                ctx.fillStyle = accent.replace('hsl', 'hsla').replace(')', `, ${alpha.toFixed(2)})`);
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, 2 * Math.PI);
-                ctx.fill();
-
-                if (p.age >= p.lifespan) {
-                    particles.splice(i, 1);
-                }
-            }
-
-            if (particles.length > 0) {
-                requestAnimationFrame(animate);
-            }
-        }
-
-        requestAnimationFrame(animate);
+        this.core.ui.effects?.embers(event.clientX, event.clientY, { count: 5 + Math.floor(Math.random() * 3) });
     }
 
     createRateIndicator(targetElement, isIncrease) {
@@ -1587,9 +1601,19 @@ export default class IndustryPanel {
     // LIFECYCLE
     // ============================================================================
 
+    onVisibilityChange({ activePanels, change }) {
+        const { loc, panel } = change;
+        const activeMainPanel = loc === "main" ? panel : activePanels.main;
+        this.core.industry.updateLoops(activeMainPanel);
+        if (loc === "main" || change.reason === "show") {
+            this.root.classList.toggle("shown", activeMainPanel === "industry");
+        }
+    }
+
     updateVisibility(loc, panel) {
-        this.core.industry.updateLoops();
-        if (loc === "center") {
+        const activeMainPanel = loc === "main" ? panel : this.core.ui.activePanels.main;
+        this.core.industry.updateLoops(activeMainPanel);
+        if (loc === "main") {
             this.root.classList.toggle("shown", panel === "industry");
         }
     }

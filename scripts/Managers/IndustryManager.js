@@ -32,7 +32,7 @@ export default class IndustryManager {
 
     constructor(core) {
         this.core = core;
-        this.access = {basic: false};
+        this.access = {basic: true};
         this.resources = {
             workers: new Resource(10, {cap: 15, isDiscovered: true}),
             crops: new Resource(0, {cap: 500, isDiscovered: true}),
@@ -50,12 +50,19 @@ export default class IndustryManager {
     }
 
     #upgrades = new Set();
+    #upgradeCounter = 0;
 
     // Optional priority: lower numbers apply later (default: 0)
     // Predicate function receives full context: (args) => boolean
     // args contains: {buildingType, resource, effectType, units, gain, drain, gainMult, drainMult, rates, buildingCount, rangeStart, rangeEnd, isBackwards, currentCount}
-    upgrade(fn, predicate = null, priority = 0) {
-        const entry = {fn, predicate, priority};
+    upgrade(fn, predicate = null, priority = 0, id = null) {
+        const entry = {
+            id: id || `upgrade_${++this.#upgradeCounter}`,
+            fn,
+            predicate,
+            priority,
+            order: this.#upgradeCounter
+        };
         this.#upgrades.add(entry);
         this.#cache.dirty = true;
         return () => {
@@ -66,7 +73,11 @@ export default class IndustryManager {
     }
 
     #sortedUpgrades() {
-        return Array.from(this.#upgrades).sort((a, b) => b.priority - a.priority);
+        return Array.from(this.#upgrades).sort((a, b) => {
+            const byPriority = b.priority - a.priority;
+            if (byPriority !== 0) return byPriority;
+            return a.order - b.order;
+        });
     }
 
     #applies(entry, args) {
@@ -123,34 +134,172 @@ export default class IndustryManager {
     }
     
     #computeEffect(ctx) {
-        let value = ctx.baseValue;
-        let mult = 1;
-        const modifiers = [];
-        
+        const basePerUnit = Number(ctx.baseValue ?? 0);
+        const units = Number(ctx.units ?? 1);
+        const operations = [];
+
         for (const entry of this.#sortedUpgrades()) {
             if (!this.#applies(entry, ctx)) continue;
-            
-            let mod = entry.fn.call(this, ctx);
-            if (!mod) continue;
-            
-            for (const metaEntry of this.#sortedUpgrades()) {
-                if (metaEntry === entry) continue;
-                const metaCtx = { ...ctx, upgradeFn: entry.fn, upgradeResult: mod };
-                const metaResult = metaEntry.fn.call(this, metaCtx);
-                if (metaResult) mod = metaResult;
-            }
-            
-            if (mod.set !== undefined) value = mod.set;
-            if (mod.add !== undefined) value += mod.add;
-            if (mod.mult !== undefined) mult *= mod.mult;
-            if (mod.modifiers) modifiers.push(...mod.modifiers);
+            const result = entry.fn.call(this, ctx);
+            operations.push(...this.#normalizeUpgradeResult(result, entry));
         }
-        
+
+        const sortedOperations = this.#sortOperations(operations);
+        let perUnit = basePerUnit;
+        const steps = [];
+
+        for (const op of sortedOperations) {
+            const before = perUnit;
+            if (op.kind === 'set') perUnit = op.value;
+            if (op.kind === 'add') perUnit += op.value;
+            if (op.kind === 'mult') perUnit *= op.value;
+            const after = perUnit;
+
+            steps.push({
+                ...op,
+                before,
+                after,
+                displayValue: this.#formatOperationDisplay(op)
+            });
+        }
+
+        const modifierRows = steps.map((step) => ({
+            value: step.displayValue,
+            label: step.label,
+            scope: 'line',
+            op: step.kind,
+            source: step.source
+        }));
+
         return {
             ...ctx,
-            value: value * mult * (ctx.units ?? 1),
-            modifiers: modifiers.length > 0 ? modifiers : undefined
+            baseTotal: basePerUnit * units,
+            perUnit,
+            value: perUnit * units,
+            modifiers: modifierRows.length > 0 ? modifierRows : undefined,
+            trace: {
+                rawPerUnit: basePerUnit,
+                adjustedPerUnit: perUnit,
+                units,
+                steps,
+                factors: modifierRows
+            }
         };
+    }
+
+    #normalizeUpgradeResult(result, entry) {
+        if (!result) return [];
+        if (Array.isArray(result)) {
+            return result.flatMap((op) => this.#normalizeOperation(op, entry));
+        }
+        if (Array.isArray(result.operations)) {
+            return result.operations.flatMap((op) => this.#normalizeOperation(op, entry));
+        }
+
+        const operations = [];
+        if (result.set !== undefined) {
+            operations.push({
+                kind: 'set',
+                value: Number(result.set),
+                label: result.label || 'set',
+                layer: result.layer ?? 0
+            });
+        }
+        if (result.add !== undefined) {
+            operations.push({
+                kind: 'add',
+                value: Number(result.add),
+                label: result.label || 'add',
+                layer: result.layer ?? 0
+            });
+        }
+        if (result.mult !== undefined) {
+            operations.push({
+                kind: 'mult',
+                value: Number(result.mult),
+                label: result.label || 'mult',
+                layer: result.layer ?? 0
+            });
+        }
+        if (Array.isArray(result.modifiers)) {
+            operations.push(...result.modifiers.flatMap((mod) => this.#normalizeModifierOperation(mod, result.layer ?? 0)));
+        }
+
+        return operations.flatMap((op) => this.#normalizeOperation(op, entry));
+    }
+
+    #normalizeModifierOperation(mod, layer = 0) {
+        const parsed = this.#parseOperationValue(mod?.value);
+        if (!parsed) return [];
+        return [{
+            ...parsed,
+            label: mod?.label || parsed.kind,
+            layer
+        }];
+    }
+
+    #parseOperationValue(value) {
+        if (typeof value === 'number') return { kind: 'add', value };
+        if (typeof value !== 'string') return null;
+        const raw = value.trim();
+        if (!raw) return null;
+        if (raw.startsWith('×') || raw.startsWith('x') || raw.startsWith('X')) {
+            const parsed = Number(raw.slice(1));
+            return Number.isFinite(parsed) ? { kind: 'mult', value: parsed } : null;
+        }
+        if (raw.startsWith('+') || raw.startsWith('-')) {
+            const parsed = Number(raw);
+            return Number.isFinite(parsed) ? { kind: 'add', value: parsed } : null;
+        }
+        if (raw.startsWith('=')) {
+            const parsed = Number(raw.slice(1));
+            return Number.isFinite(parsed) ? { kind: 'set', value: parsed } : null;
+        }
+        return null;
+    }
+
+    #normalizeOperation(op, entry) {
+        if (!op || !op.kind) return [];
+        const kind = op.kind === 'mul' ? 'mult' : op.kind;
+        if (!['set', 'add', 'mult'].includes(kind)) return [];
+        const value = Number(op.value);
+        if (!Number.isFinite(value)) return [];
+        return [{
+            kind,
+            value,
+            label: op.label || entry.id,
+            layer: Number(op.layer ?? 0),
+            source: op.source || entry.id,
+            priority: entry.priority,
+            order: entry.order
+        }];
+    }
+
+    #sortOperations(operations) {
+        const kindOrder = { set: 0, add: 1, mult: 2 };
+        return [...operations].sort((a, b) => {
+            const byLayer = (a.layer ?? 0) - (b.layer ?? 0);
+            if (byLayer !== 0) return byLayer;
+            const byKind = (kindOrder[a.kind] ?? 99) - (kindOrder[b.kind] ?? 99);
+            if (byKind !== 0) return byKind;
+            const byPriority = (b.priority ?? 0) - (a.priority ?? 0);
+            if (byPriority !== 0) return byPriority;
+            return (a.order ?? 0) - (b.order ?? 0);
+        });
+    }
+
+    #formatOperationDisplay(op) {
+        if (op.kind === 'set') return `=${this.#formatFactor(op.value)}`;
+        if (op.kind === 'add') return `${op.value >= 0 ? '+' : ''}${this.#formatFactor(op.value)}`;
+        return `×${this.#formatFactor(op.value)}`;
+    }
+
+    #formatFactor(value) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return String(value);
+        if (Math.abs(n) >= 1000) return n.toExponential(2);
+        const fixed = n.toFixed(3);
+        return fixed.replace(/\.?0+$/, '');
     }
     
     #buildActionEffects(action, type, units) {
@@ -324,7 +473,7 @@ export default class IndustryManager {
 
         const effects = this.#buildActionEffects(action, type, units);
 
-        return { plan, effects, scale, def, units, effectType };
+        return { segment: 'action', plan, effects, scale, def, units, effectType };
     }
 
     getAggregateEffects(type, effectType) {
@@ -338,7 +487,7 @@ export default class IndustryManager {
         const scale = effectType === 'worker' ? this.getWorkerScale() : 1;
         const effects = this.#buildAggregateEffects(type, effectType, units);
 
-        return effects.length ? { effects, units, scale, def } : null;
+        return effects.length ? { segment: 'aggregate', effects, units, scale, def, effectType } : null;
     }
 
     getResourceEffects(res) {
@@ -375,8 +524,15 @@ export default class IndustryManager {
             }
         }
 
+        const resource = this.resources[res];
+        const cap = resource?.effectiveCap;
+        const isCapped = cap !== undefined && resource.value.gte(cap);
+        const netFactors = isCapped ? [{ value: '×0', label: 'capped', scope: 'global', op: 'mul' }] : [];
+        const rawNet = totalGain - totalDrain;
+        const net = isCapped ? 0 : rawNet;
+
         return effects.length
-            ? { effects, totalGain, totalDrain, net: totalGain - totalDrain }
+            ? { segment: 'resource', effects, totalGain, totalDrain, rawNet, net, netFactors, isCapped, resource: res }
             : null;
     }
 
@@ -384,45 +540,41 @@ export default class IndustryManager {
 
     getWorkerScale() {
         if (this.workersOnStrike) return 0;
-        
+
         const workerDrains = new Map();
         for (const [type, b] of Object.entries(this.buildings)) {
             if (b.workers <= 0) continue;
-            const def = IndustryManager.BUILDING_DEFS[type];
-            if (!def?.effects) continue;
-            for (const [res, eff] of Object.entries(def.effects)) {
-                if (eff.worker?.drain) {
-                    workerDrains.set(res, (workerDrains.get(res) || 0) + eff.worker.drain * b.workers);
-                }
+            const workerEffects = this.#buildAggregateEffects(type, 'worker', b.workers);
+            for (const effect of workerEffects) {
+                if (effect.direction !== 'drain') continue;
+                workerDrains.set(effect.resource, (workerDrains.get(effect.resource) || 0) + effect.value);
             }
         }
-        
+
         if (workerDrains.size === 0) return 1;
-        
+
         let minScale = 1;
         for (const [res, workerDrain] of workerDrains) {
             const val = this.resources[res]?.value.toNumber() || 0;
             if (val > 0) continue;
-            
+
             let production = 0;
             for (const [type, b] of Object.entries(this.buildings)) {
-                const def = IndustryManager.BUILDING_DEFS[type];
-                const eff = def?.effects?.[res];
-                if (eff?.base?.gain && b.count > 0) {
-                    const e = this.#computeEffect({
-                        category: 'rate', resource: res, direction: 'gain', tag: 'prod',
-                        baseValue: eff.base.gain, units: b.count, buildingType: type, effectType: 'base', buildingCount: b.count
-                    });
-                    production += e.value;
+                if (b.count <= 0) continue;
+                const baseEffects = this.#buildAggregateEffects(type, 'base', b.count);
+                for (const effect of baseEffects) {
+                    if (effect.resource === res && effect.direction === 'gain') {
+                        production += effect.value;
+                    }
                 }
             }
-            
+
             if (workerDrain > 0) {
                 const scale = production / workerDrain;
                 if (scale < minScale) minScale = scale;
             }
         }
-        
+
         return Math.max(0, Math.min(1, minScale));
     }
 
@@ -449,11 +601,23 @@ export default class IndustryManager {
     getCap(res) {
         const resource = this.resources[res];
         if (!resource?.cap) return undefined;
-        
+
         let cap = resource.cap.toNumber();
         for (const [type, b] of Object.entries(this.buildings)) {
             const increase = IndustryManager.BUILDING_DEFS[type]?.capIncrease?.[res];
-            if (increase) cap += increase * b.count;
+            if (!increase || b.count <= 0) continue;
+            const effect = this.#computeEffect({
+                category: 'cap',
+                resource: res,
+                direction: 'gain',
+                tag: 'cap',
+                baseValue: increase,
+                units: b.count,
+                buildingType: type,
+                effectType: 'base',
+                buildingCount: b.count
+            });
+            cap += effect.value;
         }
         return new Decimal(cap);
     }
@@ -601,20 +765,18 @@ export default class IndustryManager {
         this.core.ui.panels.industry.render(this.getData());
     }
 
-    updateLoops() {
-        if (this.core.ui.activePanels.center === "industry" && !this.#loops.industry) {
+    updateLoops(activeMainPanel = this.core.ui.activePanels.main) {
+        const industryActive = activeMainPanel === "industry";
+        if (industryActive && !this.#loops.industry) {
             this.broadcast();
             this.#loops.industry = this.core.ui.createRenderInterval(() => this.broadcast());
-        } else if (this.core.ui.activePanels.center !== "industry") {
+        } else if (!industryActive) {
             this.core.ui.destroyRenderInterval(this.#loops.industry);
             this.#loops.industry = null;
         }
     }
 
     boot() {
-        if (this.access.basic) {
-            document.querySelector("#industrynav").classList.remove("locked");
-        }
         if (this.configs.resourceBoxExpanded) {
             this.core.ui.panels.industry.toggleView();
         }
@@ -623,20 +785,24 @@ export default class IndustryManager {
     }
 
     #setupAllUpgrades() {
-        this.#setupWisdomUpgrade();
+        this.#setupSavvyUpgrade();
     }
 
-    #setupWisdomUpgrade() {
+    #setupSavvyUpgrade() {
         this.upgrade((ctx) => {
             if (ctx.tag !== 'prod') return null;
-            const wisdom = this.core.city?.ruler?.wisdom || 0;
-            if (wisdom === 0) return null;
-            const mult = 1 + wisdom * 0.01;
+            const savvy = this.core.city?.ruler?.savvy || 0;
+            if (savvy === 0) return null;
+            const mult = 1 + savvy * 0.01;
             return {
-                mult,
-                modifiers: [{ value: `x${mult}`, label: 'wisdom' }]
+                operations: [{
+                    kind: 'mult',
+                    value: mult,
+                    label: 'savvy',
+                    layer: 20
+                }]
             };
-        });
+        }, null, 20, 'ruler_savvy_prod');
     }
 
     #setupGrowthFns() {
@@ -855,6 +1021,18 @@ export default class IndustryManager {
     cycleActionIncrement() { return this.cycleIncrement(); }
     getWorkerScalingFactor() { return this.getWorkerScale(); }
     getBottleneckResources() { return this.getBottlenecks(); }
+    getCalculationSegment(segment, options = {}) {
+        if (segment === 'action') {
+            return this.getActionEffects(options.action, options.type, options);
+        }
+        if (segment === 'aggregate') {
+            return this.getAggregateEffects(options.type, options.effectType);
+        }
+        if (segment === 'resource') {
+            return this.getResourceEffects(options.resource);
+        }
+        return null;
+    }
     isMultiIncrement() { const i = this.getSelectedIncrement(); return i === 'max' || i > 1; }
     getNetRate(res) {
         return new Decimal(this.#cache.rates.get(res) || 0);

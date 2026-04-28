@@ -1,4 +1,4 @@
-import { getElementSection } from "../../Utils.js";
+import { getElementLoc } from "../../Utils.js";
 
 export default function createInfoBox(targetElement, message, options = {}) {
     const PADDING = 8;
@@ -7,9 +7,13 @@ export default function createInfoBox(targetElement, message, options = {}) {
     const box = document.createElement('div');
     box.className = 'infobox';
     if (options.id) box.dataset.infoboxId = options.id;
-    const elementSection = getElementSection(targetElement);
-    if (elementSection) {
-        box.dataset.infoboxSection = elementSection;
+    const elementLoc = getElementLoc(targetElement);
+    if (elementLoc) {
+        box.dataset.infoboxLoc = elementLoc;
+    }
+    const panelId = targetElement.closest('.panel')?.id;
+    if (panelId) {
+        box.dataset.infoboxPanel = panelId;
     }
     box.style.opacity = '0';
     
@@ -27,6 +31,7 @@ export default function createInfoBox(targetElement, message, options = {}) {
     
     let currentPos = null;
     let dismissed = false;
+    let suspended = false;
     let updateInterval = null;
     let lastMessage = message;
     
@@ -110,6 +115,7 @@ export default function createInfoBox(targetElement, message, options = {}) {
     const scrollHandler = positionBox;
     window.addEventListener('scroll', scrollHandler, true);
     window.addEventListener('resize', scrollHandler);
+    box._positionBox = positionBox;
     
     if (options.updateFn) {
         box._updateFn = options.updateFn;
@@ -126,6 +132,7 @@ export default function createInfoBox(targetElement, message, options = {}) {
                 }
                 return;
             }
+            if (suspended) return;
             
             const newMessage = options.updateFn();
             if (newMessage && newMessage !== lastMessage) {
@@ -140,8 +147,19 @@ export default function createInfoBox(targetElement, message, options = {}) {
             : setInterval(updaterFn, 250);
         box._updateInterval = updateInterval;
     }
+
+    const setSuspended = (nextSuspended) => {
+        if (dismissed) return;
+        suspended = Boolean(nextSuspended);
+        if (suspended) {
+            box.style.display = "none";
+            return;
+        }
+        box.style.display = "";
+        positionBox();
+    };
     
-    const dismiss = () => {
+    const dismiss = ({ persist = true } = {}) => {
         if (dismissed) return;
         dismissed = true;
         
@@ -166,11 +184,14 @@ export default function createInfoBox(targetElement, message, options = {}) {
             if (box.parentElement) box.remove();
         }, 200);
         
-        options.onDismiss?.();
+        if (persist) {
+            options.onDismiss?.();
+        }
     };
     
-    box.addEventListener('click', dismiss);
+    box.addEventListener('click', () => dismiss({ persist: true }));
     box._dismiss = dismiss;
+    box._setSuspended = setSuspended;
         
     return {
         dismiss,

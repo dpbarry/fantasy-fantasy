@@ -1,4 +1,3 @@
-import { getElementSection } from "../Utils.js";
 import createBreakdownBox from "../UI/Components/BreakdownBox.js";
 
 export default function createTooltipService(core) {
@@ -9,7 +8,6 @@ export default function createTooltipService(core) {
     const pointerDismissHandlers = new WeakMap();
     const pendingTooltips = new Map();
     const tooltipShownFromHold = new WeakMap();
-    const tooltipSections = new WeakMap();
 
     let tooltipLocked = false;
     let contextMenuService = null;
@@ -34,17 +32,6 @@ export default function createTooltipService(core) {
         }));
         return keys;
     };
-
-    function checkSectionAndDismiss() {
-        if (!window.matchMedia('(width <= 950px)').matches || !core.ui.visibleSection) return;
-        for (const tip of activeTips.keys()) {
-            const tooltipSection = tooltipSections.get(tip);
-            if (tooltipSection && tooltipSection !== core.ui.visibleSection) {
-                cleanupAllTooltips();
-                break;
-            }
-        }
-    }
 
     function setContextMenuService(service) {
         contextMenuService = service;
@@ -142,29 +129,79 @@ export default function createTooltipService(core) {
     const PADDING = 8, MARGIN = 3, MULTI_GAP = 4, ARROW_MIN = 12;
     const clamp = (v, min, max) => Math.max(min, Math.min(v, max));
 
-    function calcPosition(r, tb, vw, vh) {
+    function isDialogMountRoot(mount) {
+        return mount && mount !== document.body && mount.tagName === 'DIALOG';
+    }
+
+    function getTooltipMountRoot(anchor) {
+        return anchor?.closest('dialog[open]') || document.body;
+    }
+
+    const TIP_POS_FOUR = Object.freeze(['above', 'below', 'left', 'right']);
+
+    function getTooltipPositionPreference(anchor) {
+        const raw = String(anchor?.dataset?.tipPrefer || '').toLowerCase();
+        if (TIP_POS_FOUR.includes(raw)) return raw;
+        for (const s of TIP_POS_FOUR) {
+            if (anchor?.classList?.contains(`tooltip-prefer-${s}`)) return s;
+        }
+        return null;
+    }
+
+    function buildTooltipPosOrder(preferred) {
+        if (!preferred || !TIP_POS_FOUR.includes(preferred)) return [...TIP_POS_FOUR];
+        return [preferred, ...TIP_POS_FOUR.filter((p) => p !== preferred)];
+    }
+
+    function fitsInViewport(r, boxW, boxH, vw, vh) {
+        const space = { above: r.top, below: vh - r.bottom, left: r.left, right: vw - r.right };
+        const horizontalBuffer = Math.max(0, (boxW - r.width) / 2);
+        const canCenter =
+            (r.left - horizontalBuffer) >= PADDING && (r.right + horizontalBuffer) <= (vw - PADDING);
+        return (pos) => {
+            switch (pos) {
+                case 'above':
+                case 'below':
+                    return space[pos] >= boxH + PADDING && canCenter;
+                case 'left':
+                    return (r.left - boxW - MARGIN) >= PADDING;
+                case 'right':
+                    return (r.right + boxW + MARGIN) <= (vw - PADDING);
+                default:
+                    return false;
+            }
+        };
+    }
+
+    function calcPosition(r, tb, vw, vh, preferred) {
+        const order = buildTooltipPosOrder(preferred);
+        const fits = fitsInViewport(r, tb.width, tb.height, vw, vh);
         const cx = r.left + r.width / 2;
         const cy = r.top + r.height / 2;
-        const space = { above: r.top, below: vh - r.bottom, left: r.left, right: vw - r.right };
-
-        let pos;
-        if (space.above >= tb.height + PADDING) pos = 'above';
-        else if (space.below >= tb.height + PADDING) pos = 'below';
-        else if (space.right >= tb.width + PADDING) pos = 'right';
-        else if (space.left >= tb.width + PADDING) pos = 'left';
-        else pos = space.above >= space.below ? 'above' : 'below';
+        const pos = order.find(fits) || 'above';
 
         let top, left;
-        if (pos === 'above') { top = r.top - tb.height - MARGIN; left = cx - tb.width / 2; }
-        else if (pos === 'below') { top = r.bottom + MARGIN; left = cx - tb.width / 2; }
-        else if (pos === 'left') { top = cy - tb.height / 2; left = r.left - tb.width - MARGIN; }
-        else { top = cy - tb.height / 2; left = r.right + MARGIN; }
+        if (pos === 'above') {
+            top = r.top - tb.height - MARGIN;
+            left = cx - tb.width / 2;
+        } else if (pos === 'below') {
+            top = r.bottom + MARGIN;
+            left = cx - tb.width / 2;
+        } else if (pos === 'left') {
+            top = cy - tb.height / 2;
+            left = r.left - tb.width - MARGIN;
+        } else {
+            top = cy - tb.height / 2;
+            left = r.right + MARGIN;
+        }
 
         left = clamp(left, PADDING, vw - tb.width - PADDING);
         top = clamp(top, PADDING, vh - tb.height - PADDING);
 
-        const arrowX = (pos === 'above' || pos === 'below') ? clamp(cx - left, ARROW_MIN, tb.width - ARROW_MIN) : undefined;
-        const arrowY = (pos === 'left' || pos === 'right') ? clamp(cy - top, ARROW_MIN, tb.height - ARROW_MIN) : undefined;
+        const arrowX =
+            pos === 'above' || pos === 'below' ? clamp(cx - left, ARROW_MIN, tb.width - ARROW_MIN) : undefined;
+        const arrowY =
+            pos === 'left' || pos === 'right' ? clamp(cy - top, ARROW_MIN, tb.height - ARROW_MIN) : undefined;
 
         return { pos, top, left, arrowX, arrowY };
     }
@@ -172,12 +209,27 @@ export default function createTooltipService(core) {
     function positionSingleTooltip(el, tipBox) {
         const r = el.getBoundingClientRect();
         const tb = tipBox.getBoundingClientRect();
-        const result = calcPosition(r, tb, window.innerWidth, window.innerHeight);
+        const result = calcPosition(
+            r,
+            tb,
+            window.innerWidth,
+            window.innerHeight,
+            getTooltipPositionPreference(el)
+        );
+        const mount = tipBox._tooltipMount;
+        const dr = isDialogMountRoot(mount) ? mount.getBoundingClientRect() : null;
 
         tipBox.className = tipBox.className.replace(/tooltip-(above|below|left|right)/g, '');
         tipBox.classList.add(`tooltip-${result.pos}`);
-        tipBox.style.top = `${result.top}px`;
-        tipBox.style.left = `${result.left}px`;
+        if (dr) {
+            tipBox.style.position = 'absolute';
+            tipBox.style.top = `${result.top - dr.top}px`;
+            tipBox.style.left = `${result.left - dr.left}px`;
+        } else {
+            tipBox.style.position = '';
+            tipBox.style.top = `${result.top}px`;
+            tipBox.style.left = `${result.left}px`;
+        }
 
         if (result.arrowX !== undefined) tipBox.style.setProperty('--tooltip-arrow-x', `${result.arrowX}px`);
         if (result.arrowY !== undefined) tipBox.style.setProperty('--tooltip-arrow-y', `${result.arrowY}px`);
@@ -185,21 +237,55 @@ export default function createTooltipService(core) {
 
     function positionMultiTooltips(el, tipBoxes) {
         const r = el.getBoundingClientRect();
-        const boxes = tipBoxes.map(tb => tb.getBoundingClientRect());
-        const vw = window.innerWidth, vh = window.innerHeight;
-        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        const boxes = tipBoxes.map((tb) => tb.getBoundingClientRect());
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
         const space = { above: r.top, below: vh - r.bottom, left: r.left, right: vw - r.right };
+        const mount = tipBoxes[0]?._tooltipMount;
+        const dr = isDialogMountRoot(mount) ? mount.getBoundingClientRect() : null;
+        const ox = dr ? (x) => x - dr.left : (x) => x;
+        const oy = dr ? (y) => y - dr.top : (y) => y;
+        const setPos = (tip, topPx, leftPx) => {
+            if (dr) {
+                tip.style.position = 'absolute';
+                tip.style.top = `${oy(topPx)}px`;
+                tip.style.left = `${ox(leftPx)}px`;
+            } else {
+                tip.style.position = '';
+                tip.style.top = `${topPx}px`;
+                tip.style.left = `${leftPx}px`;
+            }
+        };
 
         const totalW = boxes.reduce((s, b) => s + b.width, 0) + MULTI_GAP * (boxes.length - 1);
         const totalH = boxes.reduce((s, b) => s + b.height, 0) + MULTI_GAP * (boxes.length - 1);
-        const maxW = Math.max(...boxes.map(b => b.width));
-        const maxH = Math.max(...boxes.map(b => b.height));
+        const maxW = Math.max(...boxes.map((b) => b.width));
+        const maxH = Math.max(...boxes.map((b) => b.height));
         const vertical = boxes.reduce((s, b) => s + b.width / b.height, 0) / boxes.length > 1;
 
-        let pos, closestIdx, gTop, gLeft;
+        const preferred = getTooltipPositionPreference(el);
+        const order = buildTooltipPosOrder(preferred);
+
+        let pos;
+        if (vertical) {
+            const verticalOrder = order.filter((p) => p === 'above' || p === 'below');
+            const fitsV = fitsInViewport(r, maxW, totalH, vw, vh);
+            pos = verticalOrder.find(fitsV) || (space.above >= space.below ? 'above' : 'below');
+        } else {
+            const horizOrder = order.filter((p) => p === 'left' || p === 'right');
+            const fitsH = (p) => {
+                if (p === 'right') return (r.right + totalW + MARGIN) <= (vw - PADDING);
+                if (p === 'left') return (r.left - totalW - MARGIN) >= PADDING;
+                return false;
+            };
+            pos = horizOrder.find(fitsH) || (space.right >= space.left ? 'right' : 'left');
+        }
+
+        let closestIdx, gTop, gLeft;
 
         if (vertical) {
-            pos = space.above >= totalH + PADDING ? 'above' : space.below >= totalH + PADDING ? 'below' : 'above';
             closestIdx = pos === 'above' ? boxes.length - 1 : 0;
             gTop = pos === 'above' ? r.top - MARGIN - totalH : r.bottom + MARGIN;
             gLeft = clamp(cx - maxW / 2, PADDING, vw - maxW - PADDING);
@@ -212,8 +298,7 @@ export default function createTooltipService(core) {
                 if (i !== closestIdx) tip.classList.add('tooltip-no-arrow');
 
                 const boxLeft = gLeft + (maxW - boxes[i].width) / 2;
-                tip.style.top = `${curTop}px`;
-                tip.style.left = `${boxLeft}px`;
+                setPos(tip, curTop, boxLeft);
                 tip.style.opacity = '';
 
                 if (i === closestIdx) {
@@ -222,7 +307,6 @@ export default function createTooltipService(core) {
                 curTop += boxes[i].height + MULTI_GAP;
             });
         } else {
-            pos = space.right >= totalW + PADDING ? 'right' : space.left >= totalW + PADDING ? 'left' : 'right';
             closestIdx = pos === 'left' ? boxes.length - 1 : 0;
             gLeft = pos === 'left' ? r.left - MARGIN - totalW : r.right + MARGIN;
             gTop = clamp(cy - maxH / 2, PADDING, vh - maxH - PADDING);
@@ -235,8 +319,7 @@ export default function createTooltipService(core) {
                 if (i !== closestIdx) tip.classList.add('tooltip-no-arrow');
 
                 const boxTop = gTop + (maxH - boxes[i].height) / 2;
-                tip.style.top = `${boxTop}px`;
-                tip.style.left = `${curLeft}px`;
+                setPos(tip, boxTop, curLeft);
                 tip.style.opacity = '';
 
                 if (i === closestIdx) {
@@ -272,7 +355,8 @@ export default function createTooltipService(core) {
             return;
         }
 
-        const elementSection = getElementSection(el);
+        const mountRoot = getTooltipMountRoot(el);
+
         const tipBoxes = tips.map(tip => {
             const tipBox = document.createElement('div');
             tipBox.className = 'tooltip';
@@ -280,13 +364,10 @@ export default function createTooltipService(core) {
             tipBox.style.opacity = '0';
             tipBox.innerHTML = tip.content;
             tipBox._lastContent = tip.content;
+            tipBox._tooltipMount = mountRoot;
 
-            const openDialog = document.querySelector('dialog[open]');
-            (openDialog || document.body).appendChild(tipBox);
+            mountRoot.appendChild(tipBox);
 
-            if (elementSection) {
-                tooltipSections.set(tipBox, elementSection);
-            }
             return tipBox;
         });
 
@@ -533,7 +614,6 @@ export default function createTooltipService(core) {
                         removeDismissHandlers(anchor);
                     });
                     activeTips.delete(tipBox);
-                    tooltipSections.delete(tipBox);
                 }
             });
         });
@@ -546,6 +626,15 @@ export default function createTooltipService(core) {
         window.addEventListener('mouseleave', () => {
             lastPointer = null;
             if (activeTips.size) cleanupAllTooltips();
+        });
+
+        window.addEventListener('resize', () => {
+            if (!canHover) {
+                if (activeTips.size) cleanupAllTooltips();
+                return;
+            }
+            cleanupAllTooltips();
+            refreshHoveredTooltip();
         });
 
         document.addEventListener('pointermove', (e) => {
@@ -606,18 +695,9 @@ export default function createTooltipService(core) {
             const res = el.dataset.resource;
             if (!res || !core.industry.resources[res]) return '';
 
-            const resObj = core.industry.resources[res];
             const panel = core.ui.panels.industry;
             const data = panel.formatResourceTooltip(res);
-
-            let capHtml = '';
-            const cap = resObj.effectiveCap;
-            if (cap !== undefined) {
-                const capVal = cap.toNumber();
-                const currentVal = resObj.value.toNumber();
-                const percent = ((currentVal / capVal) * 100).toFixed(1);
-                capHtml = `<p style="opacity: 0.8; margin-top: 0.3em">Cap: ${fmt(capVal)} (${percent}%)</p>`;
-            }
+            const capHtml = panel.formatResourceCapSummary(res);
 
             if (!data) {
                 return `<p style="opacity: 0.7; font-style: italic">No production</p>${capHtml}`;
@@ -727,12 +807,14 @@ export default function createTooltipService(core) {
                 const rate = resources[res].netGrowthRate.toNumber();
                 if (rate <= 0) {
                     dataArray.push({
-                        items: [{
+                        chain: [{
                             value: fmt(needed),
                             label: res,
-                            type: 'drain',
-                            note: 'no gain'
-                        }]
+                            tone: 'drain',
+                            note: 'no gain',
+                            children: []
+                        }],
+                        resultRows: []
                     });
                     continue;
                 }
@@ -745,19 +827,29 @@ export default function createTooltipService(core) {
                 };
                 const mod = {
                     value: `÷ ${fmt(rate)}/s`,
-                    label: 'prod.',
-                    range: [0, 0]
+                    label: 'prod.'
                 };
-                const result = {
-                    items: [{
-                        value: panel.formatTime(time)
-                    }]
-                };
+                const resultRows = [{
+                    value: panel.formatTime(time),
+                    label: '',
+                    tone: 'neutral'
+                }];
 
                 dataArray.push({
-                    items: [item],
-                    modifiers: [mod],
-                    result
+                    chain: [{
+                        value: item.value,
+                        label: item.label,
+                        note: item.note,
+                        tone: 'neutral',
+                        children: [{
+                            value: mod.value,
+                            label: '',
+                            note: mod.label,
+                            tone: 'neutral',
+                            children: []
+                        }]
+                    }],
+                    resultRows
                 });
             }
 
@@ -778,26 +870,24 @@ export default function createTooltipService(core) {
             const buildingName = def.name.toLowerCase();
             const buildingNamePlural = `${buildingName}${b.count !== 1 ? 's' : ''}`;
 
-            const item = {
-                value: `${perBuilding}`,
-                label: 'worker cap'
-            };
-            const mod = {
-                value: `x ${b.count}`,
-                label: buildingNamePlural,
-                range: [0, 0]
-            };
-            const result = {
-                items: [{
-                    value: `${total}`,
-                    label: 'worker cap'
-                }]
-            };
-
             const data = {
-                items: [item],
-                modifiers: [mod],
-                result
+                chain: [{
+                    value: `${perBuilding}`,
+                    label: 'worker cap',
+                    tone: 'neutral',
+                    children: [{
+                        value: `×${b.count}`,
+                        label: '',
+                        note: buildingNamePlural,
+                        tone: 'neutral',
+                        children: []
+                    }]
+                }],
+                resultRows: [{
+                    value: `${total}`,
+                    label: 'worker cap',
+                    tone: 'neutral'
+                }]
             };
 
             return createBreakdownBox(data);
@@ -820,24 +910,30 @@ export default function createTooltipService(core) {
             const potentialByRes = {};
             for (const eff of data.effects) {
                 const { resource, direction, value } = eff;
-                const isGain = direction === 'gain';
-                potentialByRes[resource] = (potentialByRes[resource] || 0) + (isGain ? value : -value);
+                potentialByRes[resource] = (potentialByRes[resource] || 0) + (direction === 'gain' ? value : -value);
             }
 
-            const negativePotential = [];
-            const positivePotential = [];
+            const resultRows = Object.entries(potentialByRes)
+                .filter(([, val]) => Math.abs(val) >= 0.0001)
+                .map(([resource, val]) => ({
+                    value: `${val > 0 ? '+' : ''}${fmt(val)}`,
+                    label: `${resource}/s`,
+                    tone: val > 0 ? 'gain' : 'drain'
+                }));
 
-            for (const [res, val] of Object.entries(potentialByRes)) {
-                if (Math.abs(val) >= 0.0001) {
-                    const sign = val > 0 ? '+' : '-';
-                    const color = val > 0 ? 'var(--gainColor)' : 'var(--drainColor)';
-                    const item = `<span style="color: ${color}">${sign}${fmt(Math.abs(val))} ${res}/s</span>`;
-                    (val < 0 ? negativePotential : positivePotential).push(item);
-                }
-            }
+            if (!resultRows.length) return '';
 
-            const potentialEffects = [...negativePotential, ...positivePotential];
-            return potentialEffects.length > 0 ? `<p>Potential: ${potentialEffects.join(', ')}</p>` : '';
+            return createBreakdownBox({
+                header: 'Potential',
+                chain: [{
+                    value: `×${(scale * 100).toFixed(0)}%`,
+                    label: '',
+                    note: 'throttled',
+                    tone: 'neutral',
+                    children: []
+                }],
+                resultRows
+            });
         });
 
         const navButtons = document.querySelectorAll(".navbutton");
@@ -847,6 +943,15 @@ export default function createTooltipService(core) {
                 registerTip(tipKey, () => {
                     return b.classList.contains("locked") ? "<i>Locked</i>" : b.firstElementChild.alt;
                 });
+            }
+        });
+
+        // Ledger tabs already carry their label as text — only show a tooltip
+        // when locked, matching the navbutton "Locked" treatment.
+        document.querySelectorAll(".ledger-tab").forEach(b => {
+            const tipKey = getTipKeys(b)[0];
+            if (tipKey) {
+                registerTip(tipKey, () => b.classList.contains("locked") ? "<i>Locked</i>" : "");
             }
         });
 
@@ -877,6 +982,5 @@ export default function createTooltipService(core) {
 
     return {
         registerTip, showTooltip, cleanupAllTooltips, observeTooltips, setContextMenuService,
-        checkSectionAndDismiss
     };
 }
