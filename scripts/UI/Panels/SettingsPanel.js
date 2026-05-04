@@ -15,17 +15,17 @@ export default class SettingsPanel {
                     <div class="setting theme">
                         <label for="dark">Background</label>
                         <div class="inputs">
-                            <input checked id="dark" name="background" type="radio" aria-label="Dark Mode" />
-                            <input id="light" name="background" type="radio" aria-label="Light Mode" />
+                            <input checked id="dark" name="background" type="radio" />
+                            <input id="light" name="background" type="radio" />
                         </div>
                     </div>
                     <div class="setting theme">
                         <label for="lightning">Theme</label>
                         <div class="inputs">
-                            <input checked id="lightning" name="accent" type="radio" aria-label="Lightning Theme" />
-                            <input id="acid" name="accent" type="radio" aria-label="Acid Theme" />
-                            <input id="amber" name="accent" type="radio" aria-label="Amber Theme" />
-                            <input id="arcane" name="accent" type="radio" aria-label="Arcane Theme" />
+                            <input checked id="lightning" name="accent" type="radio" />
+                            <input id="acid" name="accent" type="radio" />
+                            <input id="amber" name="accent" type="radio" />
+                            <input id="arcane" name="accent" type="radio" />
                         </div>
                     </div>
                 </div>

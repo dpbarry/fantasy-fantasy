@@ -27,7 +27,6 @@ export default class StoryPanel {
             return;
         }
         this.preludeRoot.classList.add("active");
-        this.preludeRoot.removeAttribute("aria-hidden");
         this.preludeRoot.inert = false;
         if (this.skipControl) this.skipControl.disabled = false;
     }
@@ -52,7 +51,6 @@ export default class StoryPanel {
         }
         if (!this.preludeRoot) return;
         this.preludeRoot.classList.remove("active");
-        this.preludeRoot.setAttribute("aria-hidden", "true");
         this.preludeRoot.inert = true;
     }
 
@@ -177,15 +175,26 @@ export default class StoryPanel {
         listeners.push(() => randomizeBtn.removeEventListener('click', randomizeHandler));
 
         const devsaveHandler = async () => {
-            closeDialog();
-            await waitForEvent(document, 'dialogResolved');
+            const devSave = this.core.storage.devSave;
+            if (!devSave) return;
 
-            await this.core.storage.storeSave(this.core.storage.devSave);
-            await this.core.storage.loadFullGame(this.core);
-            requestAnimationFrame(() => {
-                this.core.story.startGame();
-                window.location.reload();
+            this.core.pause();
+            window.onbeforeunload = null;
+            await new Promise((resolve) => {
+                if (this.core.pendingSave) {
+                    const checkSave = setInterval(() => {
+                        if (!this.core.pendingSave) {
+                            clearInterval(checkSave);
+                            resolve();
+                        }
+                    }, 10);
+                } else {
+                    resolve();
+                }
             });
+
+            await this.core.storage.storeSave(devSave);
+            window.location.reload();
         };
 
         devsaveBtn.addEventListener('click', devsaveHandler);

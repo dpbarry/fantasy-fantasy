@@ -6,7 +6,6 @@ export default function setupGlobalBehavior(core) {
     const normalizeInputsAndForms = (root = document) => {
         root.querySelectorAll?.('input').forEach((input) => {
             input.autocomplete = "off";
-            input.inputMode = "none";
             input.spellcheck = false;
         });
         root.querySelectorAll?.('form').forEach((form) => {
@@ -22,7 +21,6 @@ export default function setupGlobalBehavior(core) {
                 if (node.nodeType !== Node.ELEMENT_NODE) return;
                 if (node.tagName === 'INPUT') {
                     node.autocomplete = "off";
-                    node.inputMode = "none";
                     node.spellcheck = false;
                 }
                 if (node.tagName === 'FORM') {

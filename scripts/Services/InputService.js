@@ -15,7 +15,7 @@ export default class InputService {
         const input = document.createElement("input");
         input.name = "inp";
         input.className = className;
-        input.inputMode = type === "alpha" ? "none" : "numeric";
+        input.inputMode = type === "alpha" ? "text" : "numeric";
         input.oninput = cb;
 
         input._resizeHandle = () => cb({ data: "", target: input });

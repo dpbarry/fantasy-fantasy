@@ -316,6 +316,8 @@ export default class UIManager {
         this.contextMenuService?.destroyMenu?.();
         this.tooltipService?.cleanupAllTooltips?.();
 
+        const previousPanel = this.activePanels[loc];
+        const turnDirection = this.getPanelTurnDirection(loc, previousPanel, panel);
         this.activePanels[loc] = panel;
         this.notifyPanelVisibilityChange({ loc, panel, reason: "show" });
         this.syncInfoBoxesForActivePanels();
@@ -330,6 +332,43 @@ export default class UIManager {
         });
 
         this.updateMobileNavArrows();
+
+        if (!force) {
+            const wrapper = loc === "main" ? this.mainPanel : this.ledger;
+            this.playPanelSwapCue(wrapper, turnDirection);
+        }
+    }
+
+    playPanelSwapCue(wrapper, direction) {
+        if (!wrapper) return;
+
+        const cls = direction === "left" ? "panel-swap-cue-left" : "panel-swap-cue-right";
+        wrapper.classList.remove("panel-swap-cue-left", "panel-swap-cue-right");
+        void wrapper.offsetWidth;
+        wrapper.classList.add(cls);
+
+        const done = () => {
+            wrapper.classList.remove("panel-swap-cue-left", "panel-swap-cue-right");
+        };
+        const onEnd = (e) => {
+            if (e.target === wrapper) done();
+        };
+        wrapper.addEventListener("animationend", onEnd);
+        setTimeout(() => {
+            wrapper.removeEventListener("animationend", onEnd);
+            done();
+        }, 420);
+    }
+
+    getPanelTurnDirection(loc, fromPanel, toPanel) {
+        const buttons = [...document.querySelectorAll(`[data-loc='${loc}'][data-panel]`)]
+            .filter((button, index, all) =>
+                all.findIndex(other => other.dataset.panel === button.dataset.panel) === index
+            );
+        const fromIndex = buttons.findIndex(button => button.dataset.panel === fromPanel);
+        const toIndex = buttons.findIndex(button => button.dataset.panel === toPanel);
+        if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return 'right';
+        return toIndex > fromIndex ? 'right' : 'left';
     }
 
     isMobileLayout() {

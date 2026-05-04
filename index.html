@@ -51,10 +51,10 @@
 </head>
 
 <body tabindex="-1">
-    <nav class="navbar" id="topnav" aria-label="Primary">
-            <button class="nudge mobile-nav-chevron" id="mobile-nav-prev" aria-label="Show previous nav group"></button>
+    <nav class="navbar" id="topnav">
+            <button class="nudge mobile-nav-chevron" id="mobile-nav-prev"></button>
             <div class="mobile-nav-viewport" id="mobile-nav-viewport">
-                <div class="nav-group" data-group="self" aria-label="Self">
+                <div class="nav-group" data-group="self">
                     <button class="nudge navbutton locked hastip" data-loc="main" data-panel="hero" data-tips="heronav"
                         id="heronav"><img alt="Hero" src="assets/HERO.svg"></button>
                     <button class="nudge navbutton locked hastip" data-loc="main" data-panel="team" data-tips="teamnav"
@@ -66,8 +66,8 @@
                     <button class="nudge navbutton locked hastip" data-loc="main" data-panel="upgrade"
                         data-tips="upgradenav" id="upgradenav"><img alt="Tree" src="assets/TREE.svg"></button>
                 </div>
-                <span class="nav-rule" data-ornament="◆" aria-hidden="true"></span>
-                <div class="nav-group" data-group="realm" aria-label="Realm">
+                <span class="nav-rule" data-ornament="◆"></span>
+                <div class="nav-group" data-group="realm">
                     <button class="nudge navbutton locked hastip" data-loc="main" data-panel="city" data-tips="citynav"
                         id="citynav"><img alt="City" src="assets/CITY.svg"></button>
                     <button class="nudge navbutton hastip" data-loc="main" data-panel="industry"
@@ -84,8 +84,8 @@
                         data-tips="tournamentnav" id="tournamentnav"><img alt="Tournament"
                             src="assets/TOURNAMENT.svg"></button>
                 </div>
-                <span class="nav-rule" data-ornament="◆" aria-hidden="true"></span>
-                <div class="nav-group" data-group="codex" aria-label="Codex">
+                <span class="nav-rule" data-ornament="◆"></span>
+                <div class="nav-group" data-group="codex">
                     <button class="nudge navbutton locked hastip" data-loc="main" data-panel="chart" data-tips="chartnav"
                         id="chartnav"><img alt="Charts" src="assets/CHART.svg"></button>
                     <button class="nudge navbutton locked hastip" data-loc="main" data-panel="achievements"
@@ -98,7 +98,7 @@
                         id="settingsnav"><img alt="Settings" src="assets/COG.svg"></button>
                 </div>
             </div>
-            <button class="nudge mobile-nav-chevron" id="mobile-nav-next" aria-label="Show next nav group"></button>
+            <button class="nudge mobile-nav-chevron" id="mobile-nav-next"></button>
     </nav>
     <div id="app-shell">
         <div class="panel-wrapper" id="main-panel">
@@ -121,7 +121,7 @@
                 </div>
         </div>
         <div class="ledger-wrap" id="ledger-wrap">
-            <nav class="ledger-tabs" aria-label="Ledger">
+            <nav class="ledger-tabs">
                 <button class="ledger-tab nudge hastip" data-loc="ledger" data-panel="log"
                     data-tips="ledger-tab-log" id="ledger-tab-log">Log</button>
                 <button class="ledger-tab nudge locked hastip" data-loc="ledger" data-panel="crew"
@@ -139,7 +139,7 @@
         </div>
     </div>
 
-    <div id="story-prelude-root" aria-hidden="true">
+    <div id="story-prelude-root">
         <div id="story-prelude-column">
             <div class="box story-prelude-panel">
                 <div data-masksize="28" id="story"></div>
@@ -148,10 +148,10 @@
         </div>
     </div>
 
-    <div id="dialog-overlay"></div>
+<div id="dialog-overlay"></div>
     <div id="loading-overlay">
         <div class="filling-icon hidden">
-            <svg class="icon-base" role="img"
+            <svg class="icon-base"
                 viewBox="41.84208679199219 92.34098815917969 943.2019805908203 936.6300811767578"
                 xmlns="http://www.w3.org/2000/svg">
                 <g transform="rotate(180, 512, 512)">
@@ -161,7 +161,7 @@
                 </g>
             </svg>
 
-            <svg class="icon-fill" role="img"
+            <svg class="icon-fill"
                 viewBox="41.84208679199219 92.34098815917969 943.2019805908203 936.6300811767578"
                 xmlns="http://www.w3.org/2000/svg">
                 <g transform="rotate(180, 512, 512)">

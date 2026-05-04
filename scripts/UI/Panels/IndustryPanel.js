@@ -147,7 +147,7 @@ export default class IndustryPanel {
                 buildingsContainer.appendChild(card);
                 requestAnimationFrame(() => {
                     const cardEl = this.buildingCards[type]?.container;
-                //    if (cardEl) this.core.ui.effects?.bloomAt(cardEl, { maxRadius: 90, embers: 12 });
+                    if (cardEl) this.core.ui.effects?.bloomAt(cardEl, { intensity: 'medium' });
                 });
             }
 

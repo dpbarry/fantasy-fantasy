@@ -10,10 +10,7 @@
 //   shimmer(el)            diagonal light-sweep across element. Value changed.
 //   embers(x, y)           physics-based sparks. Theurgy click, micro-celebrations.
 //   ribbon(fromEl, toEl)   particle arc travelling between two elements.
-//   crossfade(from, to)    panel transition: out fades down, in fades up.
-//   pageTurn(container, dir) tab-switch sweep (used internally by panel show()).
 //   bloom(x, y)            six-layer plasma pulse. Major unlock, achievement.
-//   wave({ origin })       global CRT shimmer ripple. Era change, prestige, prologue end.
 //
 // All accept an optional `intensity: 'subtle' | 'medium' | 'loud'`.
 // All have `*At(el)` overloads where they take coordinates.
@@ -80,9 +77,6 @@ function rectCenter(el) {
 const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
 const easeOutQuart = t => 1 - Math.pow(1 - t, 4);
 const easeOutExpo  = t => t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
-
-const prefersReducedMotion = () =>
-    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
 // Add a class for a duration, then remove it. Returns a Promise that resolves
 // when animationend fires (or duration elapses, whichever comes first).
@@ -168,54 +162,6 @@ function floatText(el, text, opts = {}) {
     const remove = () => node.remove();
     node.addEventListener('animationend', remove, { once: true });
     setTimeout(remove, 1100);
-}
-
-function crossfade(fromEl, toEl, opts = {}) {
-    const dur = opts.duration ?? 220;
-    if (fromEl) flashClass(fromEl, 'effect-crossfade-out', dur + 100);
-    if (toEl) {
-        // Allow caller to swap visibility around this frame; the IN class is
-        // safe to apply even if the element is already visible.
-        requestAnimationFrame(() => flashClass(toEl, 'effect-crossfade-in', dur + 100));
-    }
-}
-
-function pageTurn(container, direction = 'right', opts = {}) {
-    // Lightweight pass-through to crossfade for now. Direction reserved for a
-    // future masked-sweep variant that uses `direction` to animate translate.
-    if (!container) return;
-    crossfade(container, container, opts);
-}
-
-function wave(opts = {}) {
-    if (prefersReducedMotion()) return;
-
-    const intensity = opts.intensity ?? 'medium';
-    const duration =
-        intensity === 'subtle' ? 600 :
-        intensity === 'loud'   ? 1200 :
-                                 900;
-
-    const overlay = document.createElement('div');
-    overlay.className = 'effect-wave';
-    overlay.style.setProperty('--wave-duration', `${duration}ms`);
-
-    const origin = opts.origin ?? 'center';
-    let originStr = '50% 50%';
-    if (origin && typeof origin === 'object' && 'getBoundingClientRect' in origin) {
-        const c = rectCenter(origin);
-        originStr = `${c.x}px ${c.y}px`;
-    } else if (origin && typeof origin === 'object') {
-        originStr = `${origin.x}px ${origin.y}px`;
-    } else if (origin === 'top') {
-        originStr = '50% 0%';
-    } else if (origin === 'bottom') {
-        originStr = '50% 100%';
-    }
-    overlay.style.setProperty('--wave-origin', originStr);
-
-    document.body.appendChild(overlay);
-    setTimeout(() => overlay.remove(), duration + 100);
 }
 
 // ── Embers (physics-based sparks, optional motion-streak trail) ──
@@ -536,8 +482,6 @@ function demo(targets) {
     at(800, () => bloom(center.x, center.y, { intensity: 'subtle' }));
     at(1200, () => bloom(center.x, center.y, { intensity: 'medium' }));
     at(1500, () => bloom(center.x, center.y, { intensity: 'loud' }));
-    at(2000, () => wave({ intensity: 'medium', origin: 'center' }));
-    at(1500, () => wave({ intensity: 'loud', origin: 'top' }));
 }
 
 // ── Setup ────────────────────────────────────────────────────────
@@ -553,7 +497,7 @@ const EffectsService = {
     bloom, bloomAt, embers, embersAt, ribbon,
 
     // DOM effects
-    pulse, crackle, shimmer, floatText, crossfade, pageTurn, wave,
+    pulse, crackle, shimmer, floatText,
 
     // Demo
     demo,

@@ -173,18 +173,6 @@
             animation-duration: 0.01s !important;
         }
 
-        @media (prefers-reduced-motion: reduce) {
-
-            *,
-            *::before,
-            *::after {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-                scroll-behavior: auto !important;
-            }
-        }
-
         *,
         *::before,
         *::after {
@@ -234,6 +222,46 @@
             flex: 1 1 auto;
             display: flex;
             flex-direction: column;
+        }
+
+        @keyframes panel-swap-nudge-up {
+            0% {
+                transform: translate3d(0, 0, 0);
+                animation-timing-function: cubic-bezier(0.45, 0.04, 0.52, 1);
+            }
+
+            52% {
+                transform: translate3d(0, -3px, 0);
+                animation-timing-function: cubic-bezier(0.18, 0.88, 0.34, 1);
+            }
+
+            100% {
+                transform: translate3d(0, 0, 0);
+            }
+        }
+
+        @keyframes panel-swap-nudge-down {
+            0% {
+                transform: translate3d(0, 0, 0);
+                animation-timing-function: cubic-bezier(0.45, 0.04, 0.52, 1);
+            }
+
+            52% {
+                transform: translate3d(0, 3px, 0);
+                animation-timing-function: cubic-bezier(0.18, 0.88, 0.34, 1);
+            }
+
+            100% {
+                transform: translate3d(0, 0, 0);
+            }
+        }
+
+        .panel-wrapper.panel-swap-cue-right {
+            animation: panel-swap-nudge-up 300ms forwards;
+        }
+
+        .panel-wrapper.panel-swap-cue-left {
+            animation: panel-swap-nudge-down 300ms forwards;
         }
 
         .ledger-wrap {
