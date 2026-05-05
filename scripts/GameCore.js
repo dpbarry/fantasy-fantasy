@@ -109,6 +109,7 @@ export default class GameCore {
             if (typeof m.boot === "function") m.boot();
         })
         await LoadingService.hide();
+        this.ui.shellSettle();
 
         document.body.focus();
 

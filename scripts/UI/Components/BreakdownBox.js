@@ -28,6 +28,9 @@ function renderLine(line, depth) {
     if (line.kind === 'result') {
         return renderResult([line]);
     }
+    if (line.kind === 'separator') {
+        return '<div class="bd-sep"></div>';
+    }
     const cls = line.tone === 'gain' ? 'bd-g' : line.tone === 'drain' ? 'bd-d' : '';
     const note = line.note ? ` <span class="bd-n">(${line.note})</span>` : '';
     const label = line.label ? ` ${line.label}` : '';
@@ -37,12 +40,13 @@ function renderLine(line, depth) {
 }
 
 function renderResult(result) {
-    const parts = result.map((entry) => {
+    const rows = result.map((entry, i) => {
         const cls = entry.tone === 'gain' ? 'bd-g' : entry.tone === 'drain' ? 'bd-d' : '';
         const label = entry.label ? ` ${entry.label}` : '';
-        return `<span class="${cls}">${entry.value}${label}</span>`;
-    }).join(', ');
-    return `<div class="bd-res">= ${parts}</div>`;
+        const prefix = i === 0 ? '= ' : '  ';
+        return `<div class="bd-res-row"><span class="bd-res-prefix">${prefix}</span><span class="${cls}">${entry.value}${label}</span></div>`;
+    });
+    return `<div class="bd-res">${rows.join('')}</div>`;
 }
 
 function normalizeBreakdown(data) {

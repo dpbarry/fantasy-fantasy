@@ -113,13 +113,13 @@ export default class HackService {
                     feedback.textContent = 'Commands: help, pause, resume, hardstop, restart, devstart, settime, save, load, delsave';
                     break;
                 case 'pause':
-                    feedback.textContent = core.runtimeMode !== core.constructor.RuntimeModes.RUNNING ? "Already paused" : "Game paused";
-                    core.setRuntimeMode(core.constructor.RuntimeModes.PAUSED);
+                    feedback.textContent = core.clock.isPaused ? "Already paused" : "Game paused";
+                    core.clock.pause();
                     break;
                 case 'resume':
-                    feedback.textContent = core.runtimeMode === core.constructor.RuntimeModes.RUNNING ? "Nothing was paused" : "Game resumed";
+                    feedback.textContent = !core.clock.isPaused && core.isRunning ? "Nothing was paused" : "Game resumed";
                     core.resume();
-                    core.setRuntimeMode(core.constructor.RuntimeModes.RUNNING);
+                    core.clock.resume();
                     break;
                 case 'forcestop':
                     feedback.textContent = ! core.isRunning ? "Game is already stopped" : "Force stopped game";
@@ -185,8 +185,8 @@ export default class HackService {
                     feedback.textContent = `Set ${args[0]}.${args[1]} to ${args[2]}`;
                     break;
                 case 'setn':
-                    if (!args[0] || !args[1] || !args[2] || !isNaN(args[2])) {
-                        feedback.textContent = `Usage: set <manager> <property> <num>`;
+                    if (!args[0] || !args[1] || !args[2] || isNaN(parseInt(args[2], 10))) {
+                        feedback.textContent = `Usage: setn <manager> <property> <num>`;
                         break;
                     }
                     let setnManager = core.managers[args[0]];

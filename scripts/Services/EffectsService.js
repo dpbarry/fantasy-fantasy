@@ -1,19 +1,19 @@
 // Particle effects + DOM-driven animations on a single canvas + class hooks.
 // One animation loop, reused across all callers. Reads --accent at use-time so
-// theme switches are honored.
+// theme switches are honoured.
 //
-// Tiered vocabulary (whisper → thunderclap):
+// Vocabulary (whisper → thunderclap):
 //
-//   pulse(el)              outline glow swell+fade. Subtle hint a thing is alive.
-//   crackle(el)            red shake + flash. Action denied / can't afford.
-//   floatText(el, "+10")   text rises and fades from element. Resource gain/drain.
-//   shimmer(el)            diagonal light-sweep across element. Value changed.
-//   embers(x, y)           physics-based sparks. Theurgy click, micro-celebrations.
-//   ribbon(fromEl, toEl)   particle arc travelling between two elements.
-//   bloom(x, y)            six-layer plasma pulse. Major unlock, achievement.
+//   pulse(el)             expanding ring glow. Attention / alive / "over here".
+//   crackle(el)           lateral shake + drain flash + brief sparks. Denied / can't afford.
+//   shimmer(el)           diagonal specular sweep. New / changed / notable.
+//   floatText(el, "+10")  text rises and fades. Resource gain / drain / crit.
+//   embers(x, y)          physics sparks with optional streak trail. Theurgy, celebration.
+//   ribbon(fromEl, toEl)  particle arc between two elements. Flow / connection.
+//   bloom(x, y)           six-layer plasma pulse. Major unlock / achievement.
 //
-// All accept an optional `intensity: 'subtle' | 'medium' | 'loud'`.
-// All have `*At(el)` overloads where they take coordinates.
+// All DOM effects accept `intensity: 'subtle' | 'medium' | 'loud'`.
+// embers / bloom also have *At(el) coordinate-helper overloads.
 
 const TWO_PI = Math.PI * 2;
 
@@ -21,6 +21,7 @@ let canvas = null;
 let ctx = null;
 let particles = [];
 let running = false;
+let lastTickTime = 0;
 
 // ── Loop ─────────────────────────────────────────────────────────
 
@@ -30,12 +31,15 @@ function ensureLoop() {
     requestAnimationFrame(tick);
 }
 
-function tick() {
+function tick(timestamp) {
+    const dt = lastTickTime === 0 ? 1 : Math.min((timestamp - lastTickTime) / 16.667, 3);
+    lastTickTime = timestamp;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
-        if (p.update(p) === false) {
+        if (p.update(p, dt) === false) {
             particles.splice(i, 1);
             continue;
         }
@@ -54,6 +58,7 @@ function tick() {
         requestAnimationFrame(tick);
     } else {
         running = false;
+        lastTickTime = 0;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 }
@@ -78,8 +83,8 @@ const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
 const easeOutQuart = t => 1 - Math.pow(1 - t, 4);
 const easeOutExpo  = t => t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
 
-// Add a class for a duration, then remove it. Returns a Promise that resolves
-// when animationend fires (or duration elapses, whichever comes first).
+// Add a class for a duration, then remove it. Resolves when animationend
+// fires on the element itself, or after the fallback timeout.
 function flashClass(el, className, fallbackMs = 1000) {
     if (!el) return Promise.resolve();
     el.classList.add(className);
@@ -92,37 +97,38 @@ function flashClass(el, className, fallbackMs = 1000) {
             el.removeEventListener('animationend', onEnd);
             resolve();
         };
-        const onEnd = (e) => {
-            if (e.target !== el) return;
-            cleanup();
-        };
+        const onEnd = (e) => { if (e.target !== el) return; cleanup(); };
         el.addEventListener('animationend', onEnd);
         setTimeout(cleanup, fallbackMs);
     });
 }
 
-// ── DOM-driven effects ────────────────────────────────────────────
+// ── DOM effects ───────────────────────────────────────────────────
 
 function pulse(el, opts = {}) {
     if (!el) return;
     const intensity = opts.intensity ?? 'medium';
-    const cls =
-        intensity === 'subtle' ? 'effect-pulse-subtle' :
-        intensity === 'loud'   ? 'effect-pulse-loud'   :
-                                 'effect-pulse';
-    return flashClass(el, cls, 700);
+    const [reach, dur] =
+        intensity === 'subtle' ? ['5px',  350] :
+        intensity === 'loud'   ? ['14px', 600] :
+                                 ['9px',  480];
+    el.style.setProperty('--pulse-reach',    reach);
+    el.style.setProperty('--pulse-duration', `${dur}ms`);
+    return flashClass(el, 'effect-pulse', dur + 100);
 }
 
 function crackle(el, opts = {}) {
     if (!el) return;
-    const cls = opts.intensity === 'subtle' ? 'effect-crackle-subtle' : 'effect-crackle';
-    return flashClass(el, cls, 400);
+    const dur = opts.intensity === 'subtle' ? 200 : 280;
+    el.style.setProperty('--crackle-duration', `${dur}ms`);
+    return flashClass(el, 'effect-crackle', dur + 80);
 }
 
 function shimmer(el, opts = {}) {
     if (!el) return;
 
-    // Ensure positioned ancestor for the absolute overlay.
+    el.querySelector('.effect-shimmer-overlay')?.remove();
+
     const computed = getComputedStyle(el);
     let restorePosition = false;
     if (computed.position === 'static') {
@@ -139,24 +145,20 @@ function shimmer(el, opts = {}) {
         if (restorePosition) el.style.position = '';
     };
 
-    const sweep = overlay.querySelector?.('::before');
-    // ::before isn't queryable; rely on the overlay's own animationend bubble.
+    // animationend on ::before dispatches on the host overlay in modern browsers
     overlay.addEventListener('animationend', cleanup, { once: true });
     setTimeout(cleanup, opts.duration ?? 900);
 }
 
 function floatText(el, text, opts = {}) {
     if (!el) return;
-    const kind = opts.kind ?? 'neutral';
     const node = document.createElement('div');
-    node.className = `effect-float-text ${kind}`;
+    node.className = `effect-float-text ${opts.kind ?? 'neutral'}`;
     node.textContent = text;
 
     const r = el.getBoundingClientRect();
-    const x = (opts.x ?? r.left + r.width / 2);
-    const y = (opts.y ?? r.top + r.height / 4);
-    node.style.left = `${x}px`;
-    node.style.top = `${y}px`;
+    node.style.left = `${opts.x ?? r.left + r.width / 2}px`;
+    node.style.top  = `${opts.y ?? r.top  + r.height / 4}px`;
 
     document.body.appendChild(node);
     const remove = () => node.remove();
@@ -164,21 +166,21 @@ function floatText(el, text, opts = {}) {
     setTimeout(remove, 1100);
 }
 
-// ── Embers (physics-based sparks, optional motion-streak trail) ──
+// ── Embers (physics sparks, optional motion-streak trail) ────────
 
 function embers(x, y, opts = {}) {
     if (!ctx) return;
     const count      = opts.count      ?? 6;
-    const lifespan   = opts.lifespan   ?? 70;
-    const speedMin   = opts.speedMin   ?? 1;
-    const speedRange = opts.speedRange ?? 1.5;
+    const lifespan   = opts.lifespan   ?? 26;
+    const speedMin   = opts.speedMin   ?? 2.5;
+    const speedRange = opts.speedRange ?? 4.0;
     const color      = opts.color      ?? getAccentHsl();
-    const gravity    = opts.gravity    ?? 0.05;
-    const drag       = opts.drag       ?? 0.97;
+    const gravity    = opts.gravity    ?? 0.14;
+    const drag       = opts.drag       ?? 0.91;
     const sizeBase   = opts.size       ?? 1;
     const trail      = opts.trail      ?? false;
     const blend      = opts.blend      ?? 'screen';
-    const upBias     = opts.upBias     ?? 0.8;
+    const upBias     = opts.upBias     ?? 2.0;
 
     for (let i = 0; i < count; i++) {
         const angle = Math.random() * TWO_PI;
@@ -191,12 +193,13 @@ function embers(x, y, opts = {}) {
             age: 0,
             lifespan,
             blend,
-            update(p) {
-                p.vx *= drag;
-                p.vy = p.vy * drag + gravity;
-                p.x += p.vx;
-                p.y += p.vy;
-                p.age++;
+            update(p, dt = 1) {
+                const d = Math.pow(drag, dt);
+                p.vx *= d;
+                p.vy = p.vy * d + gravity * dt;
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.age += dt;
                 return p.age < p.lifespan;
             },
             draw(p, c) {
@@ -205,7 +208,7 @@ function embers(x, y, opts = {}) {
                 const speedNow = Math.hypot(p.vx, p.vy);
 
                 if (trail && speedNow > 0.4) {
-                    const trailLen = Math.min(speedNow * 4.5, 16);
+                    const trailLen = Math.min(speedNow * 4.5, 28);
                     const ux = p.vx / speedNow;
                     const uy = p.vy / speedNow;
                     const tx = p.x - ux * trailLen;
@@ -232,7 +235,7 @@ function embers(x, y, opts = {}) {
     ensureLoop();
 }
 
-// ── Bloom (layered AAA pulse) ────────────────────────────────────
+// ── Bloom (six-layer plasma pulse) ───────────────────────────────
 
 function bloom(x, y, opts = {}) {
     if (!ctx) return;
@@ -241,11 +244,11 @@ function bloom(x, y, opts = {}) {
     const baseScale = opts.scale ?? 1;
     const scale = baseScale * (intensity === 'subtle' ? 0.7 : intensity === 'loud' ? 1.4 : 1);
 
-    // Layer 1 — CORE FLASH: brief white-hot punch.
+    // Layer 1 — core flash: brief white-hot punch
     particles.push({
         x, y, age: 0, lifespan: 14, blend: 'screen',
         baseRadius: 22 * scale,
-        update(p) { p.age++; return p.age < p.lifespan; },
+        update(p, dt = 1) { p.age += dt; return p.age < p.lifespan; },
         draw(p, c) {
             const t = p.age / p.lifespan;
             const r = p.baseRadius * (0.5 + 0.85 * easeOutExpo(t));
@@ -261,7 +264,7 @@ function bloom(x, y, opts = {}) {
         }
     });
 
-    // Layer 2 — PLASMA CLOUD: irregular drifting blobs.
+    // Layer 2 — plasma cloud: irregular drifting blobs
     const blobs = 4 + Math.floor(Math.random() * 3);
     const blobBaseAngle = Math.random() * TWO_PI;
     for (let i = 0; i < blobs; i++) {
@@ -278,13 +281,12 @@ function bloom(x, y, opts = {}) {
             lifespan: 50 + Math.floor(Math.random() * 30),
             baseRadius: (26 + Math.random() * 28) * scale,
             blend: 'screen',
-            update(p) {
-                p.age++;
+            update(p, dt = 1) {
+                p.age += dt;
                 if (p.age < 0) return true;
-                p.x += p.vx;
-                p.y += p.vy;
-                p.vx *= 0.96;
-                p.vy = p.vy * 0.96 - 0.018;
+                p.x += p.vx * dt; p.y += p.vy * dt;
+                const d = Math.pow(0.96, dt);
+                p.vx *= d; p.vy = p.vy * d - 0.018 * dt;
                 return p.age < p.lifespan;
             },
             draw(p, c) {
@@ -304,7 +306,7 @@ function bloom(x, y, opts = {}) {
         });
     }
 
-    // Layer 3 — SPIKE RAYS: narrow tapered streaks.
+    // Layer 3 — spike rays: narrow tapered streaks
     const rays = 5 + Math.floor(Math.random() * 4);
     const raySpread = TWO_PI / rays;
     const rayStart = Math.random() * TWO_PI;
@@ -317,14 +319,13 @@ function bloom(x, y, opts = {}) {
             age: 0,
             lifespan: 22 + Math.floor(Math.random() * 9),
             blend: 'screen',
-            update(p) { p.age++; return p.age < p.lifespan; },
+            update(p, dt = 1) { p.age += dt; return p.age < p.lifespan; },
             draw(p, c) {
                 const t = p.age / p.lifespan;
                 const len = p.length * easeOutQuart(t);
                 const alpha = Math.pow(1 - t, 1.9);
                 const innerR = 4;
                 const halfW = p.thickness * 0.5 * (1 - t * 0.45);
-
                 c.save();
                 c.translate(p.x, p.y);
                 c.rotate(p.angle);
@@ -344,14 +345,10 @@ function bloom(x, y, opts = {}) {
         });
     }
 
-    // Layer 4 — SHOCKWAVE RING: thin expanding ring.
+    // Layer 4 — shockwave ring: thin expanding ring
     particles.push({
-        x, y,
-        age: 0,
-        lifespan: 28,
-        maxRadius: 92 * scale,
-        blend: 'screen',
-        update(p) { p.age++; return p.age < p.lifespan; },
+        x, y, age: 0, lifespan: 28, maxRadius: 92 * scale, blend: 'screen',
+        update(p, dt = 1) { p.age += dt; return p.age < p.lifespan; },
         draw(p, c) {
             const t = p.age / p.lifespan;
             const r = p.maxRadius * easeOutQuart(t);
@@ -360,9 +357,9 @@ function bloom(x, y, opts = {}) {
             const inner = Math.max(0, r - ringW * 1.6);
             const outer = r + ringW * 0.6;
             const grad = c.createRadialGradient(p.x, p.y, inner, p.x, p.y, outer);
-            grad.addColorStop(0,    hslWithAlpha(color, 0));
-            grad.addColorStop(0.5,  hslWithAlpha(color, alpha));
-            grad.addColorStop(1,    hslWithAlpha(color, 0));
+            grad.addColorStop(0,   hslWithAlpha(color, 0));
+            grad.addColorStop(0.5, hslWithAlpha(color, alpha));
+            grad.addColorStop(1,   hslWithAlpha(color, 0));
             c.fillStyle = grad;
             c.beginPath();
             c.arc(p.x, p.y, outer, 0, TWO_PI);
@@ -370,31 +367,18 @@ function bloom(x, y, opts = {}) {
         }
     });
 
-    // Layer 5 — KINETIC EMBERS: fast streaked sparks.
+    // Layer 5 — kinetic embers: fast streaked sparks
     embers(x, y, {
-        count: 14,
-        lifespan: 80,
-        speedMin: 1.6 * scale,
-        speedRange: 2.4 * scale,
-        color,
-        gravity: 0.045,
-        drag: 0.97,
-        trail: true,
-        blend: 'screen'
+        count: 14, lifespan: 29,
+        speedMin: 4.4 * scale, speedRange: 6.6 * scale,
+        color, gravity: 0.12, drag: 0.92, trail: true, blend: 'screen'
     });
 
-    // Layer 6 — AFTERGLOW EMBERS: slow lingering drift.
+    // Layer 6 — afterglow embers: slow lingering drift
     embers(x, y, {
-        count: 5,
-        lifespan: 130,
-        speedMin: 0.3,
-        speedRange: 0.55,
-        color,
-        gravity: 0.012,
-        drag: 0.985,
-        size: 0.6,
-        upBias: 0.4,
-        blend: 'screen'
+        count: 5, lifespan: 47,
+        speedMin: 0.8, speedRange: 1.5,
+        color, gravity: 0.033, drag: 0.955, size: 0.6, upBias: 0.4, blend: 'screen'
     });
 
     ensureLoop();
@@ -405,22 +389,18 @@ function bloom(x, y, opts = {}) {
 function ribbon(fromEl, toEl, opts = {}) {
     if (!ctx || !fromEl || !toEl) return;
     const start = rectCenter(fromEl);
-    const end = rectCenter(toEl);
+    const end   = rectCenter(toEl);
     const intensity = opts.intensity ?? 'medium';
-    const count =
-        intensity === 'subtle' ? 6 :
-        intensity === 'loud'   ? 16 :
-                                 10;
+    const count = intensity === 'subtle' ? 6 : intensity === 'loud' ? 16 : 10;
     const color = opts.color ?? getAccentHsl();
-    const arcDur = opts.duration ?? 800;
-    const lifespanFrames = Math.round(arcDur / 16.67);
+    const lifespanFrames = Math.round((opts.duration ?? 800) / 16.67);
 
     const dx = end.x - start.x;
     const dy = end.y - start.y;
     const len = Math.hypot(dx, dy) || 1;
     const perpScale = (opts.curvature ?? 0.25) * len;
     const ctrlX = (start.x + end.x) / 2 + (-dy / len) * perpScale;
-    const ctrlY = (start.y + end.y) / 2 + (dx / len) * perpScale;
+    const ctrlY = (start.y + end.y) / 2 + ( dx / len) * perpScale;
 
     for (let i = 0; i < count; i++) {
         const delay = i * 4;
@@ -431,13 +411,13 @@ function ribbon(fromEl, toEl, opts = {}) {
             age: -delay, lifespan: lifespanFrames,
             size: 1.2 + Math.random() * 0.6,
             blend: 'screen',
-            update(p) { p.age++; return p.age < p.lifespan; },
+            update(p, dt = 1) { p.age += dt; return p.age < p.lifespan; },
             draw(p, c) {
                 if (p.age < 0) return;
                 const t = p.age / p.lifespan;
                 const inv = 1 - t;
-                const px = inv * inv * p.startX + 2 * inv * t * p.ctrlX + t * t * p.endX;
-                const py = inv * inv * p.startY + 2 * inv * t * p.ctrlY + t * t * p.endY;
+                const px = inv*inv*p.startX + 2*inv*t*p.ctrlX + t*t*p.endX;
+                const py = inv*inv*p.startY + 2*inv*t*p.ctrlY + t*t*p.endY;
                 const alpha = Math.sin(t * Math.PI);
                 c.fillStyle = hslWithAlpha(color, alpha);
                 c.beginPath();
@@ -454,34 +434,30 @@ function ribbon(fromEl, toEl, opts = {}) {
 function bloomAt(el, opts = {})  { if (!el) return; const c = rectCenter(el); bloom(c.x, c.y, opts); }
 function embersAt(el, opts = {}) { if (!el) return; const c = rectCenter(el); embers(c.x, c.y, opts); }
 
-// ── Demo (manual eyeballs) ───────────────────────────────────────
-//
-// Run from devtools: `core.ui.effects.demo()`. Cycles every primitive
-// against visible test targets so the whole library can be inspected
-// in ~10 seconds.
+// ── Devtools demo ────────────────────────────────────────────────
+// core.ui.effects.demo()
 
 function demo(targets) {
-    const navbtn  = targets?.navbtn  || document.querySelector('.navbutton:not(.locked)');
-    const ledger  = targets?.ledger  || document.querySelector('.ledger-tab.chosen');
-    const button  = targets?.button  || document.querySelector('.raised-button, button:not([disabled])');
-    const center  = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    const navbtn = targets?.navbtn || document.querySelector('.navbutton:not(.locked)');
+    const button = targets?.button || document.querySelector('.raised-button, button:not([disabled])');
+    const center = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 
     let t = 0;
     const at = (ms, fn) => setTimeout(fn, t += ms);
 
-    at(0,   () => navbtn  && pulse(navbtn,  { intensity: 'subtle' }));
-    at(500, () => navbtn  && pulse(navbtn,  { intensity: 'medium' }));
-    at(700, () => navbtn  && pulse(navbtn,  { intensity: 'loud' }));
-    at(900, () => button  && shimmer(button));
-    at(1000, () => navbtn && floatText(navbtn, '+10', { kind: 'gain' }));
-    at(300, () => navbtn  && floatText(navbtn, '-3',  { kind: 'drain' }));
-    at(300, () => navbtn  && floatText(navbtn, 'CRIT!', { kind: 'crit' }));
-    at(700, () => button  && crackle(button));
-    at(800, () => navbtn && ledger && ribbon(navbtn, ledger));
+    at(0,    () => button && shimmer(button));
+    at(500,  () => navbtn && pulse(navbtn, { intensity: 'subtle' }));
+    at(300,  () => navbtn && pulse(navbtn, { intensity: 'medium' }));
+    at(400,  () => navbtn && pulse(navbtn, { intensity: 'loud'   }));
+    at(200,  () => navbtn && floatText(navbtn, '+10',  { kind: 'gain'  }));
+    at(300,  () => navbtn && floatText(navbtn, '−3',   { kind: 'drain' }));
+    at(300,  () => navbtn && floatText(navbtn, 'crit!',{ kind: 'crit'  }));
+    at(600,  () => button && crackle(button));
+    at(800,  () => navbtn && button && ribbon(navbtn, button));
     at(1000, () => embers(center.x, center.y, { count: 12, trail: true }));
-    at(800, () => bloom(center.x, center.y, { intensity: 'subtle' }));
+    at(800,  () => bloom(center.x, center.y, { intensity: 'subtle' }));
     at(1200, () => bloom(center.x, center.y, { intensity: 'medium' }));
-    at(1500, () => bloom(center.x, center.y, { intensity: 'loud' }));
+    at(1500, () => bloom(center.x, center.y, { intensity: 'loud'   }));
 }
 
 // ── Setup ────────────────────────────────────────────────────────
@@ -499,20 +475,19 @@ const EffectsService = {
     // DOM effects
     pulse, crackle, shimmer, floatText,
 
-    // Demo
+    // Devtools demo
     demo,
 
-    // Auto-bloom on .locked → unlocked transitions for navbutton/ledger-tab.
-    // Caller can suppress per-element by setting `el.dataset.skipBloom = ""`
-    // before removing the .locked class (used for prologue handoff and
-    // save-load state restoration).
+    // Auto-bloom on .locked → unlocked transitions for navbutton / ledger-tab.
+    // Suppress per-element by setting el.dataset.skipBloom before removing .locked
+    // (used for prologue handoff and save-load state restoration).
     observeUnlocks() {
         const watch = (el) => {
             const observer = new MutationObserver((mutations) => {
                 for (const m of mutations) {
                     if (m.attributeName !== 'class') continue;
                     const wasLocked = m.oldValue?.includes('locked');
-                    const isLocked = el.classList.contains('locked');
+                    const isLocked  = el.classList.contains('locked');
                     if (wasLocked && !isLocked) {
                         if ('skipBloom' in el.dataset) {
                             delete el.dataset.skipBloom;

@@ -316,8 +316,6 @@ export default class UIManager {
         this.contextMenuService?.destroyMenu?.();
         this.tooltipService?.cleanupAllTooltips?.();
 
-        const previousPanel = this.activePanels[loc];
-        const turnDirection = this.getPanelTurnDirection(loc, previousPanel, panel);
         this.activePanels[loc] = panel;
         this.notifyPanelVisibilityChange({ loc, panel, reason: "show" });
         this.syncInfoBoxesForActivePanels();
@@ -335,20 +333,20 @@ export default class UIManager {
 
         if (!force) {
             const wrapper = loc === "main" ? this.mainPanel : this.ledger;
-            this.playPanelSwapCue(wrapper, turnDirection);
+            this.playPanelSwapCue(wrapper);
         }
     }
 
-    playPanelSwapCue(wrapper, direction) {
+    playPanelSwapCue(wrapper) {
         if (!wrapper) return;
 
-        const cls = direction === "left" ? "panel-swap-cue-left" : "panel-swap-cue-right";
-        wrapper.classList.remove("panel-swap-cue-left", "panel-swap-cue-right");
+        const cls = "panel-swap-cue";
+        wrapper.classList.remove(cls);
         void wrapper.offsetWidth;
         wrapper.classList.add(cls);
 
         const done = () => {
-            wrapper.classList.remove("panel-swap-cue-left", "panel-swap-cue-right");
+            wrapper.classList.remove(cls);
         };
         const onEnd = (e) => {
             if (e.target === wrapper) done();
@@ -357,18 +355,7 @@ export default class UIManager {
         setTimeout(() => {
             wrapper.removeEventListener("animationend", onEnd);
             done();
-        }, 420);
-    }
-
-    getPanelTurnDirection(loc, fromPanel, toPanel) {
-        const buttons = [...document.querySelectorAll(`[data-loc='${loc}'][data-panel]`)]
-            .filter((button, index, all) =>
-                all.findIndex(other => other.dataset.panel === button.dataset.panel) === index
-            );
-        const fromIndex = buttons.findIndex(button => button.dataset.panel === fromPanel);
-        const toIndex = buttons.findIndex(button => button.dataset.panel === toPanel);
-        if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return 'right';
-        return toIndex > fromIndex ? 'right' : 'left';
+        }, 400);
     }
 
     isMobileLayout() {
@@ -410,6 +397,11 @@ export default class UIManager {
         Object.entries(this.activePanels).forEach(([loc, panel]) => {
             this.show(loc, panel, { force: true });
         });
+    }
+
+    shellSettle() {
+        document.body.classList.add('shell-settling');
+        setTimeout(() => document.body.classList.remove('shell-settling'), 900);
     }
 
     createRenderInterval(fn) {
@@ -519,5 +511,17 @@ export default class UIManager {
             delete el.dataset.tips;
             el.classList.remove('hastip');
         }
+    }
+
+    refreshTip(el) {
+        this.tooltipService?.immediateRefresh(el);
+    }
+
+    hookMenu(el, id) {
+        this.contextMenuService?.hookMenu(el, id);
+    }
+
+    unhookMenu(el) {
+        this.contextMenuService?.unhookMenu(el);
     }
 }

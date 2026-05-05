@@ -25,9 +25,7 @@ export default class IndustryPanel {
         return this.core.ui.formatNumber(val, opt);
     }
 
-    // ============================================================================
-    // CORE RENDER METHODS
-    // ============================================================================
+    // ── Render ───────────────────────────────────────────────────────────────
 
     render(data) {
         this.renderResources(data);
@@ -146,8 +144,8 @@ export default class IndustryPanel {
                 const card = this.createBuildingCard(type, b, def);
                 buildingsContainer.appendChild(card);
                 requestAnimationFrame(() => {
-                    const cardEl = this.buildingCards[type]?.container;
-                    if (cardEl) this.core.ui.effects?.bloomAt(cardEl, { intensity: 'medium' });
+                    const rowEl = this.buildingCards[type]?.row;
+                    if (rowEl) this.core.ui.effects?.shimmer(rowEl);
                 });
             }
 
@@ -170,59 +168,35 @@ export default class IndustryPanel {
 
                 const buildPlan = this.core.industry.getActionPlan('build', type);
                 const sellPlan = this.core.industry.getActionPlan('sell', type);
-                const hirePlan = this.core.industry.getActionPlan('hire', type);
                 const furloughPlan = this.core.industry.getActionPlan('furlough', type);
 
-
                 const canBuild = buildPlan.actual > 0;
-                if (card.addBuildingBtn) this.updateButtonStateWithTooltip(card.addBuildingBtn, canBuild, 'build', type);
                 if (card.mainBtn && def?.buildCost) this.updateButtonStateWithTooltip(card.mainBtn, canBuild, 'build', type);
 
                 if (card.sellBtn) {
-                    const canSell = sellPlan.actual > 0;
-                    this.updateButtonStateWithTooltip(card.sellBtn, canSell, 'demolish', type);
-                }
-
-                if (card.addWorkerBtn) {
-                    const canHire = hirePlan.actual > 0;
-                    this.updateButtonStateWithTooltip(card.addWorkerBtn, canHire, 'hire', type);
+                    card.sellBtn.disabled = sellPlan.actual <= 0;
                 }
 
                 if (card.removeWorkerBtn) {
-                    const canFurlough = furloughPlan.actual > 0;
-                    this.updateButtonStateWithTooltip(card.removeWorkerBtn, canFurlough, 'furlough', type);
+                    card.removeWorkerBtn.disabled = furloughPlan.actual <= 0;
                 }
 
                 this.updateMainButton(card, type, def);
                 this.updateWorkerButton(card, type, b);
 
-                this.updateBuildButton(card, type);
+                this.updateDropdownBuildButton(card, type);
+                this.updateDropdownHireButton(card, type);
                 this.updateDemolishButton(card, type);
-                this.updateHireButton(card, type);
                 this.updateFurloughButton(card, type);
 
                 const buildingHeader = card.dropdown?.querySelector('.dropdown-building .dropdown-section-header');
                 if (buildingHeader) {
-                    const headerSpan = buildingHeader.querySelector('span:first-child');
-                    if (headerSpan) {
-                        const aggregateEffects = this.getAggregateBuildingEffects(type);
-                        const content = `BUILDING${aggregateEffects ? ` (<span class="header-effects">${aggregateEffects}</span>)` : ''}`;
-                        this.updateHeaderSpanWithTooltip(headerSpan, !!aggregateEffects, 'building-effects', type, content);
-                    }
-
                     const timeToNext = this.getTimeUntilNextBuilding(type);
                     this.updateOrCreateTimeSpan(buildingHeader, timeToNext, 'time-to-next', type);
                 }
 
                 const workerHeader = card.dropdown?.querySelector('.dropdown-workers .dropdown-section-header');
                 if (workerHeader) {
-                    const headerSpan = workerHeader.querySelector('span:first-child');
-                    if (headerSpan) {
-                        const aggregateWorkerEffects = this.getAggregateWorkerEffects(type);
-                        const content = `WORKERS${aggregateWorkerEffects ? ` (<span class="header-effects">${aggregateWorkerEffects}</span>)` : ''}`;
-                        this.updateHeaderSpanWithTooltip(headerSpan, !!aggregateWorkerEffects, 'worker-effects', type, content);
-                    }
-
                     const maxWorkers = this.core.industry.getMaxWorkers(type);
                     this.updateOrCreateLimitSpan(workerHeader, maxWorkers, type);
                 }
@@ -246,9 +220,7 @@ export default class IndustryPanel {
         }
     }
 
-    // ============================================================================
-    // SETUP & INITIALIZATION
-    // ============================================================================
+    // ── Setup ────────────────────────────────────────────────────────────────
 
     setupChevron() {
         const chevron = document.createElement("div");
@@ -356,9 +328,7 @@ export default class IndustryPanel {
         this.incrementBtn = incrementBtn;
     }
 
-    // ============================================================================
-    // EVENT HANDLERS
-    // ============================================================================
+    // ── Events ───────────────────────────────────────────────────────────────
 
     handleTheurgyClick(theurgyType, event) {
         const now = Date.now();
@@ -383,6 +353,7 @@ export default class IndustryPanel {
         })
 
         this.updateTheurgyButtonStates();
+        Object.values(this.theurgyButtons).forEach(btn => this.core.ui.refreshTip(btn));
 
         if (theurgyType === 'plant') {
             this.core.story.dismissInfoBox('theurgy-plant');
@@ -422,9 +393,7 @@ export default class IndustryPanel {
         }
     }
 
-    // ============================================================================
-    // UI UPDATE METHODS
-    // ============================================================================
+    // ── UI updates ───────────────────────────────────────────────────────────
 
     updateTheurgyButtonStates() {
         Object.entries(this.theurgyButtons || {}).forEach(([type, btn]) => {
@@ -435,49 +404,6 @@ export default class IndustryPanel {
     updateIncrementControl() {
         if (this.incrementBtn) {
             this.incrementBtn.textContent = this.getIncrementLabel();
-        }
-    }
-
-    updateBuildButton(card, type) {
-        const button = card.dropdown?.querySelector('.dropdown-building .dropdown-add-building-btn');
-        if (!button) return;
-
-        const textNodeType = (typeof Node !== 'undefined' && Node.TEXT_NODE) || 3;
-        Array.from(button.childNodes).forEach(node => {
-            if (node.nodeType === textNodeType && node.textContent.trim().length) {
-                node.remove();
-            }
-        });
-        let progressFill = button.querySelector('.build-progress-fill');
-        if (!progressFill) {
-            progressFill = document.createElement('div');
-            progressFill.className = 'build-progress-fill';
-            button.prepend(progressFill);
-        }
-        let labelSpan = button.querySelector('.build-btn-label');
-        if (!labelSpan) {
-            labelSpan = document.createElement('span');
-            labelSpan.className = 'build-btn-label';
-            labelSpan.style.position = 'relative';
-            labelSpan.style.zIndex = '1';
-            button.appendChild(labelSpan);
-        }
-        labelSpan.textContent = this.formatActionLabel('Build', 'build', type);
-
-        const details = this.getBuildingButtonDetails(type);
-        this.updateButtonInfoBox(button, details);
-
-        const progress = this.core.industry.getBuildProgress(type);
-        this.updateProgressFill(progressFill, progress);
-
-        button.dataset.buildingType = type;
-
-        const plan = this.core.industry.getActionPlan('build', type);
-        const shouldShowTooltip = plan.actual <= 0 || (plan.actual > 0 && plan.actual < plan.target);
-        if (shouldShowTooltip) {
-            this.core.ui.hookTip(button, 'build');
-        } else {
-            this.core.ui.unhookTip(button, 'build');
         }
     }
 
@@ -509,16 +435,8 @@ export default class IndustryPanel {
         }
 
 
-        const buildPlan = this.core.industry.getActionPlan('build', type);
-        const dropdown = card?.dropdown;
-        const isDropdownOpen = dropdown?.classList.contains('dropped');
-        const shouldShowTooltip = buildPlan.actual <= 0 || !isDropdownOpen || (isDropdownOpen && buildPlan.actual < buildPlan.target);
-        if (shouldShowTooltip) {
-            this.core.ui.hookTip(button, 'build');
-            button.dataset.buildingType = type;
-        } else {
-            this.core.ui.unhookTip(button, 'build');
-        }
+        this.core.ui.hookTip(button, 'build');
+        button.dataset.buildingType = type;
     }
 
     updateWorkerButton(card, type, b) {
@@ -541,16 +459,42 @@ export default class IndustryPanel {
         const canHire = hirePlan.actual > 0;
         button.disabled = !canHire;
 
-        const dropdown = card?.dropdown;
-        const isDropdownOpen = dropdown?.classList.contains('dropped');
-        const shouldShowTooltip = !canHire || !isDropdownOpen || (isDropdownOpen && hirePlan.actual < hirePlan.target);
+        this.core.ui.hookTip(button, 'hire');
+        button.dataset.buildingType = type;
+    }
 
-        if (shouldShowTooltip) {
-            this.core.ui.hookTip(button, 'hire');
-            button.dataset.buildingType = type;
-        } else {
-            this.core.ui.unhookTip(button, 'hire');
-        }
+    updateDropdownBuildButton(card, type) {
+        const button = card.addBuildingBtn;
+        if (!button) return;
+
+        const plan = this.core.industry.getActionPlan('build', type);
+        button.disabled = plan.actual <= 0;
+
+        const labelSpan = button.querySelector('.build-btn-label');
+        if (labelSpan) labelSpan.textContent = this.formatActionLabel('Build', 'build', type);
+
+        const progressFill = button.querySelector('.build-progress-fill');
+        if (progressFill) this.updateProgressFill(progressFill, this.core.industry.getBuildProgress(type));
+
+        this.core.ui.hookTip(button, 'build');
+        button.dataset.buildingType = type;
+    }
+
+    updateDropdownHireButton(card, type) {
+        const button = card.addWorkerBtn;
+        if (!button) return;
+
+        const plan = this.core.industry.getActionPlan('hire', type);
+        button.disabled = plan.actual <= 0;
+
+        const labelSpan = button.querySelector('.hire-btn-label');
+        if (labelSpan) labelSpan.textContent = this.formatActionLabel('Hire', 'hire', type);
+
+        const progressFill = button.querySelector('.hire-progress-fill');
+        if (progressFill) this.updateProgressFill(progressFill, this.core.industry.getHireProgress(type));
+
+        this.core.ui.hookTip(button, 'hire');
+        button.dataset.buildingType = type;
     }
 
     updateDemolishButton(card, type) {
@@ -559,17 +503,9 @@ export default class IndustryPanel {
 
         button.textContent = this.formatActionLabel('Demolish', 'sell', type);
         const sellPlan = this.core.industry.getActionPlan('sell', type);
-        const details = this.getDemolishButtonDetails(type);
-        this.updateButtonInfoBox(button, details);
-
         button.dataset.buildingType = type;
 
-        const shouldShowTooltip = sellPlan.actual <= 0 || (sellPlan.actual > 0 && sellPlan.actual < sellPlan.target);
-        if (shouldShowTooltip) {
-            this.core.ui.hookTip(button, 'demolish');
-        } else {
-            this.core.ui.unhookTip(button, 'demolish');
-        }
+        this.core.ui.hookTip(button, 'demolish');
 
         const warning = this.getDemolishWorkerWarning(type);
         const hasWarning = warning && sellPlan.actual > 0;
@@ -580,67 +516,13 @@ export default class IndustryPanel {
         }
     }
 
-    updateHireButton(card, type) {
-        const button = card.dropdown?.querySelector('.dropdown-workers .dropdown-add-worker-btn');
-        if (!button) return;
-
-        const textNodeType = (typeof Node !== 'undefined' && Node.TEXT_NODE) || 3;
-        Array.from(button.childNodes).forEach(node => {
-            if (node.nodeType === textNodeType && node.textContent.trim().length) {
-                node.remove();
-            }
-        });
-
-        let progressFill = button.querySelector('.hire-progress-fill');
-        if (!progressFill) {
-            progressFill = document.createElement('div');
-            progressFill.className = 'hire-progress-fill';
-            button.prepend(progressFill);
-        }
-
-        let labelSpan = button.querySelector('.hire-btn-label');
-        if (!labelSpan) {
-            labelSpan = document.createElement('span');
-            labelSpan.className = 'hire-btn-label';
-            labelSpan.style.position = 'relative';
-            labelSpan.style.zIndex = '1';
-            button.appendChild(labelSpan);
-        }
-        labelSpan.textContent = this.formatActionLabel('Hire', 'hire', type);
-
-        const details = this.getWorkerButtonDetails(type);
-        this.updateButtonInfoBox(button, details);
-
-        const progress = this.core.industry.getHireProgress(type);
-        this.updateProgressFill(progressFill, progress);
-
-        const plan = this.core.industry.getActionPlan('hire', type);
-        const shouldShowTooltip = plan.actual <= 0 || (plan.actual > 0 && plan.actual < plan.target);
-        if (shouldShowTooltip) {
-            this.core.ui.hookTip(button, 'hire');
-            button.dataset.buildingType = type;
-        } else {
-            this.core.ui.unhookTip(button, 'hire');
-        }
-    }
-
     updateFurloughButton(card, type) {
         const button = card.dropdown?.querySelector('.dropdown-workers .dropdown-remove-worker-btn');
         if (!button) return;
 
         button.textContent = this.formatActionLabel('Furlough', 'furlough', type);
-        const details = this.getFurloughButtonDetails(type);
-        this.updateButtonInfoBox(button, details);
-
         button.dataset.buildingType = type;
-
-        const furloughPlan = this.core.industry.getActionPlan('furlough', type);
-        const shouldShowTooltip = furloughPlan.actual <= 0 || (furloughPlan.actual > 0 && furloughPlan.actual < furloughPlan.target);
-        if (shouldShowTooltip) {
-            this.core.ui.hookTip(button, 'furlough');
-        } else {
-            this.core.ui.unhookTip(button, 'furlough');
-        }
+        this.core.ui.hookTip(button, 'furlough');
     }
 
     updateButtonStateWithTooltip(button, isEnabled, tipName, buildingType) {
@@ -666,17 +548,6 @@ export default class IndustryPanel {
                 if (buildingType) button.dataset.buildingType = buildingType;
             }
         }
-    }
-
-    updateHeaderSpanWithTooltip(headerSpan, hasTooltip, tipName, buildingType, content) {
-        if (!headerSpan) return;
-        if (hasTooltip) {
-            this.core.ui.hookTip(headerSpan, tipName);
-            headerSpan.dataset.buildingType = buildingType;
-        } else {
-            this.core.ui.unhookTip(headerSpan, tipName);
-        }
-        headerSpan.innerHTML = content;
     }
 
     updateOrCreateTimeSpan(header, timeToNext, tipName, buildingType) {
@@ -720,29 +591,6 @@ export default class IndustryPanel {
         const limitText = `${workers}/${maxWorkers}`;
         if (limitSpan.textContent !== limitText) {
             limitSpan.textContent = limitText;
-        }
-    }
-
-    updateButtonInfoBox(buttonElement, details) {
-        if (!buttonElement) return;
-
-        const buttonWithInfo = buttonElement.closest('.button-with-info');
-        if (!buttonWithInfo) return;
-
-        let infoBox = buttonWithInfo.querySelector('.button-info-box');
-        const content = this.renderButtonInfoBox(details);
-
-        if (content) {
-            if (!infoBox) {
-                infoBox = document.createElement('div');
-                infoBox.className = 'button-info-box';
-                buttonWithInfo.appendChild(infoBox);
-                this.core.ui.hookTip(infoBox, 'info-box-breakdown');
-            }
-            infoBox.innerHTML = content;
-        } else if (infoBox) {
-            this.core.ui.unhookTip(infoBox, 'info-box-breakdown');
-            infoBox.remove();
         }
     }
 
@@ -813,9 +661,7 @@ export default class IndustryPanel {
         });
     }
 
-    // ============================================================================
-    // UI CREATION HELPERS
-    // ============================================================================
+    // ── DOM creation ─────────────────────────────────────────────────────────
 
     createBuildingCard(type, building, def) {
         const row = document.createElement('div');
@@ -830,14 +676,16 @@ export default class IndustryPanel {
             <span class="building-title">${def ? def.name : type} <span class="building-count">(${building.count})</span></span>
         `;
 
-        const buildPlan = this.core.industry.getActionPlan('build', type);
-        const isDropdownOpen = building.dropped === true;
-        const shouldShowBuildTooltip = buildPlan.actual <= 0 || (buildPlan.actual > 0 && buildPlan.actual < buildPlan.target) || (!isDropdownOpen && buildPlan.actual >= buildPlan.target);
-        if (shouldShowBuildTooltip) {
-            this.core.ui.hookTip(mainBtn, 'build');
-            mainBtn.dataset.buildingType = type;
-        }
-        mainBtn.onclick = () => this.handleBuildAction(type, def);
+        this.core.ui.hookTip(mainBtn, 'build');
+        mainBtn.dataset.buildingType = type;
+        mainBtn.onclick = () => {
+            this.handleBuildAction(type, def);
+            const card = this.buildingCards[type];
+            if (card) {
+                this.core.ui.refreshTip(card.mainBtn);
+                this.core.ui.refreshTip(card.addBuildingBtn);
+            }
+        };
 
         const workerBtn = document.createElement('button');
         workerBtn.className = 'building-worker-btn';
@@ -847,17 +695,18 @@ export default class IndustryPanel {
             <span class="worker-btn-count">${workerCount}</span>
         `;
         const initialHirePlan = this.core.industry.getActionPlan('hire', type);
-        const canHire = initialHirePlan.actual > 0;
-        workerBtn.disabled = !canHire;
-        const shouldShowHireTooltip = initialHirePlan.actual <= 0 || (initialHirePlan.actual > 0 && initialHirePlan.actual < initialHirePlan.target);
-        if (shouldShowHireTooltip) {
-            this.core.ui.hookTip(workerBtn, 'hire');
-            workerBtn.dataset.buildingType = type;
-        }
+        workerBtn.disabled = initialHirePlan.actual <= 0;
+        this.core.ui.hookTip(workerBtn, 'hire');
+        workerBtn.dataset.buildingType = type;
 
         workerBtn.onclick = (e) => {
             e.stopPropagation();
             this.handleWorkerAction(type, 'assign');
+            const card = this.buildingCards[type];
+            if (card) {
+                this.core.ui.refreshTip(card.workerBtn);
+                this.core.ui.refreshTip(card.addWorkerBtn);
+            }
         };
 
         const chevronBtn = document.createElement('button');
@@ -895,22 +744,44 @@ export default class IndustryPanel {
 
         const addBuildingBtn = dropdown.querySelector('.dropdown-add-building-btn');
         if (addBuildingBtn) {
-            addBuildingBtn.onclick = () => this.handleBuildAction(type, def);
+            addBuildingBtn.onclick = () => {
+                this.handleBuildAction(type, def);
+                const card = this.buildingCards[type];
+                if (card) {
+                    this.core.ui.refreshTip(card.addBuildingBtn);
+                    this.core.ui.refreshTip(card.mainBtn);
+                }
+            };
         }
 
         const sellBtn = dropdown.querySelector('.dropdown-sell-btn');
         if (sellBtn) {
-            sellBtn.onclick = () => this.handleSellAction(type, def);
+            sellBtn.onclick = () => {
+                this.handleSellAction(type, def);
+                const card = this.buildingCards[type];
+                if (card) this.core.ui.refreshTip(card.sellBtn);
+            };
         }
 
         const addWorkerBtn = dropdown.querySelector('.dropdown-add-worker-btn');
         if (addWorkerBtn) {
-            addWorkerBtn.onclick = () => this.handleWorkerAction(type, 'assign');
+            addWorkerBtn.onclick = () => {
+                this.handleWorkerAction(type, 'assign');
+                const card = this.buildingCards[type];
+                if (card) {
+                    this.core.ui.refreshTip(card.addWorkerBtn);
+                    this.core.ui.refreshTip(card.workerBtn);
+                }
+            };
         }
 
         const removeWorkerBtn = dropdown.querySelector('.dropdown-remove-worker-btn');
         if (removeWorkerBtn) {
-            removeWorkerBtn.onclick = () => this.handleWorkerAction(type, 'unassign');
+            removeWorkerBtn.onclick = () => {
+                this.handleWorkerAction(type, 'unassign');
+                const card = this.buildingCards[type];
+                if (card) this.core.ui.refreshTip(card.removeWorkerBtn);
+            };
         }
 
         this.buildingCards[type] = {
@@ -934,26 +805,21 @@ export default class IndustryPanel {
     getBuildingSection(type, def, b) {
         const canBuild = this.core.industry.getActionPlan('build', type).actual > 0;
         const canSell = b.count > 0;
-        const aggregateEffects = this.getAggregateBuildingEffects(type);
         const timeToNext = this.getTimeUntilNextBuilding(type);
 
         return `
             <div class="dropdown-section dropdown-building">
                 <div class="dropdown-section-header">
-                    <span ${aggregateEffects ? `class="hastip" data-tips="building-effects" data-building-type="${type}"` : ''}>BUILDING${aggregateEffects ? ` (${aggregateEffects})` : ''}</span>
+                    <span>BUILDING</span>
                     ${timeToNext ? `<span class="header-time hastip" data-tips="time-to-next" data-building-type="${type}">${timeToNext}</span>` : ''}
                 </div>
                 <div class="dropdown-section-body">
                     <div class="action-buttons">
-                        <div class="button-with-info">
-                            <button class="raised-button dropdown-add-building-btn" data-building-type="${type}" ${!canBuild ? 'disabled' : ''} style="position: relative;">
-                                <div class="build-progress-fill"></div>
-                                Build
-                            </button>
-                        </div>
-                        <div class="button-with-info">
-                            <button class="raised-button dropdown-sell-btn" ${!canSell ? 'disabled' : ''} data-building-type="${type}">Demolish</button>
-                        </div>
+                        <button class="raised-button dropdown-add-building-btn" data-building-type="${type}" ${!canBuild ? 'disabled' : ''} style="position: relative;">
+                            <div class="build-progress-fill"></div>
+                            <span class="build-btn-label" style="position: relative; z-index: 1;">Build</span>
+                        </button>
+                        <button class="raised-button dropdown-sell-btn" ${!canSell ? 'disabled' : ''} data-building-type="${type}">Demolish</button>
                     </div>
                 </div>
             </div>
@@ -968,26 +834,21 @@ export default class IndustryPanel {
         const canRemove = furloughPlan.actual > 0;
         const onStrike = this.core.industry.workersOnStrike;
         const isScaled = this.areWorkersScaled();
-        const aggregateWorkerEffects = this.getAggregateWorkerEffects(type);
         const maxWorkers = this.core.industry.getMaxWorkers(type);
 
         return `
             <div class="dropdown-section dropdown-workers">
                 <div class="dropdown-section-header">
-                    <span ${aggregateWorkerEffects ? `class="hastip" data-tips="worker-effects" data-building-type="${type}"` : ''}>WORKERS${aggregateWorkerEffects ? ` (${aggregateWorkerEffects})` : ''}</span>
+                    <span>WORKERS</span>
                     <span class="header-limit hastip" data-tips="worker-limit" data-building-type="${type}">${workerCount}/${maxWorkers}</span>
                 </div>
                 <div class="dropdown-section-body">
                     <div class="action-buttons">
-                        <div class="button-with-info">
-                            <button class="raised-button dropdown-add-worker-btn ${!canAdd ? 'hastip' : ''}" data-building-type="${type}" ${!canAdd ? `disabled data-tips="hire"` : ''} style="position: relative;">
-                                <div class="hire-progress-fill"></div>
-                                <span class="hire-btn-label" style="position: relative; z-index: 1;">Hire</span>
-                            </button>
-                        </div>
-                        <div class="button-with-info">
-                            <button class="raised-button dropdown-remove-worker-btn" ${!canRemove ? 'disabled' : ''} data-building-type="${type}">Furlough</button>
-                        </div>
+                        <button class="raised-button dropdown-add-worker-btn" data-building-type="${type}" ${!canAdd ? 'disabled' : ''} style="position: relative;">
+                            <div class="hire-progress-fill"></div>
+                            <span class="hire-btn-label" style="position: relative; z-index: 1;">Hire</span>
+                        </button>
+                        <button class="raised-button dropdown-remove-worker-btn" ${!canRemove ? 'disabled' : ''} data-building-type="${type}">Furlough</button>
                     </div>
                     ${onStrike ? `
                     <div class="worker-strike">⚠ Workers on strike (insufficient food)</div>
@@ -1000,9 +861,7 @@ export default class IndustryPanel {
         `;
     }
 
-    // ============================================================================
-    // FORMATTING & CALCULATION HELPERS
-    // ============================================================================
+    // ── Formatting & data ────────────────────────────────────────────────────
 
     #sortEffects(effects) {
         const categoryOrder = { cost: 0, reward: 1, rate: 2, cap: 3 };
@@ -1060,65 +919,71 @@ export default class IndustryPanel {
             return { header: this.getDisabledReason(action, type), chain: [], resultRows: [] };
         }
 
-        if (includePlanHeader && (action === 'sell' || action === 'furlough')) {
-            if (plan.actual < plan.target) {
-                const actionName = action === 'sell' ? 'demolish' : 'furlough';
-                return { header: `Can only ${actionName} ${plan.actual} (all)`, chain: [], resultRows: [] };
-            }
-            return null;
+        if (includePlanHeader && (action === 'sell' || action === 'furlough') && plan.actual < plan.target) {
+            const actionName = action === 'sell' ? 'demolish' : 'furlough';
+            return { header: `Can only ${actionName} ${plan.actual} (all)`, chain: [], resultRows: [] };
         }
 
         const data = this.core.industry.getCalculationSegment('action', { action, type });
         if (!data) return null;
 
         const { effects, scale, units, effectType } = data;
-        const chain = [];
-        const netRates = {};
         const sorted = this.#sortEffects(effects);
 
+        // Group by (category, resource) — each group is one visual section
+        const groups = new Map();
         for (const eff of sorted) {
-            const { category, resource, direction, tag, baseValue, value } = eff;
-            const tone = this.#toneFromDirection(direction);
-            const children = this.#effectChildren(eff, category, units, scale, effectType);
+            const key = `${eff.category}:${eff.resource}`;
+            if (!groups.has(key)) groups.set(key, { category: eff.category, resource: eff.resource, effects: [] });
+            groups.get(key).effects.push(eff);
+        }
 
-            if (category === 'cost') {
-                chain.push({ value: `-${this.fmt(value)}`, label: resource, note: 'cost', tone: 'drain', children });
-                continue;
+        const chain = [];
+        let firstSection = true;
+
+        for (const { category, resource, effects: groupEffects } of groups.values()) {
+            if (!firstSection) chain.push({ kind: 'separator' });
+            firstSection = false;
+
+            let net = 0;
+            let hasModifiers = false;
+
+            for (const eff of groupEffects) {
+                const { direction, tag, baseValue, value } = eff;
+                const tone = this.#toneFromDirection(direction);
+                const children = this.#effectChildren(eff, category, units, scale, effectType);
+                if (children.length) hasModifiers = true;
+
+                if (category === 'cost') {
+                    net += value;
+                    chain.push({ value: `-${this.fmt(value)}`, label: resource, note: 'cost', tone: 'drain', children });
+                } else if (category === 'reward') {
+                    net += value;
+                    chain.push({ value: `+${this.fmt(value)}`, label: resource, tone: 'gain', children });
+                } else if (category === 'cap') {
+                    net += direction === 'gain' ? value : -value;
+                    chain.push({ value: `${direction === 'gain' ? '+' : '-'}${this.fmt(value)}`, label: `${resource} cap`, tone, children });
+                } else if (category === 'rate') {
+                    net += direction === 'gain' ? value * scale : -(value * scale);
+                    chain.push({ value: `${direction === 'gain' ? '+' : '-'}${this.fmt(baseValue)}`, label: `${resource}/s`, note: tag, tone, children });
+                }
             }
-            if (category === 'reward') {
-                chain.push({ value: `+${this.fmt(value)}`, label: resource, tone: 'gain', children });
-                continue;
-            }
-            if (category === 'cap') {
-                chain.push({
-                    value: `${direction === 'gain' ? '+' : '-'}${this.fmt(value)}`,
-                    label: `${resource} cap`,
-                    tone,
-                    children
-                });
-                continue;
-            }
-            if (category === 'rate') {
-                chain.push({
-                    value: `${direction === 'gain' ? '+' : '-'}${this.fmt(baseValue)}`,
-                    label: `${resource}/s`,
-                    note: tag,
-                    tone,
-                    children
-                });
-                netRates[resource] = (netRates[resource] || 0) + (direction === 'gain' ? value * scale : -value * scale);
+
+            // Emit an inline result only when there is something to resolve:
+            // multiple effects in the group, or modifiers that change the value.
+            // A single flat effect is already its own answer — no result needed.
+            const needsResult = includeResult && (hasModifiers || groupEffects.length > 1) && Math.abs(net) >= 0.0001;
+            if (needsResult) {
+                const sign = net >= 0 ? '+' : '';
+                const netStr = `${sign}${this.fmt(net)}`;
+                if (category === 'cost')        chain.push({ kind: 'result', value: `-${this.fmt(net)}`, label: resource,           tone: 'drain' });
+                else if (category === 'reward') chain.push({ kind: 'result', value: `+${this.fmt(net)}`, label: resource,           tone: 'gain' });
+                else if (category === 'rate')   chain.push({ kind: 'result', value: netStr,               label: `${resource}/s`,   tone: net >= 0 ? 'gain' : 'drain' });
+                else if (category === 'cap')    chain.push({ kind: 'result', value: netStr,               label: `${resource} cap`, tone: net >= 0 ? 'gain' : 'drain' });
             }
         }
 
-        const resultRows = includeResult
-            ? Object.entries(netRates)
-                .filter(([, v]) => Math.abs(v) >= 0.0001)
-                .map(([res, v]) => ({
-                    value: `${v >= 0 ? '+' : ''}${this.fmt(v)}`,
-                    label: `${res}/s`,
-                    tone: v >= 0 ? 'gain' : 'drain'
-                }))
-            : [];
+        const resultRows = [];
 
         const isPartial = plan.actual < plan.target;
         return {
@@ -1255,34 +1120,6 @@ export default class IndustryPanel {
         }
     }
 
-    formatInfoBoxTooltip(action, type) {
-        const breakdown = this.#buildActionBreakdown(action, type, { includeResult: false, includePlanHeader: false });
-        if (!breakdown || !breakdown.chain.length) return null;
-        return breakdown;
-    }
-
-    formatAggregateEffectsInline(type, effectType) {
-        const data = this.core.industry.getAggregateEffects(type, effectType);
-        if (!data) return null;
-
-        const { effects, scale } = data;
-        const byResource = {};
-        for (const eff of effects) {
-            const { resource, direction, value } = eff;
-            const scaledValue = value * scale;
-            byResource[resource] = (byResource[resource] || 0) + (direction === 'gain' ? scaledValue : -scaledValue);
-        }
-
-        const items = [];
-        for (const [res, net] of Object.entries(byResource)) {
-            if (net !== 0) {
-                const color = net > 0 ? 'gainColor' : 'drainColor';
-                items.push(`<span style="color: var(--${color})">${net > 0 ? '+' : ''}${this.fmt(net)} ${res}/s</span>`);
-            }
-        }
-        return items.length ? items.join(',&nbsp;') : null;
-    }
-
     formatActionLabel(baseText, action, type) {
         if (!this.core.industry.isMultiIncrement()) return baseText;
         const plan = this.core.industry.getActionPlan(action, type);
@@ -1326,130 +1163,15 @@ export default class IndustryPanel {
     }
 
 
-    getAggregateBuildingEffects(type) {
-        return this.formatAggregateEffectsInline(type, 'base');
-    }
-
-    getAggregateWorkerEffects(type) {
-        return this.formatAggregateEffectsInline(type, 'worker');
-    }
-
     getTimeUntilNextBuilding(type) {
         const seconds = this.core.industry.getTimeUntilNextBuilding(type);
         return seconds !== null ? this.formatTime(seconds) : null;
-    }
-
-    getButtonDetailsFromAction(action, type) {
-        const plan = this.core.industry.getActionPlan(action, type);
-
-        if ((action === 'sell' || action === 'furlough') && (plan?.limit ?? 0) <= 0) {
-            return null;
-        }
-
-        const units = Math.max(1, plan?.target || 1);
-        const data = this.core.industry.getActionEffects(action, type, { forceUnits: units });
-        if (!data) return null;
-
-        const { effects, scale } = data;
-
-        const costs = effects.filter(e => e.category === 'cost').map(e => ({ res: e.resource, amt: e.value }));
-        const rewards = effects.filter(e => e.category === 'reward').map(e => ({ res: e.resource, amt: e.value }));
-        const caps = effects.filter(e => e.category === 'cap').map(e => ({ res: e.resource, val: e.direction === 'gain' ? e.value : -e.value }));
-        const netByRes = {};
-        for (const e of effects.filter(e => e.category === 'rate')) {
-            const scaledValue = e.value * scale;
-            netByRes[e.resource] = (netByRes[e.resource] || 0) + (e.direction === 'gain' ? scaledValue : -scaledValue);
-        }
-        const effectsList = Object.entries(netByRes).filter(([, net]) => net !== 0).map(([res, net]) => ({ res, val: Math.abs(net), type: net > 0 ? 'gain' : 'drain' }));
-
-        return { costs, rewards, effects: effectsList, capChanges: caps };
-    }
-
-    getBuildingButtonDetails(type) {
-        return this.getButtonDetailsFromAction('build', type);
-    }
-
-    getDemolishButtonDetails(type) {
-        return this.getButtonDetailsFromAction('sell', type);
-    }
-
-    getFurloughButtonDetails(type) {
-        return this.getButtonDetailsFromAction('furlough', type);
-    }
-
-    getWorkerButtonDetails(type) {
-        return this.getButtonDetailsFromAction('hire', type);
-    }
-
-    renderButtonInfoBox(details) {
-        if (!details) return '';
-
-        const accumulate = (items, prefix, getKey) =>
-            items?.reduce((map, item) => {
-                const key = getKey(item);
-                if (key) map.set(key, (map.get(key) || 0) + (item.amt ?? item.val ?? 0));
-                return map;
-            }, new Map()) || new Map();
-
-        const itemMap = new Map([
-            ...accumulate(details.costs, 'cost', c => c.amt !== undefined ? `cost_${c.res}_amt` : (c.val !== undefined && c.res ? `cost_${c.res}_val` : null)),
-            ...accumulate(details.rewards, 'reward', r => `reward_${r.res}_amt`),
-            ...accumulate(details.effects, 'effect', e => `effect_${e.res}_${e.type}`),
-            ...accumulate(details.capChanges, 'cap', c => `cap_${c.res}`)
-        ]);
-
-        const formatItem = (key, total) => {
-            const [, res, type] = key.split('_');
-            const isAmt = type === 'amt';
-            const isDrain = type === 'drain';
-            const isCost = key.startsWith('cost_');
-
-            let html, colorClass;
-            if (isCost) {
-                html = `-${this.core.ui.formatNumber(total)} ${res}${isAmt ? '' : '/s'}`;
-                colorClass = 'info-cost';
-            } else if (key.startsWith('reward_')) {
-                html = `+${this.core.ui.formatNumber(total)} ${res}`;
-                colorClass = 'info-effect effect-gain';
-            } else if (key.startsWith('cap_')) {
-                const isPos = total >= 0;
-                html = `${isPos ? '+' : ''}${this.core.ui.formatNumber(total)} ${res} cap`;
-                colorClass = `info-effect effect-${isPos ? 'gain' : 'drain'}`;
-            } else {
-                html = `${isDrain ? '-' : '+'}${this.core.ui.formatNumber(total)} ${res}/s`;
-                colorClass = `info-effect effect-${isDrain ? 'drain' : 'gain'}`;
-            }
-            return { html, colorClass };
-        };
-
-        const allItems = Array.from(itemMap.entries()).map(([key, total]) => ({ key, total, isNeg: total < 0 || key.includes('_drain') || key.startsWith('cost_') }));
-        const regular = allItems.filter(i => !i.key.startsWith('cap_')).sort((a, b) => b.isNeg - a.isNeg).map(i => formatItem(i.key, i.total));
-        const caps = allItems.filter(i => i.key.startsWith('cap_')).sort((a, b) => b.isNeg - a.isNeg).map(i => formatItem(i.key, i.total));
-
-        const joinWithColoredCommas = (items) => {
-            const result = [];
-            items.forEach((item, idx) => {
-                result.push(`<span class="${item.colorClass}">${item.html}</span>`);
-                if (idx < items.length - 1) {
-                    result.push(`<span class="${item.colorClass}">, </span>`);
-                }
-            });
-            return result.join('');
-        };
-
-        const rows = [];
-        if (regular.length) rows.push(`<span class="info-regular-items">${joinWithColoredCommas(regular)}</span>`);
-        if (caps.length) rows.push(`<span class="info-cap-items">${joinWithColoredCommas(caps)}</span>`);
-        return rows.join('');
     }
 
     getBottleneckText() {
         const bottlenecks = this.core.industry.getBottleneckResources();
         return bottlenecks.join(', ') || 'input';
     }
-
-
-
 
 
 
@@ -1531,9 +1253,7 @@ export default class IndustryPanel {
         }
     }
 
-    // ============================================================================
-    // VISUAL EFFECTS
-    // ============================================================================
+    // ── Effects ──────────────────────────────────────────────────────────────
 
     createParticleExplosion(event) {
         this.core.ui.effects?.embers(event.clientX, event.clientY, { count: 5 + Math.floor(Math.random() * 3) });
@@ -1597,9 +1317,7 @@ export default class IndustryPanel {
         setTimeout(() => floatingText.remove(), 1200);
     }
 
-    // ============================================================================
-    // LIFECYCLE
-    // ============================================================================
+    // ── Lifecycle ────────────────────────────────────────────────────────────
 
     onVisibilityChange({ activePanels, change }) {
         const { loc, panel } = change;

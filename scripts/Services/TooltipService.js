@@ -955,32 +955,42 @@ export default function createTooltipService(core) {
             }
         });
 
-        registerTip('info-box-breakdown', (el) => {
-            const buttonElement = el.closest('.button-with-info')?.querySelector('button');
-            if (!buttonElement) return '';
-
-            const buildingType = buttonElement.dataset.buildingType;
-            if (!buildingType) return '';
-
-            let action = null;
-            if (buttonElement.classList.contains('dropdown-add-building-btn')) action = 'build';
-            else if (buttonElement.classList.contains('dropdown-sell-btn')) action = 'sell';
-            else if (buttonElement.classList.contains('dropdown-add-worker-btn')) action = 'hire';
-            else if (buttonElement.classList.contains('dropdown-remove-worker-btn')) action = 'furlough';
-
-            if (!action) return '';
-
-            const panel = core.ui.panels.industry;
-            const data = panel.formatInfoBoxTooltip(action, buildingType);
-            if (!data) return '';
-
-            return createBreakdownBox(data);
-        });
-
         observeTooltips();
     })();
 
+    function immediateRefresh(el) {
+        if (!el) return;
+        const tipsForEl = [];
+        activeTips.forEach((map, tipBox) => {
+            map.forEach((anchor, key) => {
+                if (anchor === el) tipsForEl.push({ tipBox, key });
+            });
+        });
+        if (!tipsForEl.length) return;
+
+        const tipBoxes = tipsForEl.map(t => t.tipBox);
+        const updatedTips = getTips(el);
+
+        if (updatedTips.length !== tipBoxes.length) {
+            cleanupAllTooltips();
+            if (updatedTips.length > 0) showTooltip(el);
+            return;
+        }
+
+        let repositioned = false;
+        tipsForEl.forEach(({ tipBox, key }) => {
+            const updatedTip = updatedTips.find(t => t.key === key);
+            if (!updatedTip) return;
+            if (tipBox._lastContent !== updatedTip.content) {
+                tipBox.innerHTML = updatedTip.content;
+                tipBox._lastContent = updatedTip.content;
+                repositioned = true;
+            }
+        });
+        if (repositioned) repositionTooltips(el, tipBoxes);
+    }
+
     return {
-        registerTip, showTooltip, cleanupAllTooltips, observeTooltips, setContextMenuService,
+        showTooltip, cleanupAllTooltips, observeTooltips, setContextMenuService, immediateRefresh,
     };
 }

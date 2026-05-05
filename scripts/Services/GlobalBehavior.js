@@ -35,10 +35,22 @@ export default function setupGlobalBehavior(core) {
 
     const settingsButton = document.querySelector("#settingsnav");
     if (settingsButton) {
+        let lastClickTime = 0;
+        const rapidThreshold = 800; // ms allowed between clicks
+
         settingsButton.addEventListener("click", async () => {
-            if (++settingsClicks >= 5) {
+            const now = Date.now();
+            if (now - lastClickTime > rapidThreshold) {
+                settingsClicks = 1;
+            } else {
+                settingsClicks += 1;
+            }
+            lastClickTime = now;
+
+            if (settingsClicks >= 5) {
                 await HackService.show(core);
                 settingsClicks = 0;
+                lastClickTime = 0;
             }
         });
     }

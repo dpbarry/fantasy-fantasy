@@ -346,26 +346,44 @@
             }
         }
 
-        /* ── EffectsService v2 ─────────────────────────────────────
-           Keyframes and helper classes for DOM-driven effects. The
-           service adds a class, listens for animationend, removes it.
-           Canvas-driven effects (bloom/embers/ribbon) live in JS. */
+        /* ── EffectsService DOM effects ─────────────────────────────────
+           Classes added/removed by JS. Intensity via CSS vars set before
+           adding the class. Canvas effects live in EffectsService.js. */
+
+        /* ── Pulse: expanding ring ─── attention / alive / over here */
 
         @keyframes effect-pulse {
-            0%   { box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent; }
-            45%  { box-shadow: 0 0 8px 2px var(--accent-glow), 0 0 16px 4px var(--accent-glow-soft); }
-            100% { box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent; }
+            0%   { box-shadow: 0 0 0 0px color-mix(in oklab, transparent 0%, var(--accent)); }
+            8%   { box-shadow: 0 0 0 1px  color-mix(in oklab, transparent 5%, var(--accent)); }
+            100% { box-shadow: 0 0 0 var(--pulse-reach, 9px) transparent; }
         }
 
-        .effect-pulse        { animation: effect-pulse 420ms var(--ease-emphasis); }
-        .effect-pulse-subtle { animation: effect-pulse 320ms var(--ease-standard); }
-        .effect-pulse-loud   { animation: effect-pulse 620ms var(--ease-emphasis); }
+        .effect-pulse {
+            animation: effect-pulse var(--pulse-duration, 480ms) cubic-bezier(0.2, 0, 0.5, 1);
+        }
+
+        /* ── Crackle: damped shake + brief ring flash ─── denied / can't afford */
+
+        @keyframes effect-crackle {
+            0%   { transform: translateX(0);       outline-color: transparent; }
+            12%  { transform: translateX(-3px);    outline-color: var(--drainColor); }
+            28%  { transform: translateX( 3px);    outline-color: transparent; }
+            50%  { transform: translateX(-1.5px);  }
+            70%  { transform: translateX( 1px);    }
+            100% { transform: translateX(0);       }
+        }
+
+        .effect-crackle {
+            animation: effect-crackle var(--crackle-duration, 280ms) ease-out;
+            outline: 1px solid transparent;
+            outline-offset: 1px;
+        }
+
+        /* ── Shimmer: diagonal specular sweep ─── new / changed / over here */
 
         @keyframes effect-shimmer-sweep {
-            0%   { transform: translateX(-110%); opacity: 0; }
-            20%  { opacity: 1; }
-            80%  { opacity: 1; }
-            100% { transform: translateX(110%); opacity: 0; }
+            0%   { transform: translateX(-165%) skewX(-18deg); }
+            100% { transform: translateX( 165%) skewX(-18deg); }
         }
 
         .effect-shimmer-overlay {
@@ -374,27 +392,38 @@
             pointer-events: none;
             overflow: hidden;
             border-radius: inherit;
+            z-index: 9;
         }
 
         .effect-shimmer-overlay::before {
             content: "";
             position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 60%;
+            top: -10%;
+            bottom: -10%;
             left: 0;
-            background: linear-gradient(105deg,
+            width: 44%;
+            background: linear-gradient(
+                to right,
                 transparent 0%,
-                color-mix(in oklab, transparent 60%, var(--accent)) 50%,
-                transparent 100%);
+                color-mix(in oklab, transparent 88%, var(--accent)) 18%,
+                color-mix(in oklab, transparent 55%, white)         36%,
+                color-mix(in oklab, transparent  8%, white)         47%,
+                color-mix(in oklab, transparent  2%, white)         50%,
+                color-mix(in oklab, transparent  8%, white)         53%,
+                color-mix(in oklab, transparent 55%, white)         64%,
+                color-mix(in oklab, transparent 88%, var(--accent)) 82%,
+                transparent 100%
+            );
             mix-blend-mode: screen;
-            animation: effect-shimmer-sweep 700ms ease-out forwards;
+            animation: effect-shimmer-sweep 720ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
         }
+
+        /* ── Float text: rising label ─── resource gain / drain / crit */
 
         @keyframes effect-float-rise {
             0%   { opacity: 0; transform: translate(-50%, 0)    scale(0.85); }
             18%  { opacity: 1; transform: translate(-50%, -10px) scale(1.06); }
-            100% { opacity: 0; transform: translate(-50%, -42px) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -44px) scale(1); }
         }
 
         .effect-float-text {
@@ -412,14 +441,3 @@
         .effect-float-text.drain   { color: var(--drainColor); }
         .effect-float-text.crit    { color: var(--accent); font-size: 1.4em; }
         .effect-float-text.neutral { color: var(--baseColor); }
-
-        @keyframes effect-crackle {
-            0%, 100% { transform: translateX(0);    box-shadow: 0 0 0 0 transparent; }
-            18%      { transform: translateX(-3px); box-shadow: 0 0 12px 1px var(--drainColor); }
-            36%      { transform: translateX(3px); }
-            54%      { transform: translateX(-2px); box-shadow: 0 0 6px 0 var(--drainColor); }
-            72%      { transform: translateX(2px); }
-        }
-
-        .effect-crackle        { animation: effect-crackle 320ms ease-out; }
-        .effect-crackle-subtle { animation: effect-crackle 220ms ease-out; }

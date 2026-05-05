@@ -727,22 +727,45 @@ button,
                 color: var(--drainColor);
             }
 
+            .bd-sep {
+                margin: 0.35em 0;
+            }
+
             .bd-res {
                 margin-top: 0.15em;
                 padding-top: 0.15em;
                 border-top: 1px solid var(--midBaseColor);
                 font-weight: 600;
+
+                .bd-res-row {
+                    display: flex;
+                    gap: 0.2em;
+                }
+
+                .bd-res-prefix {
+                    opacity: 0.5;
+                    flex-shrink: 0;
+                    font-weight: 400;
+                    white-space: pre;
+                }
             }
         }
 
         .context-menu {
             position: fixed;
-            background: var(--pureColor);
-            filter: drop-shadow(0 2px 8px light-dark(rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.6)));
-            border: 1px solid var(--rule-strong);
-            border-radius: 3px;
-            min-width: 8rem;
-            max-width: 20rem;
+            background: light-dark(
+                color-mix(in oklab, var(--pureColor) 65%, transparent),
+                color-mix(in oklab, var(--pureColor) 65%, transparent)
+            );
+            backdrop-filter: blur(12px) saturate(1.5);
+            -webkit-backdrop-filter: blur(12px) saturate(1.5);
+            border: 1px solid light-dark(
+                color-mix(in oklab, var(--rule-normal) 70%, transparent),
+                color-mix(in oklab, var(--rule-normal) 75%, transparent)
+            );
+            border-radius: 7px;
+            min-width: 10rem;
+            max-width: 22rem;
             z-index: var(--z-tooltip);
             font-family: SourceSerif, serif;
             font-size: 0.85em;
@@ -751,18 +774,57 @@ button,
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            transition: opacity var(--dur-fast) var(--ease-standard),
-                transform var(--dur-fast) var(--ease-pop);
+            box-shadow:
+                0 2px 10px light-dark(rgba(0,0,0,0.06), rgba(0,0,0,0.75)),
+                0 0 4px  light-dark(rgba(0,0,0,0.1), rgba(0,0,0)),
+                inset 0 1px 0 light-dark(rgba(255,255,255,0.7), rgba(255,255,255,0.06));
+            transition: opacity 130ms var(--ease-standard),
+                transform 130ms var(--ease-pop);
 
             @starting-style {
                 opacity: 0;
-                transform: translateY(-4px);
+                transform: translateY(-4px) scale(0.97);
+            }
+
+            .context-menu-header {
+                padding: 0.35em 0.85em 0.3em;
+                font-size: 0.75em;
+                font-weight: 600;
+                letter-spacing: 0.09em;
+                text-transform: uppercase;
+                color: var(--accent);
+                background: var(--accent-bg-faint);
+                border-bottom: 1px solid color-mix(in oklab, var(--accent) 18%, transparent);
+                user-select: none;
+                flex-shrink: 0;
+            }
+
+            .context-menu-list {
+                display: flex;
+                flex-direction: column;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                scrollbar-width: thin;
+                scrollbar-color: color-mix(in oklab, var(--accent) 35%, transparent) transparent;
+
+                /* Fade top and bottom when scrollable */
+                &.context-menu-list--scroll {
+                    mask-image: linear-gradient(
+                        to bottom,
+                        transparent 0%,
+                        black 14%,
+                        black 86%,
+                        transparent 100%
+                    );
+                }
             }
 
             .context-menu-item {
-                padding: 0.4em 0.8em;
+                padding: 0.5em 0.9em;
                 cursor: pointer;
                 user-select: none;
+                flex-shrink: 0;
+                box-shadow: inset 3px 0 0 transparent;
                 transition: background var(--dur-fast) var(--ease-standard),
                     color var(--dur-fast) var(--ease-standard),
                     box-shadow var(--dur-fast) var(--ease-standard);
@@ -770,23 +832,31 @@ button,
                 overflow: hidden;
                 text-overflow: ellipsis;
 
+                & + .context-menu-item {
+                    border-top: 1px solid light-dark(
+                        color-mix(in oklab, var(--rule-faint) 55%, transparent),
+                        color-mix(in oklab, var(--rule-faint) 35%, transparent)
+                    );
+                }
+
                 @media (hover: hover) and (pointer: fine) {
                     &:hover:not(.disabled) {
-                        background: color-mix(in oklab, var(--accent) 25%, transparent);
+                        background: var(--accent-bg-mid);
                         color: var(--accent);
                         box-shadow: inset 2px 0 0 var(--accent);
                     }
                 }
 
                 &.disabled {
-                    opacity: 0.5;
+                    opacity: var(--op-disabled);
                     cursor: default;
                 }
 
                 &:active:not(.disabled) {
-                    background: color-mix(in oklab, var(--accent) 40%, transparent);
+                    background: var(--accent-bg-strong);
+                    color: var(--accent);
+                    box-shadow: inset 2px 0 0 var(--accent);
                 }
-
             }
         }
 

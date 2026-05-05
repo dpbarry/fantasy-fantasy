@@ -2,8 +2,7 @@ export default class ClockManager {
     #realTimeListeners;
     #gameTimeListeners;
 
-    constructor(core) {
-        this.core = core;
+    constructor() {
         this.SECONDS_PER_MINUTE = 60;
         this.SECONDS_PER_HOUR = 3600;        // 60 * 60
         this.SECONDS_PER_DAY = 86400;        // 24 * 60 * 60

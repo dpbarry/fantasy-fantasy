@@ -4,10 +4,9 @@ export default class LoadingService {
     static #particles = [];
     static #animationFrame = null;
     static #fillIcon = null;
-    static _loadedCount = 0;
+    static #loadedCount = 0;
 
-    static #resizeHandler = () => {
-    };
+    static #resizeHandler = () => {};
 
     static #warningTimeout;
     static #warningNote;
@@ -71,7 +70,7 @@ export default class LoadingService {
         const manifest = await response.json();
         const urls = Object.values(manifest);
         const total = urls.length;
-        this._loadedCount = 0;
+        this.#loadedCount = 0;
 
         const preloadContainer = document.createElement('div');
         preloadContainer.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;opacity:0;';
@@ -111,8 +110,8 @@ export default class LoadingService {
 
 
     static #updateProgress(total) {
-        this._loadedCount++;
-        const pct = (this._loadedCount / total) * 100;
+        this.#loadedCount++;
+        const pct = (this.#loadedCount / total) * 100;
         if (this.#fillIcon) {
             this.#fillIcon.style.setProperty('--prog', `${pct}%`);
         }

@@ -410,15 +410,6 @@
                         align-items: center;
                         gap: 0.5em;
 
-                        .header-effects {
-                            font-size: 1em;
-                            letter-spacing: 0;
-                            font-weight: 500;
-                            align-items: center;
-                            flex-wrap: wrap;
-                            justify-content: flex-end;
-                        }
-
                         .header-time,
                         .header-limit {
                             font-size: 0.75em;
@@ -478,7 +469,6 @@
                             &.dropdown-add-building-btn,
                             &.dropdown-add-worker-btn {
                                 --raised-tone: var(--accent);
-                                max-height: 1em;
 
                                 @media (hover: hover) and (pointer: fine) {
                                     &:hover:not(:disabled) {
@@ -494,15 +484,9 @@
                                 }
                             }
 
-
                             &.dropdown-remove-worker-btn,
                             &.dropdown-sell-btn {
                                 --raised-tone: var(--midBaseColor);
-                                max-height: 1em;
-
-                                &~.button-info-box {
-                                    border-color: color-mix(in oklab, var(--midBaseColor) 70%, transparent);
-                                }
 
                                 @media (hover: hover) and (pointer: fine) {
                                     &:disabled {
@@ -531,174 +515,11 @@
                                 border-radius: 0;
                             }
 
-                            .button-label,
-                            .button-info-box {
+                            .button-label {
                                 position: relative;
                                 z-index: 1;
                             }
                         }
-
-                        .button-with-info {
-                            display: flex;
-                            flex-direction: column;
-                            align-items: center;
-                            gap: 0.4em;
-                            flex: 1;
-
-                            .button-info-box {
-                                border: 1px solid var(--rule-faint);
-
-                                border-top: none;
-                                width: 100%;
-                                border-bottom-left-radius: 0.3em;
-                                border-bottom-right-radius: 0.3em;
-                                padding: 0.7em 0.4em 0.3em;
-                                display: flex;
-                                flex-direction: row;
-                                flex-wrap: wrap;
-                                align-items: center;
-                                margin-top: -0.8em;
-                                font-size: 0.8em;
-                                font-weight: 400;
-
-                                .info-cap-items {
-                                    flex-basis: 100%;
-                                }
-
-                                .info-cost {
-                                    color: var(--drainColor);
-                                }
-
-                                .info-effect {
-                                    &.effect-gain {
-                                        color: var(--gainColor);
-                                    }
-
-                                    &.effect-drain {
-                                        color: var(--drainColor);
-                                    }
-
-                                }
-                            }
-
-                            &:has(button:disabled) .button-info-box {
-                                opacity: 0.5;
-                            }
-                        }
-                    }
-
-                    .compact-row {
-                        display: flex;
-                        flex-direction: row;
-                        align-items: flex-start;
-                        gap: 0.5em;
-                        margin-top: 0.4em;
-
-                        .compact-label {
-                            font-weight: 600;
-                            color: var(--midBaseColor);
-                            min-width: 2.5em;
-                            flex-shrink: 0;
-                        }
-
-                        .compact-content {
-                            flex: 1;
-                            display: inline-flex;
-                            flex-wrap: wrap;
-                            gap: 0.3em;
-                            align-items: center;
-                        }
-                    }
-
-                    .dropdown-description .dropdown-section-body {
-                        font-style: italic;
-                        opacity: 0.85;
-                    }
-
-                    .detail-item {
-                        display: flex;
-                        align-items: center;
-                        gap: 0.5em;
-                        margin-bottom: 0.5em;
-
-                        .detail-label {
-                            font-weight: 600;
-                            color: var(--midBaseColor);
-                            min-width: 4em;
-                        }
-
-                        .detail-cost {
-                            display: inline-flex;
-                            align-items: center;
-                            gap: 0.3em;
-                            color: var(--baseColor);
-
-                            &.insufficient {
-                                color: var(--drainColor);
-                            }
-                        }
-
-                        .detail-needed {
-                            font-size: 0.85em;
-                            opacity: 0.8;
-                        }
-
-                        .detail-amount {
-                            font-weight: 600;
-                            color: var(--accent);
-                        }
-
-                        .detail-resource {
-                            text-transform: capitalize;
-                            opacity: 0.9;
-                        }
-
-                        .detail-time {
-                            color: var(--accent);
-                            font-weight: 500;
-                        }
-                    }
-
-                    .worker-controls {
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        gap: 0.8em;
-                        margin-bottom: 0.8em;
-
-                        button {
-                            width: 2em;
-                            height: 2em;
-                            border: 1px solid var(--midBaseColor);
-                            background: color-mix(in oklab, var(--surface) 90%, var(--accent) 10%);
-                            color: var(--baseColor);
-                            border-radius: 0.3em;
-                            cursor: pointer;
-                            font-size: 1.1em;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            transition: background 0.15s, border-color 0.15s;
-
-                            @media (hover: hover) and (pointer: fine) {
-                                &:hover:not(:disabled) {
-                                    background: color-mix(in oklab, var(--surface) 80%, var(--accent) 20%);
-                                    border-color: var(--accent);
-                                }
-                            }
-
-                            &:disabled {
-                                opacity: 0.4;
-                                cursor: default;
-                            }
-                        }
-                    }
-
-                    .worker-count {
-                        font-weight: 600;
-                        color: var(--baseColor);
-                        min-width: 4em;
-                        text-align: center;
                     }
 
                     .worker-strike {
@@ -733,16 +554,6 @@
                         font-size: 0.85em;
                         font-weight: 500;
                         opacity: 0.7;
-                    }
-
-                    .worker-effects {
-                        margin-top: 0.5em;
-
-                        &.empty {
-                            opacity: 0.5;
-                            font-style: italic;
-                            font-size: 0.9em;
-                        }
                     }
 
                 }
