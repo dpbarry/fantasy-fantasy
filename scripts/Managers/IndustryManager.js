@@ -431,6 +431,7 @@ export default class IndustryManager {
 
     #computeWorkerThrottleState(contributors, resourceValues = this.#getResourceValues(), workersOnStrike = this.workersOnStrike) {
         const nonWorkerGains = new Map();
+        const workerGains = new Map();
         const workerDrains = new Map();
 
         for (const contributor of contributors) {
@@ -447,6 +448,13 @@ export default class IndustryManager {
                     (workerDrains.get(contributor.resource) || 0) + contributor.value
                 );
             }
+
+            if (contributor.effectType === 'worker' && contributor.direction === 'gain') {
+                workerGains.set(
+                    contributor.resource,
+                    (workerGains.get(contributor.resource) || 0) + contributor.value
+                );
+            }
         }
 
         const bottlenecks = [];
@@ -457,8 +465,10 @@ export default class IndustryManager {
                 if (workerDrain <= 0) continue;
                 if ((resourceValues[resource] || 0) > 0) continue;
 
-                const supply = nonWorkerGains.get(resource) || 0;
-                const resourceScale = workerDrain > 0 ? supply / workerDrain : 1;
+                const baseSupply = nonWorkerGains.get(resource) || 0;
+                const workerSupply = workerGains.get(resource) || 0;
+                const netWorkerDemand = workerDrain - workerSupply;
+                const resourceScale = netWorkerDemand > 0 ? baseSupply / netWorkerDemand : 1;
                 if (resourceScale < 1) bottlenecks.push(resource);
                 scale = Math.min(scale, resourceScale);
             }
