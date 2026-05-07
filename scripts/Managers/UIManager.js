@@ -8,6 +8,8 @@ import NewsPanel from "../UI/Panels/NewsPanel.js";
 import SettingsPanel from "../UI/Panels/SettingsPanel.js";
 import IndustryPanel from "../UI/Panels/IndustryPanel.js";
 
+const MAIN_PANELS_WITH_DOM = new Set(["industry", "settings", "news"]);
+
 export default class UIManager {
     constructor(core) {
         this.core = core;
@@ -64,6 +66,7 @@ export default class UIManager {
         this.mobileNavViewport = document.getElementById("mobile-nav-viewport");
         this.mobileNavPrev = document.getElementById("mobile-nav-prev");
         this.mobileNavNext = document.getElementById("mobile-nav-next");
+        this.shellEmptyMain = document.getElementById("shell-empty-main");
         this.canvas = this.newCanvas();
     }
 
@@ -331,10 +334,22 @@ export default class UIManager {
 
         this.updateMobileNavArrows();
 
+        if (loc === "main") {
+            this.syncShellEmptyMain();
+        }
+
         if (!force) {
             const wrapper = loc === "main" ? this.mainPanel : this.ledger;
             this.playPanelSwapCue(wrapper);
         }
+    }
+
+    syncShellEmptyMain() {
+        const root = this.shellEmptyMain;
+        if (!root) return;
+        const visible = !MAIN_PANELS_WITH_DOM.has(this.activePanels.main);
+        root.classList.toggle("shown", visible);
+        root.setAttribute("aria-hidden", visible ? "false" : "true");
     }
 
     playPanelSwapCue(wrapper) {
@@ -486,6 +501,7 @@ export default class UIManager {
             ledger: validLedger.includes(incoming.ledger) ? incoming.ledger : "log"
         };
 
+        this.syncShellEmptyMain();
     }
 
     updateMobileNavArrows() {

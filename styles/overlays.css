@@ -346,11 +346,7 @@
             }
         }
 
-        /* ── EffectsService DOM effects ─────────────────────────────────
-           Classes added/removed by JS. Intensity via CSS vars set before
-           adding the class. Canvas effects live in EffectsService.js. */
-
-        /* ── Pulse: expanding ring ─── attention / alive / over here */
+        /* EffectsService DOM hooks (vars set in JS before class add) */
 
         @keyframes effect-pulse {
             0%   { box-shadow: 0 0 0 0px color-mix(in oklab, transparent 0%, var(--accent)); }
@@ -361,8 +357,6 @@
         .effect-pulse {
             animation: effect-pulse var(--pulse-duration, 480ms) cubic-bezier(0.2, 0, 0.5, 1);
         }
-
-        /* ── Crackle: damped shake + brief ring flash ─── denied / can't afford */
 
         @keyframes effect-crackle {
             0%   { transform: translateX(0);       outline-color: transparent; }
@@ -378,8 +372,6 @@
             outline: 1px solid transparent;
             outline-offset: 1px;
         }
-
-        /* ── Shimmer: diagonal specular sweep ─── new / changed / over here */
 
         @keyframes effect-shimmer-sweep {
             0%   { transform: translateX(-165%) skewX(-18deg); }
@@ -417,8 +409,6 @@
             mix-blend-mode: screen;
             animation: effect-shimmer-sweep 720ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
         }
-
-        /* ── Float text: rising label ─── resource gain / drain / crit */
 
         @keyframes effect-float-rise {
             0%   { opacity: 0; transform: translate(-50%, 0)    scale(0.85); }

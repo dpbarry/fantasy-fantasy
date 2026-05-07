@@ -141,6 +141,24 @@
             --z-takeover: 2500;
             --z-overlay:   10000;
             --z-scanlines: 99999;
+
+            /* ── Radius (shared framing) ───────────────────────────── */
+            --radius-xs: 2px;
+            --radius-sm: 3px;
+            --radius-md: 10px;
+
+            /* ── Shell states: locked surfaces, empty panels ───────── */
+            --state-locked-opacity: var(--op-disabled);
+            --state-locked-icon-tint: color-mix(in oklab, var(--baseColor) 54%, var(--midBaseColor));
+            --state-empty-padding-block: var(--s-8);
+            --state-empty-padding-inline: var(--s-6);
+            --state-empty-max-width: 26rem;
+            --state-empty-line: linear-gradient(
+                90deg,
+                transparent,
+                color-mix(in oklab, var(--accent) 42%, transparent),
+                transparent
+            );
         }
 
         :root[data-theme="dark"] {
@@ -317,7 +335,7 @@
         .box {
             background: var(--surface);
             border: 1px solid var(--rule-faint);
-            border-radius: 3px;
+            border-radius: var(--radius-sm);
             padding: var(--boxGap);
             display: flex;
             flex-direction: column;
@@ -543,7 +561,7 @@
             gap: 0;
             background: var(--surface-mid);
             border: 1px solid light-dark(var(--rule-normal), var(--rule-faint));
-            border-radius: 3px;
+            border-radius: var(--radius-sm);
             padding: 0;
             flex: 0 0 auto;
             box-shadow: var(--shadow-soft);
@@ -597,8 +615,14 @@
             }
 
             &.locked {
-                opacity: var(--op-disabled);
+                opacity: var(--state-locked-opacity);
                 cursor: default;
+                color: var(--state-locked-icon-tint);
+                text-shadow: none;
+
+                &::after {
+                    opacity: 0;
+                }
             }
 
             @media (pointer: fine) and (hover: hover) {
@@ -782,20 +806,23 @@
 
 
         .lock {
-            transition: opacity 0.15s, bottom 0.2s;
+            transition: opacity var(--dur-normal) var(--ease-standard),
+                bottom var(--dur-normal) var(--ease-standard);
             position: relative;
-            font-size: 0.9em;
+            font-size: var(--t-sm);
             opacity: 1;
-            font-family: SourceSerif;
-            background: transparent;
-            border: 1px solid var(--rule-normal);
+            font-family: var(--font-body);
+            background: color-mix(in oklab, var(--surface) 94%, var(--accent) 6%);
+            border: 1px solid var(--rule-faint);
             width: 100%;
             height: 100%;
             justify-content: center;
             align-items: center;
-            border-radius: 3px;
-            padding: var(--boxGap);
+            border-radius: var(--radius-sm);
+            padding: var(--state-empty-padding-block) var(--state-empty-padding-inline);
             display: flex;
+            color: color-mix(in oklab, var(--baseColor) 88%, var(--midBaseColor));
+            box-shadow: inset 0 0 0 1px color-mix(in oklab, transparent 92%, var(--accent));
 
             &.hide {
                 opacity: 0;
@@ -816,7 +843,7 @@
             position: relative;
             font-size: 0.8em;
             border: 0;
-            border-radius: 2px;
+            border-radius: var(--radius-xs);
             font-family: var(--font-body);
             transition: scale var(--dur-fast) var(--ease-standard),
                 opacity var(--dur-normal) var(--ease-standard),
@@ -861,7 +888,14 @@
 
             &.locked {
                 cursor: default;
-                opacity: var(--op-disabled);
+                opacity: var(--state-locked-opacity);
+                color: color-mix(in oklab, var(--baseColor) 70%, var(--midBaseColor));
+
+                &::before {
+                    background-color: var(--state-locked-icon-tint);
+                    filter: saturate(0.48);
+                    box-shadow: none;
+                }
             }
 
             @media (width <=850px) {

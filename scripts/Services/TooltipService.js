@@ -1,4 +1,4 @@
-import createBreakdownBox from "../UI/Components/BreakdownBox.js";
+import createBreakdown from "../UI/Components/Breakdown.js";
 
 export default function createTooltipService(core) {
     const tooltips = new Map();
@@ -126,7 +126,7 @@ export default function createTooltipService(core) {
 
 
 
-    const PADDING = 8, MARGIN = 3, MULTI_GAP = 4, ARROW_MIN = 12;
+    const PADDING = 8, MARGIN = 8, MULTI_GAP = 12, ARROW_MIN = 12;
     const clamp = (v, min, max) => Math.max(min, Math.min(v, max));
 
     function isDialogMountRoot(mount) {
@@ -237,6 +237,7 @@ export default function createTooltipService(core) {
 
     function positionMultiTooltips(el, tipBoxes) {
         const r = el.getBoundingClientRect();
+        tipBoxes.forEach(tb => void tb.offsetHeight);
         const boxes = tipBoxes.map((tb) => tb.getBoundingClientRect());
         const vw = window.innerWidth;
         const vh = window.innerHeight;
@@ -283,10 +284,9 @@ export default function createTooltipService(core) {
             pos = horizOrder.find(fitsH) || (space.right >= space.left ? 'right' : 'left');
         }
 
-        let closestIdx, gTop, gLeft;
+        let gTop, gLeft;
 
         if (vertical) {
-            closestIdx = pos === 'above' ? boxes.length - 1 : 0;
             gTop = pos === 'above' ? r.top - MARGIN - totalH : r.bottom + MARGIN;
             gLeft = clamp(cx - maxW / 2, PADDING, vw - maxW - PADDING);
             gTop = clamp(gTop, PADDING, vh - totalH - PADDING);
@@ -295,19 +295,15 @@ export default function createTooltipService(core) {
             tipBoxes.forEach((tip, i) => {
                 tip.className = tip.className.replace(/tooltip-(above|below|left|right|no-arrow)/g, '');
                 tip.classList.add(`tooltip-${pos}`);
-                if (i !== closestIdx) tip.classList.add('tooltip-no-arrow');
 
                 const boxLeft = gLeft + (maxW - boxes[i].width) / 2;
                 setPos(tip, curTop, boxLeft);
                 tip.style.opacity = '';
-
-                if (i === closestIdx) {
-                    tip.style.setProperty('--tooltip-arrow-x', `${clamp(cx - boxLeft, ARROW_MIN, boxes[i].width - ARROW_MIN)}px`);
-                }
-                curTop += boxes[i].height + MULTI_GAP;
+                tip.style.setProperty('--tooltip-arrow-x', `${clamp(cx - boxLeft, ARROW_MIN, boxes[i].width - ARROW_MIN)}px`);
+                const placed = tip.getBoundingClientRect();
+                curTop = placed.bottom + MULTI_GAP;
             });
         } else {
-            closestIdx = pos === 'left' ? boxes.length - 1 : 0;
             gLeft = pos === 'left' ? r.left - MARGIN - totalW : r.right + MARGIN;
             gTop = clamp(cy - maxH / 2, PADDING, vh - maxH - PADDING);
             gLeft = clamp(gLeft, PADDING, vw - totalW - PADDING);
@@ -316,16 +312,13 @@ export default function createTooltipService(core) {
             tipBoxes.forEach((tip, i) => {
                 tip.className = tip.className.replace(/tooltip-(above|below|left|right|no-arrow)/g, '');
                 tip.classList.add(`tooltip-${pos}`);
-                if (i !== closestIdx) tip.classList.add('tooltip-no-arrow');
 
                 const boxTop = gTop + (maxH - boxes[i].height) / 2;
                 setPos(tip, boxTop, curLeft);
                 tip.style.opacity = '';
-
-                if (i === closestIdx) {
-                    tip.style.setProperty('--tooltip-arrow-y', `${clamp(cy - boxTop, ARROW_MIN, boxes[i].height - ARROW_MIN)}px`);
-                }
-                curLeft += boxes[i].width + MULTI_GAP;
+                tip.style.setProperty('--tooltip-arrow-y', `${clamp(cy - boxTop, ARROW_MIN, boxes[i].height - ARROW_MIN)}px`);
+                const placed = tip.getBoundingClientRect();
+                curLeft = placed.right + MULTI_GAP;
             });
         }
     }
@@ -691,6 +684,13 @@ export default function createTooltipService(core) {
             return `<p>Increment by ${inc === 'max' ? 'maximum' : inc}</p>`;
         });
 
+        const renderBreakdownContent = (data) => {
+            if (!data) return '';
+            return Array.isArray(data)
+                ? data.map((section) => createBreakdown(section)).join('')
+                : createBreakdown(data);
+        };
+
         registerTip('resource-name', (el) => {
             const res = el.dataset.resource;
             if (!res || !core.industry.resources[res]) return '';
@@ -703,7 +703,7 @@ export default function createTooltipService(core) {
                 return `<p style="opacity: 0.7; font-style: italic">No production</p>${capHtml}`;
             }
 
-            return createBreakdownBox(data) + capHtml;
+            return renderBreakdownContent(data) + capHtml;
         });
 
         registerTip('resource-rate', (el) => {
@@ -716,69 +716,44 @@ export default function createTooltipService(core) {
                 return `<p style="opacity: 0.7; font-style: italic">No production</p>`;
             }
 
-            return createBreakdownBox(data);
+            return renderBreakdownContent(data);
         });
 
-        registerTip('build', (el) => {
-            const type = el.dataset.buildingType;
-            if (!type) return '';
-            const panel = core.ui.panels.industry;
-            const data = panel.formatActionTooltip('build', type);
-            if (!data) return '';
-            return createBreakdownBox(data);
-        });
+        const registerIndustryActionTip = (tipKey, action) => {
+            registerTip(tipKey, (el) => {
+                const type = el.dataset.buildingType;
+                if (!type) return '';
+                const data = core.ui.panels.industry.formatActionTooltip(action, type);
+                return renderBreakdownContent(data);
+            });
+        };
 
-        registerTip('demolish', (el) => {
-            const type = el.dataset.buildingType;
-            if (!type) return '';
-            const panel = core.ui.panels.industry;
-            const data = panel.formatActionTooltip('sell', type);
-            if (!data) return '';
-            return createBreakdownBox(data);
-        });
+        registerIndustryActionTip('build', 'build');
+        registerIndustryActionTip('demolish', 'sell');
 
         registerTip('demolish-warning', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
             const panel = core.ui.panels.industry;
             const warning = panel.getDemolishWorkerWarning(type);
-            return warning ? `<p>${warning}</p>` : '';
+            return warning ? `<p style="color: var(--warningColor)">${warning}</p>` : '';
         });
 
-        registerTip('hire', (el) => {
-            const type = el.dataset.buildingType;
-            if (!type) return '';
-            const panel = core.ui.panels.industry;
-            const data = panel.formatActionTooltip('hire', type);
-            if (!data) return '';
-            return createBreakdownBox(data);
-        });
-
-        registerTip('furlough', (el) => {
-            const type = el.dataset.buildingType;
-            if (!type) return '';
-            const panel = core.ui.panels.industry;
-            const data = panel.formatActionTooltip('furlough', type);
-            if (!data) return '';
-            return createBreakdownBox(data);
-        });
+        registerIndustryActionTip('hire', 'hire');
+        registerIndustryActionTip('furlough', 'furlough');
 
         registerTip('building-effects', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-            const panel = core.ui.panels.industry;
-            const sections = panel.formatAggregateTooltip(type, 'base');
-            if (!sections || sections.length === 0) return '';
-            return sections.map(s => createBreakdownBox(s)).join('');
+            const sections = core.ui.panels.industry.formatAggregateTooltip(type, 'base');
+            return renderBreakdownContent(sections);
         });
 
         registerTip('worker-effects', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-            const panel = core.ui.panels.industry;
-            const data = panel.formatAggregateTooltip(type, 'worker');
-            if (!data || data.length === 0) return '';
-            return data.map(s => createBreakdownBox(s)).join('');
+            const sections = core.ui.panels.industry.formatAggregateTooltip(type, 'worker');
+            return renderBreakdownContent(sections);
         });
 
         registerTip('time-to-next', (el) => {
@@ -854,7 +829,7 @@ export default function createTooltipService(core) {
             }
 
             if (dataArray.length === 0) return '';
-            return dataArray.map(data => createBreakdownBox(data)).join('');
+            return renderBreakdownContent(dataArray);
         });
 
         registerTip('worker-limit', (el) => {
@@ -890,50 +865,18 @@ export default function createTooltipService(core) {
                 }]
             };
 
-            return createBreakdownBox(data);
+            return renderBreakdownContent(data);
         });
 
         registerTip('worker-limited', (el) => {
             const type = el.dataset.buildingType;
             if (!type) return '';
-
-            const def = core.industry.constructor.BUILDING_DEFS[type];
             const b = core.industry.buildings[type];
-            if (!def || !b || !b.workers || b.workers === 0) return '';
-
-            const scale = core.industry.getWorkerScalingFactor();
-            if (scale >= 1) return '';
-
-            const data = core.industry.getAggregateEffects(type, 'worker');
-            if (!data || !data.effects || data.effects.length === 0) return '';
-
-            const potentialByRes = {};
-            for (const eff of data.effects) {
-                const { resource, direction, value } = eff;
-                potentialByRes[resource] = (potentialByRes[resource] || 0) + (direction === 'gain' ? value : -value);
-            }
-
-            const resultRows = Object.entries(potentialByRes)
-                .filter(([, val]) => Math.abs(val) >= 0.0001)
-                .map(([resource, val]) => ({
-                    value: `${val > 0 ? '+' : ''}${fmt(val)}`,
-                    label: `${resource}/s`,
-                    tone: val > 0 ? 'gain' : 'drain'
-                }));
-
-            if (!resultRows.length) return '';
-
-            return createBreakdownBox({
-                header: 'Potential',
-                chain: [{
-                    value: `×${(scale * 100).toFixed(0)}%`,
-                    label: '',
-                    note: 'throttled',
-                    tone: 'neutral',
-                    children: []
-                }],
-                resultRows
-            });
+            if (!b?.workers) return '';
+            if (core.industry.getWorkerScalingFactor() >= 1) return '';
+            const omitHeader = el.classList.contains('worker-limited');
+            const sections = core.ui.panels.industry.formatThrottledTooltip(type, { omitHeader });
+            return renderBreakdownContent(sections);
         });
 
         const navButtons = document.querySelectorAll(".navbutton");

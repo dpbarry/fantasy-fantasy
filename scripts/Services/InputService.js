@@ -185,8 +185,6 @@ export default class InputService {
         return store;
     }
 
-
-
     // Keeps focus within story inputs (desktop only)
     static setupFocusRecapture(inputs) {
         let blurEnabled = true;

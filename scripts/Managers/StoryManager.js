@@ -310,7 +310,7 @@ export default class StoryManager {
         const crops = this.core.industry.resources.crops.value.toNumber();
         const needed = 10 - crops;
         if (needed <= 0) {
-            return "Build your first farm plot to passively gain crops every second";
+            return "Build your first farm plot to passively gain crops every second.";
         } else {
             return `Gather ${needed} more crop${needed > 1 ? 's' : ''} to be able to build your first farm plot. Farm plots passively gain crops every second.`;
         }

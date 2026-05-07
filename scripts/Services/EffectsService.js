@@ -1,19 +1,4 @@
-// Particle effects + DOM-driven animations on a single canvas + class hooks.
-// One animation loop, reused across all callers. Reads --accent at use-time so
-// theme switches are honoured.
-//
-// Vocabulary (whisper → thunderclap):
-//
-//   pulse(el)             expanding ring glow. Attention / alive / "over here".
-//   crackle(el)           lateral shake + drain flash + brief sparks. Denied / can't afford.
-//   shimmer(el)           diagonal specular sweep. New / changed / notable.
-//   floatText(el, "+10")  text rises and fades. Resource gain / drain / crit.
-//   embers(x, y)          physics sparks with optional streak trail. Theurgy, celebration.
-//   ribbon(fromEl, toEl)  particle arc between two elements. Flow / connection.
-//   bloom(x, y)           six-layer plasma pulse. Major unlock / achievement.
-//
-// All DOM effects accept `intensity: 'subtle' | 'medium' | 'loud'`.
-// embers / bloom also have *At(el) coordinate-helper overloads.
+// Canvas particles + DOM hooks; CSS in overlays.css. Reads --accent live.
 
 const TWO_PI = Math.PI * 2;
 
@@ -62,8 +47,6 @@ function tick(timestamp) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 }
-
-// ── Helpers ──────────────────────────────────────────────────────
 
 function getAccentHsl() {
     const raw = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
@@ -244,7 +227,6 @@ function bloom(x, y, opts = {}) {
     const baseScale = opts.scale ?? 1;
     const scale = baseScale * (intensity === 'subtle' ? 0.7 : intensity === 'loud' ? 1.4 : 1);
 
-    // Layer 1 — core flash: brief white-hot punch
     particles.push({
         x, y, age: 0, lifespan: 14, blend: 'screen',
         baseRadius: 22 * scale,
@@ -264,7 +246,6 @@ function bloom(x, y, opts = {}) {
         }
     });
 
-    // Layer 2 — plasma cloud: irregular drifting blobs
     const blobs = 4 + Math.floor(Math.random() * 3);
     const blobBaseAngle = Math.random() * TWO_PI;
     for (let i = 0; i < blobs; i++) {
@@ -306,7 +287,6 @@ function bloom(x, y, opts = {}) {
         });
     }
 
-    // Layer 3 — spike rays: narrow tapered streaks
     const rays = 5 + Math.floor(Math.random() * 4);
     const raySpread = TWO_PI / rays;
     const rayStart = Math.random() * TWO_PI;
@@ -345,7 +325,6 @@ function bloom(x, y, opts = {}) {
         });
     }
 
-    // Layer 4 — shockwave ring: thin expanding ring
     particles.push({
         x, y, age: 0, lifespan: 28, maxRadius: 92 * scale, blend: 'screen',
         update(p, dt = 1) { p.age += dt; return p.age < p.lifespan; },
@@ -367,14 +346,12 @@ function bloom(x, y, opts = {}) {
         }
     });
 
-    // Layer 5 — kinetic embers: fast streaked sparks
     embers(x, y, {
         count: 14, lifespan: 29,
         speedMin: 4.4 * scale, speedRange: 6.6 * scale,
         color, gravity: 0.12, drag: 0.92, trail: true, blend: 'screen'
     });
 
-    // Layer 6 — afterglow embers: slow lingering drift
     embers(x, y, {
         count: 5, lifespan: 47,
         speedMin: 0.8, speedRange: 1.5,
@@ -469,13 +446,8 @@ const EffectsService = {
         this.observeUnlocks();
     },
 
-    // Canvas effects
     bloom, bloomAt, embers, embersAt, ribbon,
-
-    // DOM effects
     pulse, crackle, shimmer, floatText,
-
-    // Devtools demo
     demo,
 
     // Auto-bloom on .locked → unlocked transitions for navbutton / ledger-tab.
